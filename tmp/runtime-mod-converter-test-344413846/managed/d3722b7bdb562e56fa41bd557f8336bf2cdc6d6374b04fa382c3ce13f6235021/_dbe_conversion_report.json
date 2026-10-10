@@ -1,0 +1,32 @@
+{
+	"fileCount": 3,
+	"contentHash": "d3722b7bdb562e56fa41bd557f8336bf2cdc6d6374b04fa382c3ce13f6235021",
+	"unsupported": [],
+	"sourceFormat": "vslice",
+	"dependencies": [],
+	"output": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/tmp/runtime-mod-converter-test-344413846/managed/d3722b7bdb562e56fa41bd557f8336bf2cdc6d6374b04fa382c3ce13f6235021",
+	"ignored": [],
+	"packageRoot": ".",
+	"converted": [],
+	"retained": [
+		{
+			"target": "shared/images/stages/catastrophe-stage/cars/fxCarTemplate/Animation.json",
+			"source": "shared/images/stages/catastrophe-stage/cars/fxCarTemplate/Animation.json"
+		},
+		{
+			"target": "shared/images/stages/catastrophe-stage/cars/fxCarTemplate/spritemap1.json",
+			"source": "shared/images/stages/catastrophe-stage/cars/fxCarTemplate/spritemap1.json"
+		},
+		{
+			"target": "shared/images/stages/catastrophe-stage/cars/fxCarTemplate/spritemap1.png",
+			"source": "shared/images/stages/catastrophe-stage/cars/fxCarTemplate/spritemap1.png"
+		}
+	],
+	"source": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/tmp/runtime-mod-converter-test-344413846/vslice-animate-assets",
+	"incompatibilities": [],
+	"targetEngine": "dbe",
+	"reportVersion": 3,
+	"warnings": [
+		"Folder paths and known package wrappers were normalized; script logic was not translated."
+	]
+}

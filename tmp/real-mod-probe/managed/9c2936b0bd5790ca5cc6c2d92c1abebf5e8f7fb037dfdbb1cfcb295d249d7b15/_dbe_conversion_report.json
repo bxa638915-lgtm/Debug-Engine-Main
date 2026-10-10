@@ -1,0 +1,353 @@
+{
+	"fileCount": 67,
+	"contentHash": "9c2936b0bd5790ca5cc6c2d92c1abebf5e8f7fb037dfdbb1cfcb295d249d7b15",
+	"unsupported": [
+		{
+			"reason": "Psych stage fields without a DBE Stage XML equivalent were omitted from normalized XML; the original JSON was retained under _dbe_preserved.",
+			"fields": [
+				"camera_speed",
+				"hide_girlfriend"
+			],
+			"source": "stages/heaven.json"
+		},
+		{
+			"reason": "Psych song character overrides and colors have no DBE Week song equivalent; the original JSON was retained under _dbe_preserved.",
+			"fields": [
+				"songs[*][1]",
+				"songs[*][2]"
+			],
+			"source": "weeks/smit.json"
+		},
+		{
+			"reason": "Psych week fields without a DBE Week XML equivalent were omitted from normalized XML; the original JSON was retained under _dbe_preserved.",
+			"fields": [
+				"hideStoryMode"
+			],
+			"source": "weeks/smit.json"
+		}
+	],
+	"sourceFormat": "psych",
+	"dependencies": [],
+	"output": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/tmp/real-mod-probe/managed/9c2936b0bd5790ca5cc6c2d92c1abebf5e8f7fb037dfdbb1cfcb295d249d7b15",
+	"ignored": [],
+	"packageRoot": ".",
+	"converted": [
+		{
+			"target": "data/characters/elmeena.json",
+			"source": "characters/elmeena.json"
+		},
+		{
+			"target": "data/characters/miracle-dead.json",
+			"source": "characters/miracle-dead.json"
+		},
+		{
+			"target": "data/characters/miracle.json",
+			"source": "characters/miracle.json"
+		},
+		{
+			"target": "data/characters/readme.txt",
+			"source": "characters/readme.txt"
+		},
+		{
+			"target": "data/events/cameraShit.lua",
+			"source": "custom_events/cameraShit.lua"
+		},
+		{
+			"target": "data/events/cameraShit.txt",
+			"source": "custom_events/cameraShit.txt"
+		},
+		{
+			"target": "data/events/hudBump.lua",
+			"source": "custom_events/hudBump.lua"
+		},
+		{
+			"target": "data/events/hudBump.txt",
+			"source": "custom_events/hudBump.txt"
+		},
+		{
+			"target": "data/events/zoomShit.lua",
+			"source": "custom_events/zoomShit.lua"
+		},
+		{
+			"target": "data/events/zoomShit.txt",
+			"source": "custom_events/zoomShit.txt"
+		},
+		{
+			"target": "data/stages/heaven.xml",
+			"source": "stages/heaven.json"
+		},
+		{
+			"target": "data/stages/heaven.lua",
+			"source": "stages/heaven.lua"
+		},
+		{
+			"target": "data/weeks/weeks/smit.xml",
+			"source": "weeks/smit.json"
+		},
+		{
+			"reason": "generated DBE event registry metadata",
+			"target": "data/events/cameraShit.json",
+			"source": "(generated from custom_events/cameraShit.lua)"
+		},
+		{
+			"reason": "generated DBE event registry metadata",
+			"target": "data/events/hudBump.json",
+			"source": "(generated from custom_events/hudBump.lua)"
+		},
+		{
+			"reason": "generated DBE event registry metadata",
+			"target": "data/events/zoomShit.json",
+			"source": "(generated from custom_events/zoomShit.lua)"
+		}
+	],
+	"retained": [
+		{
+			"target": "data/characters/elmeena.xml",
+			"source": "data/characters/elmeena.xml"
+		},
+		{
+			"target": "data/credits.txt",
+			"source": "data/credits.txt"
+		},
+		{
+			"target": "data/settings.json",
+			"source": "data/settings.json"
+		},
+		{
+			"target": "data/smitten-rings/events.json",
+			"source": "data/smitten-rings/events.json"
+		},
+		{
+			"target": "data/smitten-rings/smitten-rings-hard.json",
+			"source": "data/smitten-rings/smitten-rings-hard.json"
+		},
+		{
+			"target": "data/smitten-rings/stuffz.lua",
+			"source": "data/smitten-rings/stuffz.lua"
+		},
+		{
+			"target": "fonts/darkella.ttf",
+			"source": "fonts/darkella.ttf"
+		},
+		{
+			"target": "images/characters/elmeena.png",
+			"source": "images/characters/elmeena.png"
+		},
+		{
+			"target": "images/characters/elmeena.xml",
+			"source": "images/characters/elmeena.xml"
+		},
+		{
+			"target": "images/characters/hallelujah-ded.png",
+			"source": "images/characters/hallelujah-ded.png"
+		},
+		{
+			"target": "images/characters/hallelujah-ded.xml",
+			"source": "images/characters/hallelujah-ded.xml"
+		},
+		{
+			"target": "images/characters/hallelujah.png",
+			"source": "images/characters/hallelujah.png"
+		},
+		{
+			"target": "images/characters/hallelujah.xml",
+			"source": "images/characters/hallelujah.xml"
+		},
+		{
+			"target": "images/credits/bluesoda.png",
+			"source": "images/credits/bluesoda.png"
+		},
+		{
+			"target": "images/credits/ck.png",
+			"source": "images/credits/ck.png"
+		},
+		{
+			"target": "images/credits/hatoya.png",
+			"source": "images/credits/hatoya.png"
+		},
+		{
+			"target": "images/credits/hjk.png",
+			"source": "images/credits/hjk.png"
+		},
+		{
+			"target": "images/credits/htb.png",
+			"source": "images/credits/htb.png"
+		},
+		{
+			"target": "images/credits/melon.png",
+			"source": "images/credits/melon.png"
+		},
+		{
+			"target": "images/credits/naru.png",
+			"source": "images/credits/naru.png"
+		},
+		{
+			"target": "images/credits/sct.png",
+			"source": "images/credits/sct.png"
+		},
+		{
+			"target": "images/credits/shikumiro.png",
+			"source": "images/credits/shikumiro.png"
+		},
+		{
+			"target": "images/credits/shyblue.png",
+			"source": "images/credits/shyblue.png"
+		},
+		{
+			"target": "images/credits/teruday.png",
+			"source": "images/credits/teruday.png"
+		},
+		{
+			"target": "images/credits/tobao.png",
+			"source": "images/credits/tobao.png"
+		},
+		{
+			"target": "images/credits/tr.png",
+			"source": "images/credits/tr.png"
+		},
+		{
+			"target": "images/gfDanceTitle.json",
+			"source": "images/gfDanceTitle.json"
+		},
+		{
+			"target": "images/icons/elmo.png",
+			"source": "images/icons/elmo.png"
+		},
+		{
+			"target": "images/icons/ti we r.png",
+			"source": "images/icons/ti we r.png"
+		},
+		{
+			"target": "images/logoBumpin.png",
+			"source": "images/logoBumpin.png"
+		},
+		{
+			"target": "images/logoBumpin.xml",
+			"source": "images/logoBumpin.xml"
+		},
+		{
+			"target": "images/menuBG.png",
+			"source": "images/menuBG.png"
+		},
+		{
+			"target": "images/menuBGblue.png",
+			"source": "images/menuBGblue.png"
+		},
+		{
+			"target": "images/menuBGmagenta.png",
+			"source": "images/menuBGmagenta.png"
+		},
+		{
+			"target": "images/menuDesat.png",
+			"source": "images/menuDesat.png"
+		},
+		{
+			"target": "images/stages/haben/bakaneko.png",
+			"source": "images/stages/haben/bakaneko.png"
+		},
+		{
+			"target": "images/stages/haben/base.png",
+			"source": "images/stages/haben/base.png"
+		},
+		{
+			"target": "images/stages/haben/cloud1.png",
+			"source": "images/stages/haben/cloud1.png"
+		},
+		{
+			"target": "images/stages/haben/cloud2.png",
+			"source": "images/stages/haben/cloud2.png"
+		},
+		{
+			"target": "images/stages/haben/cloud3.png",
+			"source": "images/stages/haben/cloud3.png"
+		},
+		{
+			"target": "images/stages/haben/cloud4.png",
+			"source": "images/stages/haben/cloud4.png"
+		},
+		{
+			"target": "images/stages/haben/cloud5.png",
+			"source": "images/stages/haben/cloud5.png"
+		},
+		{
+			"target": "images/stages/haben/cloud6.png",
+			"source": "images/stages/haben/cloud6.png"
+		},
+		{
+			"target": "images/stages/haben/cloud7.png",
+			"source": "images/stages/haben/cloud7.png"
+		},
+		{
+			"target": "images/stages/haben/shiro.png",
+			"source": "images/stages/haben/shiro.png"
+		},
+		{
+			"target": "images/stages/haben/withLight.png",
+			"source": "images/stages/haben/withLight.png"
+		},
+		{
+			"reason": "outside the detected package root; retained for review",
+			"target": "_dbe_preserved/mod_url.txt",
+			"source": "mod_url.txt"
+		},
+		{
+			"target": "pack.json",
+			"source": "pack.json"
+		},
+		{
+			"reason": "outside the detected package root; retained for review",
+			"target": "_dbe_preserved/pack.png",
+			"source": "pack.png"
+		},
+		{
+			"target": "scripts/deathChar.lua",
+			"source": "scripts/deathChar.lua"
+		},
+		{
+			"target": "scripts/strumBG.lua",
+			"source": "scripts/strumBG.lua"
+		},
+		{
+			"target": "songs/smitten-rings/Inst.ogg",
+			"source": "songs/smitten-rings/Inst.ogg"
+		},
+		{
+			"target": "songs/smitten-rings/Voices-Opponent.ogg",
+			"source": "songs/smitten-rings/Voices-Opponent.ogg"
+		},
+		{
+			"target": "songs/smitten-rings/Voices-Player.ogg",
+			"source": "songs/smitten-rings/Voices-Player.ogg"
+		},
+		{
+			"reason": "preserved original Psych metadata",
+			"target": "_dbe_preserved/psych_source/stages/heaven.json",
+			"source": "stages/heaven.json"
+		},
+		{
+			"reason": "preserved original Psych metadata",
+			"target": "_dbe_preserved/psych_source/weeks/smit.json",
+			"source": "weeks/smit.json"
+		}
+	],
+	"source": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/export/release/windows/bin/mods/Lovers Angel Number (Psych Mod)",
+	"incompatibilities": [],
+	"targetEngine": "dbe",
+	"reportVersion": 3,
+	"warnings": [
+		"File outside the detected mod root was preserved for review: mod_url.txt",
+		"File outside the detected mod root was preserved for review: pack.png",
+		"Folder paths and known package wrappers were normalized; script logic was not translated.",
+		"One or more scripts use runtimes this converter does not translate; they were preserved for manual review.",
+		"Psych stage fields without a DBE Stage XML equivalent were omitted from normalized XML; the original JSON was retained under _dbe_preserved. Source: stages/heaven.json",
+		"Psych week fields without a DBE Week XML equivalent were omitted from normalized XML; the original JSON was retained under _dbe_preserved. Source: weeks/smit.json",
+		"Psych week song character/color values were omitted from the DBE week XML: weeks/smit.json",
+		"Script copied without source-code translation: custom_events/cameraShit.lua",
+		"Script copied without source-code translation: custom_events/hudBump.lua",
+		"Script copied without source-code translation: custom_events/zoomShit.lua",
+		"Script copied without source-code translation: data/smitten-rings/stuffz.lua",
+		"Script copied without source-code translation: scripts/deathChar.lua",
+		"Script copied without source-code translation: scripts/strumBG.lua",
+		"Script copied without source-code translation: stages/heaven.lua"
+	]
+}

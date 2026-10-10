@@ -1,0 +1,51 @@
+{
+	"fileCount": 5,
+	"contentHash": "66056647b7e4f25f043dd5d506bb367efb3b1fc25826af593d2cea71bbfdcd11",
+	"unsupported": [
+		{
+			"reason": "script runtime is not translated by this converter",
+			"target": "scripts/unsupported.js",
+			"source": "Release/assets/preload/scripts/unsupported.js"
+		}
+	],
+	"sourceFormat": "psych",
+	"dependencies": [],
+	"output": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/tmp/runtime-mod-converter-test-344413846/managed/66056647b7e4f25f043dd5d506bb367efb3b1fc25826af593d2cea71bbfdcd11",
+	"ignored": [],
+	"packageRoot": "Release/assets/preload",
+	"converted": [
+		{
+			"target": "data/songs/bopeebo/charts/hard.json",
+			"source": "Release/assets/preload/data/songs/bopeebo/charts/hard.json"
+		},
+		{
+			"target": "pack.json",
+			"source": "Release/assets/preload/pack.json"
+		},
+		{
+			"target": "scripts/example.lua",
+			"source": "Release/assets/preload/scripts/example.lua"
+		},
+		{
+			"target": "scripts/unsupported.js",
+			"source": "Release/assets/preload/scripts/unsupported.js"
+		}
+	],
+	"retained": [
+		{
+			"reason": "outside the detected package root; retained for review",
+			"target": "_dbe_preserved/README.txt",
+			"source": "README.txt"
+		}
+	],
+	"source": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/tmp/runtime-mod-converter-test-344413846/source",
+	"incompatibilities": [],
+	"targetEngine": "dbe",
+	"reportVersion": 3,
+	"warnings": [
+		"File outside the detected mod root was preserved for review: README.txt",
+		"Folder paths and known package wrappers were normalized; script logic was not translated.",
+		"One or more scripts use runtimes this converter does not translate; they were preserved for manual review.",
+		"Script copied without source-code translation: Release/assets/preload/scripts/example.lua"
+	]
+}

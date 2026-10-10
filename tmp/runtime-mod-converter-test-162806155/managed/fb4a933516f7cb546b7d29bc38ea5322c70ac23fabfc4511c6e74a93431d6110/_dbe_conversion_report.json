@@ -1,0 +1,61 @@
+{
+	"fileCount": 9,
+	"contentHash": "fb4a933516f7cb546b7d29bc38ea5322c70ac23fabfc4511c6e74a93431d6110",
+	"unsupported": [],
+	"sourceFormat": "cne",
+	"dependencies": [],
+	"output": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/tmp/runtime-mod-converter-test-162806155/managed/fb4a933516f7cb546b7d29bc38ea5322c70ac23fabfc4511c6e74a93431d6110",
+	"ignored": [],
+	"packageRoot": ".",
+	"converted": [],
+	"retained": [
+		{
+			"reason": "outside the detected package root; retained for review",
+			"target": "_dbe_preserved/.nomedia",
+			"source": ".nomedia"
+		},
+		{
+			"reason": "outside the detected package root; retained for review",
+			"target": "_dbe_preserved/concept.png",
+			"source": "concept.png"
+		},
+		{
+			"target": "data/config/modpack.ini",
+			"source": "data/config/modpack.ini"
+		},
+		{
+			"target": "data/songs/cat-o-strophe/cat-o-strophe-metadata.json",
+			"source": "data/songs/cat-o-strophe/cat-o-strophe-metadata.json"
+		},
+		{
+			"reason": "outside the detected package root; retained for review",
+			"target": "_dbe_preserved/mod_url.txt",
+			"source": "mod_url.txt"
+		},
+		{
+			"target": "scripts/characters/masyunya.hxc",
+			"source": "scripts/characters/masyunya.hxc"
+		},
+		{
+			"target": "shared/images/character.png",
+			"source": "shared/images/character.png"
+		},
+		{
+			"target": "songs/cat-o-strophe/Inst.ogg",
+			"source": "songs/cat-o-strophe/Inst.ogg"
+		},
+		{
+			"target": "_polymod_meta.json",
+			"source": "_polymod_meta.json"
+		}
+	],
+	"source": "C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/Debug Engine-Main/tmp/runtime-mod-converter-test-162806155/mixed-cne",
+	"incompatibilities": [],
+	"targetEngine": "dbe",
+	"reportVersion": 3,
+	"warnings": [
+		"File outside the detected mod root was preserved for review: .nomedia",
+		"File outside the detected mod root was preserved for review: concept.png",
+		"File outside the detected mod root was preserved for review: mod_url.txt"
+	]
+}

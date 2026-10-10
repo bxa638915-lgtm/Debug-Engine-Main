@@ -1,0 +1,87 @@
+{
+	"animations": [
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 12,
+			"anim": "singLEFT",
+			"loop": false,
+			"name": "WAAAAAHHHHAAAA"
+		},
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 12,
+			"anim": "idle",
+			"loop": false,
+			"name": "AAAAAAAAIDOL"
+		},
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 12,
+			"anim": "singDOWN",
+			"loop": false,
+			"name": "maybedown"
+		},
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 12,
+			"anim": "singUP",
+			"loop": false,
+			"name": "AEAEAEAEAE"
+		},
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 12,
+			"anim": "singRIGHT",
+			"loop": false,
+			"name": "sayE"
+		},
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 24,
+			"anim": "singDOWNmiss",
+			"loop": false,
+			"name": "downshit"
+		},
+		{
+			"offsets": [60, 21],
+			"indices": [],
+			"fps": 24,
+			"anim": "singRIGHTmiss",
+			"loop": false,
+			"name": "ieieieiei"
+		},
+		{
+			"offsets": [59, 21],
+			"indices": [],
+			"fps": 24,
+			"anim": "singUPmiss",
+			"loop": false,
+			"name": "HA"
+		},
+		{
+			"offsets": [68, 21],
+			"indices": [],
+			"fps": 24,
+			"anim": "singLEFTmiss",
+			"loop": false,
+			"name": "awfuck"
+		}
+	],
+	"vocals_file": "",
+	"no_antialiasing": false,
+	"image": "characters/hallelujah",
+	"position": [0, 50],
+	"healthicon": "ti we r",
+	"flip_x": true,
+	"healthbar_colors": [255, 250, 163],
+	"camera_position": [0, 100],
+	"sing_duration": 4,
+	"scale": 0.8,
+	"_editor_isPlayer": true
+}

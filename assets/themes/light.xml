@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FNF UI Studio — Light Theme
+    Clean, high-contrast light editor theme.
+-->
+<style>
+    .haxeui-root {
+        background-color: #F2F3F5;
+        color: #2E3338;
+        font-name: "Roboto";
+        font-size: 13px;
+    }
+
+    Panel, VBox, HBox {
+        background-color: #FFFFFF;
+        border-color: #D4D7DC;
+        border-size: 1px;
+    }
+
+    .panel-header {
+        background-color: #EBEDEF;
+        color: #2E3338;
+        font-size: 12px;
+        font-bold: true;
+        padding: 4px 8px;
+        border-bottom-size: 1px;
+        border-bottom-color: #D4D7DC;
+    }
+
+    MenuBar {
+        background-color: #FFFFFF;
+        border-bottom-size: 1px;
+        border-bottom-color: #D4D7DC;
+    }
+
+    MenuBar > MenuItem {
+        color: #4F5660;
+        padding: 4px 10px;
+        background-color: transparent;
+        border-radius: 3px;
+    }
+
+    MenuBar > MenuItem:hover {
+        background-color: #EBEDEF;
+        color: #2E3338;
+    }
+
+    Menu {
+        background-color: #FFFFFF;
+        border-color: #D4D7DC;
+        border-size: 1px;
+        border-radius: 4px;
+        padding: 4px 0px;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
+    }
+
+    Menu > MenuItem {
+        color: #2E3338;
+        padding: 5px 20px 5px 12px;
+    }
+
+    Menu > MenuItem:hover {
+        background-color: #5865F2;
+        color: #FFFFFF;
+    }
+
+    .toolbar {
+        background-color: #EBEDEF;
+        border-bottom-size: 1px;
+        border-bottom-color: #D4D7DC;
+        padding: 3px 6px;
+    }
+
+    .toolbar > Button {
+        background-color: transparent;
+        color: #4F5660;
+        border-color: transparent;
+        border-radius: 4px;
+        padding: 4px 6px;
+    }
+
+    .toolbar > Button:hover {
+        background-color: #D4D7DC;
+        color: #2E3338;
+    }
+
+    .toolbar > Button.active {
+        background-color: #5865F2;
+        color: #FFFFFF;
+    }
+
+    Button {
+        background-color: #EBEDEF;
+        color: #2E3338;
+        border-color: #C7CAD1;
+        border-size: 1px;
+        border-radius: 4px;
+        padding: 5px 12px;
+    }
+
+    Button:hover {
+        background-color: #D4D7DC;
+        border-color: #5865F2;
+    }
+
+    Button.primary {
+        background-color: #5865F2;
+        color: #FFFFFF;
+        border-color: #4752C4;
+    }
+
+    Button.primary:hover {
+        background-color: #6470F3;
+    }
+
+    Button.danger {
+        background-color: #ED4245;
+        color: #FFFFFF;
+        border-color: #C03537;
+    }
+
+    TextField, TextArea, NumberStepper {
+        background-color: #FFFFFF;
+        color: #2E3338;
+        border-color: #C7CAD1;
+        border-size: 1px;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+
+    TextField:focus, TextArea:focus {
+        border-color: #5865F2;
+    }
+
+    DropDown, ComboBox {
+        background-color: #FFFFFF;
+        color: #2E3338;
+        border-color: #C7CAD1;
+        border-size: 1px;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+
+    TreeView {
+        background-color: #F8F9F9;
+        color: #2E3338;
+    }
+
+    TreeView .item.selected {
+        background-color: #5865F2;
+        color: #FFFFFF;
+    }
+
+    TreeView .item:hover {
+        background-color: #EBEDEF;
+    }
+
+    .inspector-label {
+        color: #6B7280;
+        font-size: 12px;
+        width: 90px;
+    }
+
+    .inspector-section-header {
+        background-color: #F2F3F5;
+        color: #6B7280;
+        font-size: 11px;
+        font-bold: true;
+        padding: 3px 8px;
+        text-transform: uppercase;
+    }
+
+    TabView .tab-button.selected {
+        color: #5865F2;
+        border-bottom-color: #5865F2;
+    }
+
+    Dialog {
+        background-color: #FFFFFF;
+        border-color: #D4D7DC;
+        border-radius: 8px;
+        box-shadow: 0px 8px 32px rgba(0,0,0,0.2);
+    }
+
+    Dialog .dialog-title {
+        background-color: #F2F3F5;
+        color: #2E3338;
+        font-bold: true;
+        padding: 12px 16px;
+        border-bottom-size: 1px;
+        border-bottom-color: #D4D7DC;
+    }
+
+    .status-bar {
+        background-color: #5865F2;
+        color: #FFFFFF;
+        font-size: 12px;
+        padding: 2px 8px;
+    }
+
+    SplitView .splitter {
+        background-color: #D4D7DC;
+    }
+
+    SplitView .splitter:hover {
+        background-color: #5865F2;
+    }
+
+    Slider .thumb {
+        background-color: #5865F2;
+        border-radius: 8px;
+        width: 14px;
+        height: 14px;
+    }
+
+    Slider .track-fill {
+        background-color: #5865F2;
+    }
+
+    .node-editor-container {
+        background-color: #EBEBEB;
+    }
+</style>

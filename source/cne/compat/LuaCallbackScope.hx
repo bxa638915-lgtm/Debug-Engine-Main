@@ -1,0 +1,103 @@
+package cne.compat;
+
+import llua.Lua;
+import llua.State;
+
+/**
+	Gives each Lua state unique native callback names while exposing stable API
+	names to Lua. linc_luajit stores callbacks globally by name, so this scope
+	prevents callbacks from separate scripts replacing one another.
+**/
+class LuaCallbackScope
+{
+	private static var nextScopeId:Int = 0;
+	private static inline var INTERNAL_PREFIX:String = "__cne_callback_";
+
+	private var state:State;
+	private var scopeId:Int;
+	private var callbackNames:Array<String> = [];
+	private var disposed:Bool = false;
+	private var errorHandler:Dynamic->Void;
+
+	public function new(state:State, ?errorHandler:Dynamic->Void)
+	{
+		this.state = state;
+		this.errorHandler = errorHandler;
+		scopeId = nextScopeId++;
+		Lua.init_callbacks(state);
+	}
+
+	/** Registers a Haxe callback and exposes it under the requested Lua name. */
+	public function bind(name:String, callback:Dynamic):Bool
+	{
+		if (disposed || state == null || name == null || StringTools.trim(name).length == 0 || callback == null)
+			return false;
+
+		var internalName = INTERNAL_PREFIX + scopeId + "_" + callbackNames.length;
+		var callbackState = state;
+		var callbackErrorHandler = errorHandler;
+		var safeCallback = Reflect.makeVarArgs((args:Array<Dynamic>) ->
+		{
+			var result:Dynamic = null;
+			try
+				result = Reflect.callMethod(null, callback, args)
+			catch (error:Dynamic)
+			{
+				if (callbackErrorHandler != null)
+					try callbackErrorHandler(error) catch (_:Dynamic) {}
+			}
+			// linc_luajit returns one result even for void callbacks. Push nil
+			// explicitly so it cannot accidentally return the last input argument.
+			// Unsupported Haxe classes also become nil instead of leaving the Lua
+			// stack unbalanced in linc_luajit's conversion helper.
+			if (result == null || !canConvert(result, 0))
+			{
+				Lua.pushnil(callbackState);
+				return null;
+			}
+			return result;
+		});
+		Lua.register(state, internalName, safeCallback);
+		Lua.getglobal(state, internalName);
+		Lua.setglobal(state, name);
+		callbackNames.push(internalName);
+		return true;
+	}
+
+	private static function canConvert(value:Dynamic, depth:Int):Bool
+	{
+		if (depth > 16) return false;
+		return switch (Type.typeof(value))
+		{
+			case TNull | TBool | TInt | TFloat | TClass(String): true;
+			case TClass(Array):
+				var supported = true;
+				for (item in (cast value:Array<Dynamic>))
+					if (!canConvert(item, depth + 1)) supported = false;
+				supported;
+			case TClass(haxe.ds.StringMap):
+				var supported = true;
+				for (item in (cast value:haxe.ds.StringMap<Dynamic>))
+					if (!canConvert(item, depth + 1)) supported = false;
+				supported;
+			case TObject:
+				var supported = true;
+				for (field in Reflect.fields(value))
+					if (!canConvert(Reflect.field(value, field), depth + 1)) supported = false;
+				supported;
+			default: false;
+		}
+	}
+
+	/** Removes the callbacks owned by this state from linc_luajit's global map. */
+	public function dispose():Void
+	{
+		if (disposed) return;
+		disposed = true;
+		if (state != null)
+			for (name in callbackNames)
+				llua.Lua.Lua_helper.remove_callback(state, name);
+		callbackNames = [];
+		state = null;
+	}
+}

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="new buttons and stuff.png" width="2412" height="2430">
+	<SubTexture name="Big button instance 10000" x="2158" y="1114" width="92" height="546" rotated="true" frameX="-0" frameY="-0" frameWidth="546" frameHeight="92"/>
+	<SubTexture name="Big button instance 10001" x="2201" y="554" width="92" height="546" rotated="true" frameX="-0" frameY="-0" frameWidth="546" frameHeight="92"/>
+	<SubTexture name="Big button instance 10002" x="551" y="2337" width="530" height="82" frameX="-8" frameY="-6" frameWidth="546" frameHeight="92"/>
+	<SubTexture name="Big_buttonEVIL instance 10000" x="1846" y="1701" width="93" height="545" rotated="true" frameX="-25" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10001" x="1955" y="1129" width="98" height="553" rotated="true" frameX="-18" frameY="-18" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10002" x="569" y="1778" width="559" height="104" frameX="-15" frameY="-15" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10003" x="1" y="1715" width="563" height="108" frameX="-13" frameY="-13" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10004" x="1163" y="1173" width="565" height="110" frameX="-12" frameY="-12" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10005" x="1547" y="577" width="114" height="569" rotated="true" frameX="-10" frameY="-10" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10006" x="577" y="1544" width="569" height="114" frameX="-10" frameY="-10" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10007" x="579" y="1423" width="571" height="116" frameX="-9" frameY="-9" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10008" x="581" y="1300" width="573" height="118" frameX="-8" frameY="-8" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10009" x="1" y="1352" width="573" height="118" frameX="-8" frameY="-8" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10010" x="583" y="1175" width="575" height="120" frameX="-7" frameY="-7" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10011" x="1" y="1227" width="575" height="120" frameX="-7" frameY="-7" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10012" x="1" y="1227" width="575" height="120" frameX="-7" frameY="-7" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10013" x="1" y="1100" width="577" height="122" frameX="-6" frameY="-6" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10014" x="595" y="593" width="122" height="577" rotated="true" frameX="-6" frameY="-6" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10015" x="595" y="593" width="122" height="577" rotated="true" frameX="-6" frameY="-6" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10016" x="908" y="589" width="124" height="579" rotated="true" frameX="-5" frameY="-5" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10017" x="908" y="589" width="124" height="579" rotated="true" frameX="-4" frameY="-4" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10018" x="773" y="591" width="124" height="579" rotated="true" frameX="-5" frameY="-5" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10019" x="1041" y="1" width="126" height="581" rotated="true" frameX="-4" frameY="-4" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10020" x="1041" y="587" width="126" height="581" rotated="true" frameX="-4" frameY="-4" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10021" x="1041" y="587" width="126" height="581" rotated="true" frameX="-4" frameY="-4" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10022" x="908" y="1" width="128" height="583" rotated="true" frameX="-3" frameY="-3" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10023" x="773" y="1" width="130" height="585" rotated="true" frameX="-2" frameY="-2" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10024" x="1" y="832" width="585" height="130" frameX="-2" frameY="-2" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10025" x="1" y="556" width="589" height="134" frameX="-0" frameY="-0" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10026" x="636" y="1" width="132" height="587" rotated="true" frameX="-1" frameY="-1" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10027" x="636" y="1" width="132" height="587" rotated="true" frameX="-1" frameY="-1" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10028" x="636" y="1" width="132" height="587" rotated="true" frameX="-1" frameY="-1" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10029" x="636" y="1" width="132" height="587" rotated="true" frameX="-1" frameY="-1" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10030" x="1" y="695" width="587" height="132" frameX="-1" frameY="-1" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10031" x="1" y="695" width="587" height="132" frameX="-2" frameY="-2" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10032" x="1" y="832" width="585" height="130" frameX="-2" frameY="-2" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10033" x="773" y="1" width="130" height="585" rotated="true" frameX="-1" frameY="-1" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10034" x="908" y="1" width="128" height="583" rotated="true" frameX="-3" frameY="-3" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10035" x="1" y="967" width="583" height="128" frameX="-3" frameY="-3" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10036" x="1041" y="1" width="126" height="581" rotated="true" frameX="-4" frameY="-4" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10037" x="595" y="593" width="122" height="577" rotated="true" frameX="-6" frameY="-6" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10038" x="1" y="1352" width="573" height="118" frameX="-8" frameY="-8" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10039" x="1547" y="577" width="114" height="569" rotated="true" frameX="-9" frameY="-9" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10040" x="1781" y="571" width="106" height="561" rotated="true" frameX="-14" frameY="-14" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10041" x="2102" y="559" width="94" height="550" rotated="true" frameX="-20" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10042" x="1" y="2143" width="546" height="93" frameX="-24" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10043" x="2157" y="1675" width="93" height="545" rotated="true" frameX="-25" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10044" x="1846" y="1701" width="93" height="545" rotated="true" frameX="-25" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10045" x="1846" y="1701" width="93" height="545" rotated="true" frameX="-25" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10046" x="1846" y="1701" width="93" height="545" rotated="true" frameX="-25" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10047" x="1846" y="1701" width="93" height="545" rotated="true" frameX="-25" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL instance 10048" x="1846" y="1701" width="93" height="545" rotated="true" frameX="-25" frameY="-20" frameWidth="593" frameHeight="138"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10000" x="1172" y="1" width="122" height="577" rotated="true" frameX="-1" frameY="-1" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10001" x="1172" y="583" width="122" height="577" rotated="true" frameX="-1" frameY="-1" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10002" x="1299" y="1" width="120" height="575" rotated="true" frameX="-2" frameY="-2" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10003" x="1299" y="581" width="120" height="575" rotated="true" frameX="-2" frameY="-2" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10004" x="1424" y="1" width="118" height="573" rotated="true" frameX="-3" frameY="-3" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10005" x="1424" y="579" width="118" height="573" rotated="true" frameX="-3" frameY="-3" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10006" x="1" y="1475" width="571" height="116" frameX="-4" frameY="-4" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10007" x="1547" y="1" width="116" height="571" rotated="true" frameX="-4" frameY="-4" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10008" x="1" y="1596" width="569" height="114" frameX="-5" frameY="-5" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10009" x="1151" y="1544" width="569" height="114" frameX="-5" frameY="-5" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10010" x="1155" y="1423" width="567" height="112" frameX="-6" frameY="-6" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10011" x="1159" y="1300" width="567" height="112" frameX="-6" frameY="-6" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10012" x="1666" y="577" width="110" height="565" rotated="true" frameX="-7" frameY="-7" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10013" x="1668" y="1" width="110" height="565" rotated="true" frameX="-7" frameY="-7" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10014" x="575" y="1663" width="565" height="110" frameX="-7" frameY="-7" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10015" x="1145" y="1663" width="563" height="108" frameX="-8" frameY="-8" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10016" x="1733" y="1147" width="108" height="563" rotated="true" frameX="-8" frameY="-8" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10017" x="1783" y="1" width="106" height="561" rotated="true" frameX="-9" frameY="-9" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10018" x="1145" y="1776" width="561" height="106" frameX="-9" frameY="-9" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10019" x="1" y="1828" width="559" height="104" frameX="-10" frameY="-10" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10020" x="1846" y="1137" width="104" height="559" rotated="true" frameX="-10" frameY="-10" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10021" x="1892" y="567" width="102" height="557" rotated="true" frameX="-11" frameY="-11" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10022" x="1894" y="1" width="102" height="557" rotated="true" frameX="-11" frameY="-11" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10023" x="1" y="1937" width="555" height="100" frameX="-12" frameY="-12" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10024" x="561" y="1937" width="555" height="100" frameX="-12" frameY="-12" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10025" x="1121" y="1887" width="555" height="100" frameX="-12" frameY="-12" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10026" x="1999" y="563" width="98" height="553" rotated="true" frameX="-13" frameY="-13" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10027" x="2001" y="1" width="98" height="553" rotated="true" frameX="-13" frameY="-13" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10028" x="1121" y="1992" width="551" height="97" frameX="-14" frameY="-13" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10029" x="1" y="2042" width="551" height="96" frameX="-14" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10030" x="557" y="2042" width="550" height="95" frameX="-14" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10031" x="2058" y="1121" width="95" height="549" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10032" x="2104" y="1" width="94" height="548" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10033" x="2058" y="1675" width="94" height="548" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10034" x="1955" y="1687" width="93" height="547" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10035" x="1112" y="2094" width="547" height="93" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10036" x="557" y="2142" width="547" height="93" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10037" x="2203" y="1" width="92" height="546" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10038" x="1711" y="1776" width="92" height="546" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10039" x="1109" y="2192" width="545" height="92" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10040" x="552" y="2240" width="545" height="92" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10041" x="1" y="2241" width="545" height="92" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10042" x="1808" y="2251" width="545" height="92" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10043" x="2255" y="1105" width="92" height="545" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10044" x="2298" y="552" width="92" height="545" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10045" x="2300" y="1" width="92" height="545" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10046" x="2255" y="1655" width="92" height="545" rotated="true" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10047" x="1102" y="2327" width="545" height="92" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Big_buttonEVIL_confirm instance 10048" x="1102" y="2327" width="545" height="92" frameX="-15" frameY="-14" frameWidth="582" frameHeight="127"/>
+	<SubTexture name="Cone instance 10000" x="2071" y="2348" width="94" height="81" frameX="-0" frameY="-1" frameWidth="94" frameHeight="82"/>
+	<SubTexture name="Gear instance 10000" x="2340" y="2348" width="71" height="63" frameX="-1" frameY="-1" frameWidth="72" frameHeight="64"/>
+	<SubTexture name="Polus instance 10000" x="2170" y="2348" width="82" height="80" frameX="-0" frameY="-0" frameWidth="82" frameHeight="80"/>
+	<SubTexture name="Red and Green instance 10000" x="1909" y="2348" width="157" height="80" frameX="-1" frameY="-0" frameWidth="158" frameHeight="80"/>
+	<SubTexture name="Small Button instance 10000" x="1" y="2338" width="268" height="79" frameX="-0" frameY="-0" frameWidth="268" frameHeight="80"/>
+	<SubTexture name="Small Button instance 10001" x="274" y="2338" width="268" height="79" frameX="-0" frameY="-0" frameWidth="268" frameHeight="80"/>
+	<SubTexture name="Small Button instance 10002" x="1652" y="2348" width="252" height="71" frameX="-9" frameY="-4" frameWidth="268" frameHeight="80"/>
+	<SubTexture name="Trophy instance 10000" x="2257" y="2348" width="78" height="66" frameX="-0" frameY="-0" frameWidth="78" frameHeight="66"/>
+	<SubTexture name="tablet instance 10000" x="1" y="1" width="630" height="550" frameX="-0" frameY="-0" frameWidth="630" frameHeight="550"/>
+</TextureAtlas>

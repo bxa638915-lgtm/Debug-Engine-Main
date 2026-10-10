@@ -1,0 +1,39 @@
+{
+	"animations": [
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 12,
+			"anim": "firstDeath",
+			"loop": false,
+			"name": "ded"
+		},
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 12,
+			"anim": "deathLoop",
+			"loop": true,
+			"name": "loopingthedeathoom"
+		},
+		{
+			"offsets": [72, 21],
+			"indices": [],
+			"fps": 24,
+			"anim": "deathConfirm",
+			"loop": false,
+			"name": "confim"
+		}
+	],
+	"vocals_file": "",
+	"no_antialiasing": false,
+	"image": "characters/hallelujah-ded",
+	"position": [0, 50],
+	"healthicon": "bf",
+	"flip_x": true,
+	"healthbar_colors": [49, 176, 209],
+	"camera_position": [-50, 0],
+	"sing_duration": 4,
+	"scale": 0.8,
+	"_editor_isPlayer": true
+}

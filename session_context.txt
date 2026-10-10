@@ -1,0 +1,9 @@
+Project: Debug Engine (DBE)
+Goal: Chart/Event Converter & UI Improvements
+
+Summary:
+- Analyzed Chart converters. Found redundancy between PsychParser and PsychChartImporter. Recommended unification.
+- Implemented top-left message overlay in ConsoleUI.hx using ImGui.
+- Fixed multiple indentation/encoding issues with ConsoleUI.hx using awk.
+- Current state: ConsoleUI.hx updated with topMessage variable, setTopMessage() method, and overlay render logic.
+- Pending: Verify build with 'lime test windows'.

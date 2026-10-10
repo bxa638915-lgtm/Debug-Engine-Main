@@ -1,0 +1,55 @@
+{
+	"animations": [
+		{
+			"offsets": [5, -32],
+			"indices": [],
+			"fps": 12,
+			"anim": "idle",
+			"loop": false,
+			"name": "idle"
+		},
+		{
+			"offsets": [6, -32],
+			"indices": [],
+			"fps": 12,
+			"anim": "singLEFT",
+			"loop": false,
+			"name": "singLEFT"
+		},
+		{
+			"offsets": [5, -32],
+			"indices": [],
+			"fps": 12,
+			"anim": "singUP",
+			"loop": false,
+			"name": "singUP"
+		},
+		{
+			"offsets": [5, -32],
+			"indices": [],
+			"fps": 12,
+			"anim": "singDOWN",
+			"loop": false,
+			"name": "singDOWN"
+		},
+		{
+			"offsets": [5, -32],
+			"indices": [],
+			"fps": 12,
+			"anim": "singRIGHT",
+			"loop": false,
+			"name": "singRIGHT"
+		}
+	],
+	"vocals_file": "",
+	"no_antialiasing": false,
+	"image": "characters/elmeena",
+	"position": [-800, -590],
+	"healthicon": "elmo",
+	"flip_x": false,
+	"healthbar_colors": [255, 201, 209],
+	"camera_position": [550, 720],
+	"sing_duration": 5.6,
+	"scale": 0.4,
+	"_editor_isPlayer": false
+}
