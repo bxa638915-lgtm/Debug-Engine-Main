@@ -7,6 +7,8 @@ import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import flixel.util.typeLimit.OneOfTwo;
 import funkin.backend.FunkinText;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import funkin.backend.scripting.events.CancellableEvent;
 import funkin.backend.scripting.events.menu.MenuChangeEvent;
 import funkin.backend.scripting.events.menu.storymenu.*;
@@ -302,11 +304,15 @@ class StoryMenuState extends MusicBeatState {
 		if (characterSprites != null)
 			characterSprites.forEachAlive(function(spr) spr.playAnim("confirm", true, LOCK));
 
-		PlayState.loadWeek(event.week, event.difficulty);
+		var firstSong = event.week.songs[0];
+		var request = new SongLoadRequest(firstSong.name, event.difficulty, firstSong.variation, false, false, true, false, "story", Paths.getAssetsRoot());
 
 		new FlxTimer().start(1, function(tmr:FlxTimer)
 		{
-			FlxG.switchState(new PlayState());
+			SongLoader.start(request, () -> {
+				PlayState.loadWeek(event.week, event.difficulty);
+				return PlayState.SONG;
+			});
 		});
 		weekSprites.members[event.weekID].startFlashing();
 	}

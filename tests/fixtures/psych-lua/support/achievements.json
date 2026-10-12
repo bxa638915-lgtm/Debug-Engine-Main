@@ -1,0 +1,10 @@
+{
+  "achievements": [
+    {
+      "name": "DBE fixture achievement",
+      "save": "dbe___DBE_TEMP_MOD__",
+      "description": "Temporary Psych Lua contract fixture",
+      "maxScore": 3
+    }
+  ]
+}

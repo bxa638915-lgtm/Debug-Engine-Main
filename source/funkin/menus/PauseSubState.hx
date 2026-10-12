@@ -2,6 +2,8 @@ package funkin.menus;
 
 import flixel.sound.FlxSound;
 import funkin.backend.FunkinText;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import funkin.backend.FunkinText;
@@ -168,12 +170,16 @@ class PauseSubState extends MusicBeatSubstate
 			case "Restart Song":
 				parentDisabler.reset();
 				game.registerSmoothTransition();
-				FlxG.resetState();
+				var request = SongLoadRequest.fromPlayState("retry");
+				SongLoader.start(request, () -> PlayState.SONG);
 			case "Change Controls":
 				persistentDraw = false;
 				openSubState(new KeybindsOptions());
 			case "Change Options":
-				FlxG.switchState(new OptionsMenu((_) -> FlxG.switchState(new PlayState())));
+				var request = SongLoadRequest.fromPlayState("optionsReturn");
+				FlxG.switchState(new OptionsMenu((_) -> {
+					SongLoader.start(request, () -> PlayState.SONG);
+				}));
 			case "Exit to charter":
 				FlxG.switchState(new Charter(PlayState.SONG.meta.name, PlayState.difficulty, PlayState.variation, false));
 			case "Exit to menu":

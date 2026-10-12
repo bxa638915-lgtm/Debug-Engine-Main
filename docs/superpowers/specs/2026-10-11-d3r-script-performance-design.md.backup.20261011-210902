@@ -1,0 +1,78 @@
+# DBE: reduzir custo inicial dos scripts em genocide-D3R
+
+## Status
+
+Design aprovado em conversa; aguardando revisão desta especificação. Ainda não é um plano de implementação e nenhuma alteração de engine foi feita para este trabalho.
+
+## Objetivo
+
+Reduzir a pressão de memória e o trabalho recorrente de interpretação causados por scripts no começo de `genocide-D3R`, preservando o comportamento dos mods. O usuário relata FPS baixo já no início da música na build Release; a mesma música roda normalmente quando os scripts do mod são desativados.
+
+O primeiro recorte deve corrigir o custo de uma imagem sólida enorme criada no início, evitar reparse de trechos `runHaxeCode` idênticos no caminho Lua→HScript, e melhorar o diagnóstico de scripts/câmeras/shaders para orientar uma etapa posterior se a queda persistir.
+
+## Evidências no checkout
+
+- `mods/d 3 S 0 r mix/data/genocide-d3r/EndingCinematics.lua:6-15` cria em `onCreate()` um gráfico branco sólido de `12000 × 12000` pixels e mantém sua alpha em `0.001` até um uso posterior. A `makeGraphic` Lua atual cria o gráfico com essas dimensões. RGBA de 8 bits exigiria aproximadamente 576.000.000 bytes (549 MiB) para o bitmap da CPU, sem contar outros dados ou alocações do renderer. Isso confirma uma alocação grande; não prova, sozinho, que ela seja a causa integral dos 13–25 FPS.
+- `source/funkin/backend/scripting/LuaScript.hx:656-667` encaminha `runHaxeCode` a um interpretador HScript persistente. `source/funkin/backend/scripting/HScript.hx:71-78,176-181` chama `parseString` em `loadFromString` a cada `executeString`, antes de executar a expressão.
+- `mods/d 3 S 0 r mix/data/genocide-d3r/somethincool.lua:175-192` constrói chamadas `runHaxeCode` dentro do loop de personagens em `onUpdatePost`; no setup normal, o texto gerado por personagem se repete a cada frame. O tamanho desse custo no FPS ainda precisa ser medido.
+- `source/funkin/game/PlayState.hx` prepara a ordem dos eventos uma vez e retira os eventos vencidos da fila durante o update. `source/funkin/backend/assets/Paths.hx:415-418` usa o cache de bitmap do Flixel. Esses caminhos existentes não justificam uma reescrita geral de eventos ou do carregador de imagens nesta etapa.
+- A inspeção é estática. Não houve perfilador ligado à build Release, medição de GPU nem comparação de memória em runtime; câmeras e shaders continuam sendo suspeitos a medir, não causas confirmadas.
+
+## Alternativas consideradas
+
+1. **Somente instrumentar:** menor risco inicial, mas deixa a alocação de centenas de MiB criada imediatamente.
+2. **Corrigir custos confirmados e coletar um snapshot diagnóstico — recomendado:** otimização restrita para gráficos sólidos grandes, cache limitado do parse repetido no caminho `runHaxeCode`, e dados de scripts/câmeras/shaders no relatório diagnóstico existente. Preserva os arquivos do mod e evita refatorações sem evidência.
+3. **Reescrever carregadores de eventos, assets, personagens e shaders:** risco alto de compatibilidade e memória, sem evidência de que essas mudanças expliquem a queda desde o início. Não faz parte desta especificação.
+
+## Desenho recomendado
+
+### 1. Gráficos sólidos grandes expostos ao Lua
+
+Na fronteira Lua `makeGraphic` de `source/funkin/backend/scripting/LuaScript.hx`, usar uma textura-base mínima escalada para os gráficos sólidos acima de um limiar de área definido durante a implementação. Gráficos abaixo do limiar continuam usando `makeGraphic` normalmente. O caminho só se aplica aos gráficos gerados por cor sólida; imagens de arquivo, spritesheets, shaders e outros gráficos não mudam.
+
+O tamanho visual solicitado, posição, cor, alpha, câmera e hitbox devem manter o comportamento atual. A textura-base altera as dimensões internas do frame (por exemplo, `frameWidth`/`frameHeight`); antes de ativar o caminho, a implementação deve conferir os acessos dessas propriedades nos objetos Lua e demonstrar que o caso de uso não depende delas. Se o contrato não puder ser preservado para um caso, esse gráfico deve permanecer no caminho antigo.
+
+### 2. Cache limitado para parse de `runHaxeCode`
+
+No interpretador HScript persistente criado pelo caminho Lua, reutilizar a expressão parseada para o mesmo texto-fonte. A expressão deve continuar sendo executada em toda chamada, no mesmo interpretador, mantendo as variáveis e os efeitos em runtime. O cache será limitado, isolado por interpretador e limpo no reload/destroy. Erros de sintaxe devem conservar o contexto de arquivo/linha atual; textos distintos ou entradas não cacheáveis seguem pelo parser existente.
+
+Antes de implementar, confirmar que executar repetidamente a mesma AST não a altera de modo que mude chamadas subsequentes. Se não for seguro reutilizar a AST, descartar essa otimização e reportar a limitação, sem trocar silenciosamente a semântica dos scripts.
+
+### 3. Snapshot diagnóstico sob demanda
+
+Estender o relatório F8 existente de `PlayStateDiagnostics` com contagens e estimativas que ajudem a interpretar o próximo teste: scripts Lua carregados, câmeras ativas, filtros de shader encontrados e tamanho estimado dos maiores gráficos sólidos gerados. O snapshot é sob demanda e não deve produzir uma linha por frame nem criar instrumentação de tempo ativa continuamente. Se uma contagem não puder ser obtida sem acoplar o diagnóstico a internals frágeis, omiti-la e registrar essa limitação.
+
+## Fluxo
+
+1. Scripts chamam `makeGraphic` como hoje.
+2. A ponte Lua avalia dimensões e aplica o caminho de textura mínima apenas a sólidos acima do limiar; objetos pequenos mantêm o comportamento atual.
+3. Chamadas `runHaxeCode` chegam ao interpretador persistente; a chave exata do código encontra AST cacheada quando disponível; a AST executa em cada chamada.
+4. Ao solicitar o diagnóstico F8, a engine coleta o snapshot sem alterar a ordem de eventos, o estado da música ou os scripts.
+
+## Fora de escopo
+
+- Editar `genocide-D3R`, seus charts, eventos, personagens, shaders ou scripts.
+- Alterar a semântica, ordem, cancelamento ou timing dos eventos do chart.
+- Precarregar indiscriminadamente assets, personagens ou shaders.
+- Substituir ou converter câmeras nesta etapa.
+- Prometer um valor fixo de FPS antes da comparação na máquina do usuário.
+
+## Compatibilidade e riscos
+
+- `frameWidth`/`frameHeight` podem diferir em sprites sólidos grandes; confirmar todos os consumidores relevantes da ponte Lua. Se houver dependência, preservar o caminho antigo para esse caso.
+- Cache de AST pode reter memória ou ter comportamento incorreto se o interpretador mutar a expressão. Limite e limpeza são obrigatórios; reutilização depende de inspeção da implementação do parser/interpreter.
+- A otimização da textura reduz a memória de backing do bitmap, mas o retângulo ainda cobre uma grande área de tela quando desenhado. Portanto, não garante ganho específico de GPU ou uma taxa de FPS determinada.
+- A captura F8 deve ser sob demanda para evitar overhead permanente e ruído no console.
+
+## Critérios de aceitação
+
+- O conteúdo do mod, o chart e os eventos permanecem inalterados.
+- Para um gráfico sólido acima do limiar, a memória estimada do bitmap de backing cai de forma substancial enquanto dimensões visuais, cor, alpha, posição, câmera e hitbox permanecem equivalentes.
+- Chamadas repetidas de texto Haxe idêntico reutilizam o parse, mas continuam executando os efeitos uma vez por chamada; reload/destroy não deixa entradas presas.
+- O diagnóstico F8 mostra o snapshot disponível sem spam contínuo.
+- Compilação Release completa; o teste manual compara a mesma música, build Release e máquina, com scripts ativados, antes/depois, anotando FPS e memória. O resultado é relatado como medição observada, não garantia.
+- Se a música continuar lenta, o próximo diagnóstico mede separadamente câmera/shader e callbacks Lua por custo; carregadores só mudam se esses dados apontarem para eles.
+
+## Próxima etapa
+
+Após o usuário revisar e aprovar este documento, elaborar um plano de implementação com arquivos e verificações exatos. Nenhuma implementação começa antes da aprovação do spec e do plano.

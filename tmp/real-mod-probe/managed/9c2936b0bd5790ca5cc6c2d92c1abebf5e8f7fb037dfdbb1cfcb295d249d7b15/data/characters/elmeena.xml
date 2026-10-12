@@ -1,8 +1,0 @@
-<!DOCTYPE codename-engine-character>
-<character x="-800" y="-590" sprite="characters/elmeena" scale="0.4" camx="550" camy="720" icon="elmo" color="#FFC9D1" holdTime="5.6">
-	<anim name="idle" anim="idle" x="5" y="-32" fps="12"/>
-	<anim name="singLEFT" anim="singLEFT" x="6" y="-32" fps="12"/>
-	<anim name="singUP" anim="singUP" x="5" y="-32" fps="12"/>
-	<anim name="singDOWN" anim="singDOWN" x="5" y="-32" fps="12"/>
-	<anim name="singRIGHT" anim="singRIGHT" x="5" y="-32" fps="12"/>
-</character>

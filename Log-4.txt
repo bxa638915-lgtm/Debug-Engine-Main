@@ -1,0 +1,46 @@
+Link: ApplicationMain.exe
+   Criando biblioteca ApplicationMain.lib e objeto ApplicationMain.exp
+[  16:30:08  |   VERBOSE   ] Switched to mod: d 3 S 0 r mix
+[  16:30:16  |   WARNING   ] Blend Mode Extensions won't work in MOD_API_VERSION below than 2
+[  16:30:16  | INFORMATION ] [Language] Found languages: en/English, es/Español, it/Italiano, pl/Polski, pt/Português
+[  16:30:16  |   VERBOSE   ] [Language] Setting Language To: English (en)
+[  16:30:18  | INFORMATION ] [Discord] Connected to User Dev S.Hx (dev_scx4dc)
+[  16:30:41  |   WARNING   ] [FLIXEL] FlxG.cameras.remove(): The camera you attempted to remove is not a part of the game.
+[  16:30:41  |   WARNING   ] [FLIXEL] FlxG.cameras.remove(): The camera you attempted to remove is not a part of the game.
+[  16:30:41  |   WARNING   ] [FLIXEL] FlxG.cameras.remove(): The camera you attempted to remove is not a part of the game.
+[  16:30:42  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:117: [WARN] Shader float[] property overlayColor not found.
+[  16:30:42  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:117: [WARN] Shader float[] property satinColor not found.
+[  16:30:42  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:117: [WARN] Shader float[] property innerShadowColor not found.
+[  16:30:42  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:100: [WARN] Shader float property innerShadowAngle not found.
+[  16:30:42  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:100: [WARN] Shader float property innerShadowDistance not found.
+[  16:30:42  |    ERROR    ] [FLIXEL] Could not find a image asset with ID 'assets/images/empty.png'.
+[  16:30:42  |    ERROR    ] [FLIXEL] Could not find a image asset with ID 'assets/images/empty.png'.
+[  16:30:44  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:44  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:44  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:45  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:46  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:53  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:54  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:55  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:55  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:56  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:57  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:58  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:58  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:58  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:58  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:58  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:117: [WARN] Shader float[] property overlayColor not found.
+[  16:30:58  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:117: [WARN] Shader float[] property satinColor not found.
+[  16:30:58  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:117: [WARN] Shader float[] property innerShadowColor not found.
+[  16:30:58  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:100: [WARN] Shader float property innerShadowAngle not found.
+[  16:30:58  |    TRACE    ] flixel/addons/display/FlxRuntimeShader.hx:100: [WARN] Shader float property innerShadowDistance not found.
+[  16:30:58  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:59  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:30:59  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:31:00  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:31:00  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:31:00  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:31:00  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:31:00  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)
+[  16:31:00  |    ERROR    ] Better Cinematics.luaLua callback onEvent failed: [string "--Created by RamenDominoes (Please credit if ..."]:55: attempt to perform arithmetic on global 'StrumY' (a nil value)

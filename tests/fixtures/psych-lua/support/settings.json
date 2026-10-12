@@ -1,0 +1,8 @@
+[
+  {
+    "name": "DBE task 6 setting",
+    "type": "string",
+    "save": "dbeTask6Setting",
+    "value": "loaded-from-mod"
+  }
+]

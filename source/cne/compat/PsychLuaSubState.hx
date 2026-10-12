@@ -14,18 +14,29 @@ class PsychLuaSubState extends FlxSubState
 	final pauseGame:Bool;
 	var previousPersistentUpdate:Bool;
 	var previousPersistentDraw:Bool;
+	var previousPaused:Bool;
+	var previousFollowLerp:Float;
+	var musicWasPlaying:Bool;
+	var vocalsWerePlaying:Bool;
 
 	public function new(name:String, pauseGame:Bool = false)
 	{
 		substateName = name == null || name.length == 0 ? "unnamed" : name;
 		this.pauseGame = pauseGame;
 		game = PlayState.instance;
-		super();
-		currentName = substateName;
 		if (pauseGame && game != null)
 		{
 			previousPersistentUpdate = game.persistentUpdate;
 			previousPersistentDraw = game.persistentDraw;
+			previousPaused = game.paused;
+			previousFollowLerp = game.camGame == null ? 0 : game.camGame.followLerp;
+			musicWasPlaying = game.inst != null && game.inst.playing;
+			vocalsWerePlaying = game.vocals != null && game.vocals.playing;
+		}
+		super();
+		currentName = substateName;
+		if (pauseGame && game != null)
+		{
 			game.persistentUpdate = false;
 			game.persistentDraw = true;
 			game.paused = true;
@@ -67,7 +78,10 @@ class PsychLuaSubState extends FlxSubState
 		{
 			game.persistentUpdate = previousPersistentUpdate;
 			game.persistentDraw = previousPersistentDraw;
-			game.paused = false;
+			game.paused = previousPaused;
+			if (game.camGame != null) game.camGame.followLerp = previousFollowLerp;
+			if (!musicWasPlaying && game.inst != null) game.inst.pause();
+			if (!vocalsWerePlaying && game.vocals != null) game.vocals.pause();
 		}
 		super.destroy();
 	}

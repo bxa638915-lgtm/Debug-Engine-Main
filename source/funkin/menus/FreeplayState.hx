@@ -5,6 +5,8 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import dbe.compatibility.chart.VSliceChartCodec;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import funkin.backend.chart.Chart;
 import funkin.backend.chart.ChartData.ChartMetaData;
 import funkin.backend.chart.VSliceParser;
@@ -389,8 +391,11 @@ class FreeplayState extends MusicBeatState
 		Options.freeplayLastDifficulty = curDifficulties[curDifficulty];
 		Options.freeplayLastVariation = curSong.variant;
 
-		PlayState.loadSong(event.song, event.difficulty, event.variant, event.opponentMode, event.coopMode);
-		FlxG.switchState(new PlayState());
+		var request = SongLoadRequest.forSong(event.song, event.difficulty, event.variant, event.opponentMode, event.coopMode, "freeplay");
+		SongLoader.start(request, () -> {
+			PlayState.loadSong(event.song, event.difficulty, event.variant, event.opponentMode, event.coopMode);
+			return PlayState.SONG;
+		});
 	}
 
 	public function convertChart() {

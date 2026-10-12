@@ -42,9 +42,18 @@ class PsychLuaPropertyPath
 		}
 		if (Std.isOfType(value, Array))
 		{
-			var index = Std.parseInt(part);
 			var items:Array<Dynamic> = cast value;
+			if (part == "length") return items.length;
+			var index = Std.parseInt(part);
 			return index != null && index >= 0 && index < items.length ? items[index] : null;
+		}
+		if (isFlxPoint(value))
+		{
+			return switch (part)
+			{
+				case "x" | "y": Reflect.getProperty(value, part);
+				default: null;
+			};
 		}
 		if (part == "direction" && hasNoteAngle(value))
 		{
@@ -93,6 +102,10 @@ class PsychLuaPropertyPath
 		{
 			switch (part)
 			{
+				case "scroll": return Reflect.getProperty(value, "scroll");
+				case "scroll.x" | "scroll.y":
+					var scroll:Dynamic = Reflect.getProperty(value, "scroll");
+					return scroll == null ? null : Reflect.getProperty(scroll, part.substr("scroll.".length));
 				case "x" | "y" | "width" | "height" | "zoom" | "alpha" | "angle" | "visible" | "bgColor":
 					var res:Dynamic = Reflect.getProperty(value, part);
 					if (res == null) res = Reflect.field(value, part);
@@ -112,6 +125,19 @@ class PsychLuaPropertyPath
 		return Type.getClassName(cls) == "flixel.FlxCamera";
 	}
 
+	private static function isFlxPoint(value:Dynamic):Bool
+	{
+		if (value == null) return false;
+		var cls = Type.getClass(value);
+		while (cls != null)
+		{
+			var className = Type.getClassName(cls);
+			if (className == "flixel.math.FlxPoint" || className == "flixel.math.FlxBasePoint") return true;
+			cls = Type.getSuperClass(cls);
+		}
+		return false;
+	}
+
 	private static function hasNoteAngle(value:Dynamic):Bool
 	{
 		if (value == null) return false;
@@ -122,7 +148,7 @@ class PsychLuaPropertyPath
 
 	public static function read(root:Dynamic, path:String):Dynamic
 	{
-		var value = root;
+		var value:Dynamic = root;
 		var parts = split(path);
 		if (value == null)
 		{
@@ -188,10 +214,21 @@ class PsychLuaPropertyPath
 			return newValue;
 		}
 		var field = property;
+		if (isFlxPoint(target) && (field == "x" || field == "y"))
+		{
+			var valueFloat = Std.parseFloat(Std.string(newValue));
+			if (Math.isNaN(valueFloat)) return null;
+			Reflect.setProperty(target, field, valueFloat);
+			return newValue;
+		}
 		if (isCamera(target))
 		{
-			switch (field)
+				switch (field)
 			{
+				case "scroll":
+					if (isFlxPoint(newValue))
+						Reflect.setProperty(target, "scroll", newValue);
+					return newValue;
 				case "x" | "y" | "width" | "height" | "zoom" | "alpha" | "angle" | "visible":
 					try {
 						Reflect.setProperty(target, field, newValue);

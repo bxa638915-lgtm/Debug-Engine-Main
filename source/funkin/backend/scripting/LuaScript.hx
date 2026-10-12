@@ -1,14 +1,18 @@
 package funkin.backend.scripting;
-
+#if LUA_ALLOWED
 import cne.compat.LuaCallbackScope;
 import cne.compat.PsychLuaObjectRegistry;
 import cne.compat.PsychLuaPropertyPath;
+import cne.compat.PsychLuaCamera;
+import cne.compat.PsychLuaProfile;
 import cne.compat.PsychHookMap;
 import cne.compat.PsychLuaSubState;
 import cne.compat.PsychDialogueConverter;
 import cne.compat.PsychTimeBar;
 import cne.compat.PsychCallbackResult;
 import cne.compat.PsychAchievementStore;
+import cne.compat.ScriptCapabilities;
+import dbe.diagnostics.ScriptTimingProfiler;
 import flixel.FlxSprite;
 import flixel.FlxObject;
 import flixel.FlxG;
@@ -27,6 +31,8 @@ import openfl.display.BlendMode;
 import haxe.ds.ObjectMap;
 import funkin.backend.system.Conductor;
 import funkin.backend.assets.Paths;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import funkin.backend.assets.ModsFolder;
 import funkin.backend.shaders.CustomShader;
 import funkin.backend.utils.DiscordUtil;
@@ -72,6 +78,9 @@ class LuaScript extends Script
 	private var luaTimers:Map<String, FlxTimer> = [];
 	private var luaTweens:Map<String, FlxTween> = [];
 	private var luaSounds:Map<String, FlxSound> = [];
+	private var luaSoundLoops:Map<String, Bool> = [];
+	private static var luaDeletedFiles:Map<String, Bool> = [];
+	private var stageLuaObjects:Map<String, FlxSprite> = [];
 	private var sourceOverride:String;
 	private var luaHScript:Script;
 	private var scriptClosed:Bool = false;
@@ -110,7 +119,8 @@ class LuaScript extends Script
 		}
 
 		callbackScope = new LuaCallbackScope(lua, (callbackError:Dynamic) -> error('Lua API callback failed: ${Std.string(callbackError)}'));
-		LuaL.dostring(lua, "if math and not math.lerp then math.lerp = function(from, to, ratio) return from + (to - from) * ratio end end; if not lerp then lerp = math.lerp end");
+		callbackScope.bind("dbeSafeOsClock", () -> haxe.Timer.stamp());
+		LuaL.dostring(lua, "os = { clock = dbeSafeOsClock }; dbeSafeOsClock = nil; if math and not math.lerp then math.lerp = function(from, to, ratio) return from + (to - from) * ratio end end; if not lerp then lerp = math.lerp end");
 		bindPsychApi();
 		setNumberConstant("screenWidth", FlxG.width);
 		setNumberConstant("screenHeight", FlxG.height);
@@ -121,11 +131,11 @@ class LuaScript extends Script
 		callbackScope.bind("print", function(?a:Dynamic, ?b:Dynamic, ?c:Dynamic, ?d:Dynamic):Void printValues([a, b, c, d]));
 		callbackScope.bind("debugPrint", function(?a:Dynamic, ?b:Dynamic, ?c:Dynamic, ?d:Dynamic):Void printValues([a, b, c, d]));
 		callbackScope.bind("getProperty", (path:String) -> readPsychProperty(path));
-		callbackScope.bind("setProperty", (path:String, value:Dynamic) -> writePsychProperty(path, value));
+		callbackScope.bind("setProperty", setPsychProperty);
 		callbackScope.bind("getPropertyFromClass", (className:String, path:String) -> readPath(resolveClass(className), path));
-		callbackScope.bind("setPropertyFromClass", (className:String, path:String, value:Dynamic) -> writePath(resolveClass(className), path, value));
+		callbackScope.bind("setPropertyFromClass", setPsychPropertyFromClass);
 		callbackScope.bind("getPropertyFromGroup", (groupName:String, index:Float, path:String) -> readPath(getGroupMember(groupName, Std.int(index)), path));
-		callbackScope.bind("setPropertyFromGroup", (groupName:String, index:Float, path:String, value:Dynamic) -> writePath(getGroupMember(groupName, Std.int(index)), path, value));
+		callbackScope.bind("setPropertyFromGroup", setPsychPropertyFromGroup);
 		callbackScope.bind("getRandomBool", function(?chance:Float):Bool return FlxG.random.bool(chance == null ? 50 : chance));
 		callbackScope.bind("characterPlayAnim", function(characterName:String, animation:String, ?force:Bool):Bool
 		{
@@ -164,8 +174,8 @@ class LuaScript extends Script
 	{
 		callbackScope.bind("makeLuaSprite", function(tag:String, ?image:String = null, ?x:Float = 0, ?y:Float = 0):Bool
 		{
-			var sprite = new FlxSprite(x, y);
-			if (image != null && image.length > 0) sprite.loadGraphic(Paths.image(image));
+			var sprite = new LuaGraphicSprite(x, y);
+			if (image != null && image.length > 0 && image.toLowerCase() != "empty") sprite.loadGraphic(Paths.image(image));
 			if (PlayState.instance != null) sprite.cameras = [PlayState.instance.camGame];
 			sprite.active = true;
 			registerLuaObject(tag, sprite);
@@ -173,8 +183,8 @@ class LuaScript extends Script
 		});
 		callbackScope.bind("makeAnimatedLuaSprite", function(tag:String, ?image:String = null, ?x:Float = 0, ?y:Float = 0, ?spriteType:String = "auto"):Bool
 		{
-			var sprite = new FlxSprite(x, y);
-			if (image != null && image.length > 0) sprite.frames = Paths.getFrames(image);
+			var sprite = new LuaGraphicSprite(x, y);
+			if (image != null && image.length > 0 && image.toLowerCase() != "empty") sprite.frames = Paths.getFrames(image);
 			if (PlayState.instance != null) sprite.cameras = [PlayState.instance.camGame];
 			sprite.active = true;
 			registerLuaObject(tag, sprite);
@@ -183,29 +193,40 @@ class LuaScript extends Script
 		callbackScope.bind("makeGraphic", function(tag:String, ?width:Int = 256, ?height:Int = 256, ?color:Dynamic = "FFFFFF"):Bool
 		{
 			var sprite = getOrCreateLuaSprite(tag);
-			sprite.makeGraphic(width, height, parseLuaColor(color));
+			makeLuaSpriteGraphic(sprite, width, height, parseLuaColor(color));
 			return true;
 		});
 		callbackScope.bind("luaSpriteMakeGraphic", function(tag:String, width:Int, height:Int, ?color:Dynamic = "FFFFFF"):Bool
 		{
 			var sprite = getLuaSprite(tag);
 			if (sprite == null) return false;
-			sprite.makeGraphic(width, height, parseLuaColor(color));
+			makeLuaSpriteGraphic(sprite, width, height, parseLuaColor(color));
 			return true;
 		});
 		callbackScope.bind("addLuaSprite", addLuaSprite);
 		callbackScope.bind("removeLuaSprite", removeLuaSprite);
 		callbackScope.bind("luaSpriteExists", (tag:String) -> getLuaSprite(tag) != null);
-		callbackScope.bind("luaSpriteAddAnimationByPrefix", addLuaAnimationByPrefix);
+		callbackScope.bind("luaSpriteAddAnimationByPrefix", function(tag:String, name:String, prefix:String, ?frameRate:Float = 24, ?looped:Bool = true):Dynamic
+		{
+			addLuaAnimationByPrefix(tag, name, prefix, frameRate, looped);
+			return null;
+		});
 		callbackScope.bind("addAnimationByPrefix", addLuaAnimationByPrefix);
-		callbackScope.bind("luaSpriteAddAnimationByIndices", addLuaAnimationByIndices);
+		callbackScope.bind("luaSpriteAddAnimationByIndices", function(tag:String, name:String, prefix:String, indices:Dynamic, ?frameRate:Float = 24):Dynamic
+		{
+			addLuaAnimationByIndices(tag, name, prefix, indices, frameRate);
+			return null;
+		});
 		callbackScope.bind("addAnimationByIndices", addLuaAnimationByIndices);
-		callbackScope.bind("addAnimation", function(tag:String, name:String, frames:Array<Dynamic>, ?frameRate:Float = 24, ?looped:Bool = true):Bool
-			return addLuaAnimationByIndices(tag, name, "", frames, frameRate, looped));
-		callbackScope.bind("addAnimationByIndicesLoop", function(tag:String, name:String, prefix:String, indices:Array<Dynamic>, ?frameRate:Float = 24):Bool
+		callbackScope.bind("addAnimation", addLuaAnimation);
+		callbackScope.bind("addAnimationByIndicesLoop", function(tag:String, name:String, prefix:String, indices:Dynamic, ?frameRate:Float = 24):Bool
 			return addLuaAnimationByIndices(tag, name, prefix, indices, frameRate, true));
 		callbackScope.bind("objectPlayAnimation", playLuaAnimation);
-		callbackScope.bind("luaSpritePlayAnimation", playLuaAnimation);
+		callbackScope.bind("luaSpritePlayAnimation", function(tag:String, animation:String, ?force:Bool = false):Dynamic
+		{
+			playLuaAnimation(tag, animation, force);
+			return null;
+		});
 		callbackScope.bind("playAnim", playLuaAnimation);
 		callbackScope.bind("setObjectCamera", setLuaObjectCamera);
 		callbackScope.bind("setLuaSpriteCamera", setLuaObjectCamera);
@@ -221,13 +242,21 @@ class LuaScript extends Script
 		callbackScope.bind("loadGraphic", loadLuaGraphic);
 		callbackScope.bind("loadFrames", loadLuaFrames);
 		callbackScope.bind("loadMultipleFrames", loadLuaFrames);
-		callbackScope.bind("makeFlxAnimateSprite", makeLuaAnimateSprite);
-		callbackScope.bind("loadAnimateAtlas", loadLuaAnimateAtlas);
+		callbackScope.bind("makeFlxAnimateSprite", function(tag:String, ?x:Float = 0, ?y:Float = 0, ?loadFolder:String = null):Dynamic
+		{
+			makeLuaAnimateSprite(tag, x, y, loadFolder);
+			return null;
+		});
+		callbackScope.bind("loadAnimateAtlas", function(tag:String, folderOrImage:String, ?spriteJson:String = null, ?animationJson:String = null):Dynamic
+		{
+			loadLuaAnimateAtlas(tag, folderOrImage, spriteJson, animationJson);
+			return null;
+		});
 		callbackScope.bind("addAnimationBySymbol", addLuaSymbolAnimation);
 		callbackScope.bind("addAnimationBySymbolIndices", addLuaSymbolIndicesAnimation);
-		callbackScope.bind("addToGroup", addLuaObjectToGroup);
-		callbackScope.bind("removeFromGroup", removeLuaObjectFromGroup);
-		callbackScope.bind("updateHitboxFromGroup", updateLuaHitboxFromGroup);
+		callbackScope.bind("addToGroup", function(groupName:String, tag:String, ?index:Int = -1):Void addLuaObjectToGroup(groupName, tag, index));
+		callbackScope.bind("removeFromGroup", removePsychObjectFromGroup);
+		callbackScope.bind("updateHitboxFromGroup", function(groupName:String, index:Int):Void updateLuaHitboxFromGroup(groupName, index));
 		callbackScope.bind("getPixelColor", getLuaPixelColor);
 	}
 
@@ -266,7 +295,7 @@ class LuaScript extends Script
 	private function bindPsychUtilityApi():Void
 	{
 		callbackScope.bind("getPropertyLuaSprite", (tag:String, property:String) -> PsychLuaPropertyPath.read(getLuaObject(tag), property));
-		callbackScope.bind("setPropertyLuaSprite", (tag:String, property:String, value:Dynamic) -> PsychLuaPropertyPath.write(getLuaObject(tag), property, value));
+		callbackScope.bind("setPropertyLuaSprite", setPsychLuaSpriteProperty);
 		callbackScope.bind("getRandomInt", function(min:Float, max:Float, ?exclude:String = ""):Int
 		{
 			var excluded:Array<Int> = [];
@@ -310,11 +339,15 @@ class LuaScript extends Script
 		callbackScope.bind("getGraphicMidpointY", (tag:String) -> getLuaObjectPoint(tag, true, true));
 		callbackScope.bind("getScreenPositionX", (tag:String, ?camera:String = "game") -> getLuaScreenPosition(tag, camera, false));
 		callbackScope.bind("getScreenPositionY", (tag:String, ?camera:String = "game") -> getLuaScreenPosition(tag, camera, true));
-		callbackScope.bind("callMethod", callLuaMethod);
-		callbackScope.bind("callMethodFromClass", callLuaMethodFromClass);
-		callbackScope.bind("createInstance", createLuaInstance);
-		callbackScope.bind("addInstance", addLuaInstance);
-		callbackScope.bind("instanceArg", (name:String) -> '##PSYCHLUA_STRINGTOOBJ$name');
+		if (psychLuaProfileName() != PsychLuaProfile.PSYCH_063)
+		{
+			callbackScope.bind("callMethod", callLuaMethod);
+			callbackScope.bind("callMethodFromClass", callLuaMethodFromClass);
+			callbackScope.bind("createInstance", createLuaInstance);
+			callbackScope.bind("addInstance", function(tag:String, ?inFront:Bool = false):Void { addLuaInstance(tag, inFront); });
+			callbackScope.bind("instanceArg", function(name:String, ?className:String = null):String
+				return '##PSYCHLUA_STRINGTOOBJ::$name${className == null ? "" : "::" + className}');
+		}
 	}
 
 	private function bindPsychScriptApi():Void
@@ -324,22 +357,39 @@ class LuaScript extends Script
 		callbackScope.bind("getRunningScripts", getRunningLuaScripts);
 		callbackScope.bind("isRunning", isLuaScriptRunning);
 		callbackScope.bind("callScript", callLuaScript);
+		if (psychLuaProfileName() == PsychLuaProfile.PSYCH_063)
+		{
+			callbackScope.bind("getGlobalFromScript", getLuaGlobalFromScript);
+			callbackScope.bind("setGlobalFromScript", setLuaGlobalFromScript);
+		}
 		callbackScope.bind("callOnScripts", function(functionName:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false, ?ignoreSelf:Bool = true,
 			?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>) return callPsychScripts(functionName, args, ignoreStops, ignoreSelf, excludeScripts, excludeValues));
 		callbackScope.bind("callOnLuas", function(functionName:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false, ?ignoreSelf:Bool = true,
-			?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>) return callLuaScripts(functionName, args, ignoreStops, ignoreSelf, excludeScripts, excludeValues));
+			?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>)
+		{
+			var result = callLuaScripts(functionName, args, ignoreStops, ignoreSelf, excludeScripts, excludeValues);
+			return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : result;
+		});
 		callbackScope.bind("setOnScripts", function(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?excludeScripts:Array<String>) return setLuaScripts(name, value, ignoreSelf, excludeScripts, false));
 		callbackScope.bind("setOnLuas", function(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?excludeScripts:Array<String>) return setLuaScripts(name, value, ignoreSelf, excludeScripts, true));
 		callbackScope.bind("addLuaScript", addLuaScript);
 		callbackScope.bind("removeLuaScript", removeLuaScript);
-		callbackScope.bind("addHScript", addHScript);
-		callbackScope.bind("removeHScript", removeHScript);
-		callbackScope.bind("callOnHScript", function(functionName:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false, ?ignoreSelf:Bool = true,
-			?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>) return callScripts(functionName, args, ignoreStops, ignoreSelf, excludeScripts, excludeValues, "hscript"));
-		callbackScope.bind("setOnHScript", function(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?excludeScripts:Array<String>) return setScripts(name, value, ignoreSelf, excludeScripts, "hscript"));
-		callbackScope.bind("runHaxeCode", runLuaHScriptCode);
-		callbackScope.bind("runHaxeFunction", runLuaHScriptFunction);
-		callbackScope.bind("addHaxeLibrary", addLuaHaxeLibrary);
+		if (psychLuaProfileName() != PsychLuaProfile.PSYCH_063)
+		{
+			callbackScope.bind("addHScript", function(name:String, ?ignoreAlreadyRunning:Bool = false):Void { addHScript(name, ignoreAlreadyRunning); });
+			callbackScope.bind("removeHScript", removeHScript);
+			callbackScope.bind("callOnHScript", function(functionName:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false, ?ignoreSelf:Bool = true,
+				?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>) return callScripts(functionName, args, ignoreStops, ignoreSelf, excludeScripts, excludeValues, "hscript"));
+			callbackScope.bind("setOnHScript", function(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?excludeScripts:Array<String>) return setScripts(name, value, ignoreSelf, excludeScripts, "hscript"));
+			callbackScope.bind("runHaxeFunction", runLuaHScriptFunction);
+		}
+		callbackScope.bind("runHaxeCode", function(code:String, ?varsToBring:Dynamic, ?functionName:String, ?args:Array<Dynamic>):Dynamic
+		{
+			return psychLuaProfileName() == PsychLuaProfile.PSYCH_063
+				? runLuaHScriptCode(code)
+				: runLuaHScriptCode(code, varsToBring, functionName, args);
+		});
+		callbackScope.bind("addHaxeLibrary", function(library:String, ?packageName:String = ""):Void { addLuaHaxeLibrary(library, packageName); });
 		callbackScope.bind("close", closeLuaScript);
 	}
 
@@ -387,6 +437,15 @@ class LuaScript extends Script
 		}
 	}
 
+	/** Makes XML stage sprites available to Lua property and object helpers without serializing Haxe objects. */
+	public function setStageSprites(sprites:Map<String, FlxSprite>):Void
+	{
+		stageLuaObjects = [];
+		if (sprites == null) return;
+		for (tag => sprite in sprites)
+			if (tag != null && sprite != null) stageLuaObjects.set(PsychLuaObjectRegistry.normalizeTag(tag), sprite);
+	}
+
 	private function getRunningLuaScripts():Array<String>
 	{
 		var result:Array<String> = [];
@@ -402,8 +461,13 @@ class LuaScript extends Script
 		var game = PlayState.instance;
 		if (game == null || game.scripts == null || name == null) return null;
 		var target = StringTools.replace(name.toLowerCase(), "\\", "/");
+		var targetWithExtension = StringTools.endsWith(target, ".lua") ? target : target + ".lua";
+		var targetWithoutExtension = StringTools.endsWith(target, ".lua") ? target.substring(0, target.length - 4) : target;
 		for (script in game.scripts.scripts)
-			if (Std.isOfType(script, LuaScript) && (script.path.toLowerCase() == target || script.fileName.toLowerCase() == target || StringTools.endsWith(script.path.toLowerCase(), target))) return script;
+			if (Std.isOfType(script, LuaScript)
+				&& (script.path.toLowerCase() == target || script.path.toLowerCase() == targetWithExtension
+					|| script.fileName.toLowerCase() == target || script.fileName.toLowerCase() == targetWithoutExtension
+					|| StringTools.endsWith(script.path.toLowerCase(), targetWithExtension))) return script;
 		return null;
 	}
 
@@ -415,39 +479,52 @@ class LuaScript extends Script
 	private function callLuaScript(name:String, functionName:String, ?args:Array<Dynamic>):Dynamic
 	{
 		var script = findLuaScript(name);
-		return script == null ? null : script.call(functionName, args == null ? [] : args);
+		if (script == null) return null;
+		var result = script.call(functionName, args == null ? [] : args);
+		return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : result;
+	}
+
+	private function getLuaGlobalFromScript(name:String, global:String):Dynamic
+	{
+		var script = findLuaScript(name);
+		if (script == null || global == null) return null;
+		var value = script.get(global);
+		if (Std.isOfType(value, String) || Std.isOfType(value, Bool) || Std.isOfType(value, Int) || Std.isOfType(value, Float)) return value;
+		return null;
+	}
+
+	private function setLuaGlobalFromScript(name:String, global:String, value:Dynamic):Void
+	{
+		var script = findLuaScript(name);
+		if (script != null && global != null) script.set(global, value);
 	}
 
 	private function callLuaScripts(functionName:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false, ?ignoreSelf:Bool = true,
 		?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>):Dynamic
 	{
 		var game = PlayState.instance;
-		if (game == null || game.scripts == null) return PsychCallbackResult.FUNCTION_CONTINUE;
+		var profile = psychLuaProfileName();
+		if (game == null || game.scripts == null) return PsychCallbackResult.continueValueForProfile(profile);
 		if (excludeScripts == null) excludeScripts = [];
-		if (excludeValues == null) excludeValues = [PsychCallbackResult.FUNCTION_CONTINUE];
-		var result:Dynamic = PsychCallbackResult.FUNCTION_CONTINUE;
+		if (excludeValues == null) excludeValues = PsychCallbackResult.defaultExcludeValues(profile);
+		var callbacks:Array<Array<Dynamic>->Dynamic> = [];
 		for (script in game.scripts.scripts)
 		{
 			if (!Std.isOfType(script, LuaScript)) continue;
 			if (ignoreSelf && script == this) continue;
 			if (isPsychScriptExcluded(script, excludeScripts)) continue;
 			if (!script.active) continue;
-			var value = script.call(functionName, args == null ? [] : args);
-			if (PsychCallbackResult.shouldStopLua(value, ignoreStops, excludeValues))
-			{
-				result = value;
-				break;
-			}
-			if (PsychCallbackResult.includeResult(value, excludeValues)) result = value;
+			var target:LuaScript = cast script;
+			callbacks.push((callbackArgs:Array<Dynamic>) -> target.call(functionName, callbackArgs));
 		}
-		return result;
+		return PsychCallbackResult.dispatchLuaCallbacks(callbacks, args, profile, ignoreStops, excludeValues);
 	}
 
 	private function callPsychScripts(functionName:String, ?args:Array<Dynamic>, ?ignoreStops:Bool = false, ?ignoreSelf:Bool = true,
 		?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>):Dynamic
 	{
 		if (excludeScripts == null) excludeScripts = [];
-		if (excludeValues == null) excludeValues = [PsychCallbackResult.FUNCTION_CONTINUE];
+		if (excludeValues == null) excludeValues = PsychCallbackResult.defaultExcludeValues(psychLuaProfileName());
 		var result = callLuaScripts(functionName, args, ignoreStops, ignoreSelf, excludeScripts, excludeValues);
 		if (PsychCallbackResult.shouldCallHScript(result, excludeValues))
 			result = callScripts(functionName, args, ignoreStops, ignoreSelf, excludeScripts, excludeValues, "hscript");
@@ -544,10 +621,11 @@ class LuaScript extends Script
 		?excludeScripts:Array<String>, ?excludeValues:Array<Dynamic>, ?language:String = "hscript"):Dynamic
 	{
 		var game = PlayState.instance;
-		if (game == null || game.scripts == null) return PsychCallbackResult.FUNCTION_CONTINUE;
+		var profile = psychLuaProfileName();
+		if (game == null || game.scripts == null) return PsychCallbackResult.continueValueForProfile(profile);
 		if (excludeScripts == null) excludeScripts = [];
-		if (excludeValues == null) excludeValues = [PsychCallbackResult.FUNCTION_CONTINUE];
-		var result:Dynamic = PsychCallbackResult.FUNCTION_CONTINUE;
+		if (excludeValues == null) excludeValues = PsychCallbackResult.defaultExcludeValues(profile);
+		var callbacks:Array<Array<Dynamic>->Dynamic> = [];
 		for (script in game.scripts.scripts)
 		{
 			if (language == "hscript" && !Std.isOfType(script, HScript)) continue;
@@ -555,15 +633,12 @@ class LuaScript extends Script
 			if (ignoreSelf && script == this) continue;
 			if (isPsychScriptExcluded(script, excludeScripts)) continue;
 			if (!script.active) continue;
-			var value = script.call(functionName, args == null ? [] : args);
-			if (PsychCallbackResult.shouldStopHScript(value, ignoreStops, excludeValues))
-			{
-				result = value;
-				break;
-			}
-			if (PsychCallbackResult.includeResult(value, excludeValues)) result = value;
+			var target:Script = script;
+			callbacks.push((callbackArgs:Array<Dynamic>) -> target.call(functionName, callbackArgs));
 		}
-		return result;
+		return language == "lua"
+			? PsychCallbackResult.dispatchLuaCallbacks(callbacks, args, profile, ignoreStops, excludeValues)
+			: PsychCallbackResult.dispatchHScriptCallbacks(callbacks, args, profile, ignoreStops, excludeValues);
 	}
 
 	private function setScripts(name:String, value:Dynamic, ?ignoreSelf:Bool = false, ?excludeScripts:Array<String>, ?language:String = "hscript"):Dynamic
@@ -584,49 +659,70 @@ class LuaScript extends Script
 	private function runLuaHScriptCode(code:String, ?varsToBring:Dynamic, ?functionName:String, ?args:Array<Dynamic>):Dynamic
 	{
 		if (code == null) return null;
-		var game = PlayState.instance;
-		if (game == null) return null;
-		if (luaHScript == null)
-		{
-			luaHScript = Script.fromString(code, 'psychlua/${fileName}_embedded.hx');
-			if (!Std.isOfType(luaHScript, HScript)) { luaHScript = null; return null; }
-			game.scripts.add(luaHScript);
-			luaHScript.set("game", game);
-			luaHScript.set("PlayState", PlayState);
-			luaHScript.set("FlxG", FlxG);
-			if (varsToBring != null)
-				for (field in Reflect.fields(varsToBring)) luaHScript.set(field, Reflect.field(varsToBring, field));
-			luaHScript.load();
+		var haxeCodeStartedAt = ScriptTimingProfiler.startTimer();
+		var hscript = ensureLuaHScript();
+		if (hscript == null) {
+			ScriptTimingProfiler.finishRunHaxeCode(path, haxeCodeStartedAt);
+			return null;
 		}
-		else
+		hscript.set("game", PlayState.instance);
+		hscript.set("PlayState", PlayState);
+		hscript.set("FlxG", FlxG);
+		if (varsToBring != null)
+			for (field in Reflect.fields(varsToBring)) hscript.set(field, Reflect.field(varsToBring, field));
+
+		var result = hscript.executeString(code);
+		if (functionName != null && functionName.length > 0)
 		{
-			var hscript:HScript = cast luaHScript;
-			hscript.set("game", game);
-			hscript.set("PlayState", PlayState);
-			hscript.set("FlxG", FlxG);
-			if (varsToBring != null)
-				for (field in Reflect.fields(varsToBring)) hscript.set(field, Reflect.field(varsToBring, field));
-			hscript.loadFromString(code);
-			if (hscript.expr != null) hscript.interp.execute(hscript.expr);
+			var callResult = hscript.call(functionName, args == null ? [] : args);
+			if (callResult != null) result = callResult;
 		}
-		if (functionName != null && functionName.length > 0) return luaHScript.call(functionName, args == null ? [] : args);
-		return null;
+		ScriptTimingProfiler.finishRunHaxeCode(path, haxeCodeStartedAt);
+		return toPsychLuaValue(result);
 	}
 
 	private function runLuaHScriptFunction(functionName:String, ?args:Array<Dynamic>):Dynamic
 	{
-		return luaHScript == null || functionName == null ? null : luaHScript.call(functionName, args == null ? [] : args);
+		if (functionName == null) return null;
+		var hscript = ensureLuaHScript();
+		return hscript == null ? null : toPsychLuaValue(hscript.call(functionName, args == null ? [] : args));
 	}
 
 	private function addLuaHaxeLibrary(library:String, ?packageName:String = ""):Bool
 	{
-		if (luaHScript == null || !Std.isOfType(luaHScript, HScript) || library == null) return false;
+		if (library == null) return false;
+		var hscript = ensureLuaHScript();
+		if (hscript == null) return false;
 		var fullName = packageName == null || packageName.length == 0 ? library : packageName + "." + library;
 		var resolved:Dynamic = Type.resolveClass(fullName);
-		if (resolved == null) resolved = Type.resolveEnum(fullName);
+		if (resolved == null && psychLuaProfileName() != PsychLuaProfile.PSYCH_063) resolved = Type.resolveEnum(fullName);
 		if (resolved == null) return false;
-		luaHScript.set(library, resolved);
+		hscript.set(library, resolved);
 		return true;
+	}
+
+	private function ensureLuaHScript():HScript
+	{
+		var game = PlayState.instance;
+		if (game == null) return null;
+		if (luaHScript != null && Std.isOfType(luaHScript, HScript)) return cast luaHScript;
+
+		var embedded = Script.fromString("", 'psychlua/${fileName}_embedded.hx');
+		if (!Std.isOfType(embedded, HScript)) return null;
+		luaHScript = embedded;
+		game.scripts.add(embedded);
+		embedded.set("game", game);
+		embedded.set("PlayState", PlayState);
+		embedded.set("FlxG", FlxG);
+		embedded.load();
+		return cast embedded;
+	}
+
+	private static function toPsychLuaValue(value:Dynamic):Dynamic
+	{
+		if (value == null || Std.isOfType(value, Bool) || Std.isOfType(value, Int) || Std.isOfType(value, Float) || Std.isOfType(value, String)
+			|| Std.isOfType(value, Array)) return value;
+		return null;
 	}
 
 	private function closeLuaScript():Bool
@@ -650,6 +746,8 @@ class LuaScript extends Script
 		callbackScope.bind("achievementExists", PsychAchievementStore.exists);
 		callbackScope.bind("changeDiscordPresence", changePsychDiscordPresence);
 		callbackScope.bind("changeDiscordClientID", changePsychDiscordClientID);
+		if (psychLuaProfileName() == PsychLuaProfile.PSYCH_063)
+			callbackScope.bind("changePresence", changePsychDiscordPresence);
 		callbackScope.bind("getTranslationPhrase", getPsychTranslationPhrase);
 		callbackScope.bind("getFileTranslation", getPsychFileTranslation);
 	}
@@ -819,7 +917,6 @@ class LuaScript extends Script
 		if (animateClass == null) return false;
 		var sprite:Dynamic = Type.createInstance(animateClass, [x, y]);
 		if (sprite == null) return false;
-		if (PlayState.instance != null) sprite.cameras = [PlayState.instance.camGame];
 		sprite.active = true;
 		registerLuaObject(tag, sprite);
 		if (loadFolder != null && loadFolder.length > 0 && !loadLuaAnimateAtlas(tag, loadFolder))
@@ -855,19 +952,42 @@ class LuaScript extends Script
 		if (animateController == null) return false;
 		var add = Reflect.field(animateController, "addBySymbol");
 		if (add == null) return false;
-		Reflect.callMethod(animateController, add, [name, symbol, frameRate, looped]);
+		Reflect.callMethod(animateController, add, [name, symbol, frameRate, looped, matX, matY]);
+		playLuaSymbolAnimationIfNeeded(animateController, name);
 		return true;
 	}
 
-	private function addLuaSymbolIndicesAnimation(tag:String, name:String, symbol:String, ?indices:Array<Dynamic>, ?frameRate:Float = 24, ?looped:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool
+	private function addLuaSymbolIndicesAnimation(tag:String, name:String, symbol:String, ?indices:Dynamic = null, ?frameRate:Float = 24, ?looped:Bool = false, ?matX:Float = 0, ?matY:Float = 0):Bool
 	{
 		var animateController = getLuaAnimateController(tag);
 		if (animateController == null) return false;
 		var add = Reflect.field(animateController, "addBySymbolIndices");
 		if (add == null) return false;
-		var frameIndices:Array<Int> = indices == null ? [] : [for (index in indices) Std.int(Std.parseFloat(Std.string(index)))];
-		Reflect.callMethod(animateController, add, [name, symbol, frameIndices, frameRate, looped]);
+		var frameIndices:Array<Int> = [];
+		if (indices == null)
+			frameIndices.push(0);
+		else if (Std.isOfType(indices, String))
+		{
+			for (index in (cast indices:String).trim().split(","))
+				frameIndices.push(Std.int(Std.parseFloat(index)));
+		}
+		else if (Std.isOfType(indices, Array))
+		{
+			for (index in (cast indices:Array<Dynamic>))
+				frameIndices.push(Std.int(Std.parseFloat(Std.string(index))));
+		}
+		else
+			return false;
+		Reflect.callMethod(animateController, add, [name, symbol, frameIndices, frameRate, looped, matX, matY]);
+		playLuaSymbolAnimationIfNeeded(animateController, name);
 		return true;
+	}
+
+	private function playLuaSymbolAnimationIfNeeded(animateController:Dynamic, name:String):Void
+	{
+		if (Reflect.getProperty(animateController, "curAnim") != null) return;
+		var play = Reflect.field(animateController, "play");
+		if (play != null) Reflect.callMethod(animateController, play, [name, true]);
 	}
 
 	private function getLuaAnimateController(tag:String):Dynamic
@@ -943,6 +1063,11 @@ class LuaScript extends Script
 	{
 		var sprite = getLuaObject(tag);
 		if (!Std.isOfType(sprite, FlxSprite) || (cast sprite:FlxSprite).pixels == null) return FlxColor.BLACK;
+		if (Std.isOfType(sprite, LuaGraphicSprite))
+		{
+			var compactColor:Null<Int> = (cast sprite:LuaGraphicSprite).compactPixelColor(x, y);
+			if (compactColor != null) return compactColor;
+		}
 		var bitmap = (cast sprite:FlxSprite).pixels;
 		if (x < 0 || y < 0 || x >= bitmap.width || y >= bitmap.height) return FlxColor.BLACK;
 		return bitmap.getPixel32(x, y);
@@ -1028,14 +1153,17 @@ class LuaScript extends Script
 			registerLuaObject(key, instance);
 			return true;
 		}
-		catch (_:Dynamic) return false;
+		catch (error:Dynamic)
+		{
+			return false;
+		}
 	}
 
 	private function addLuaInstance(tag:String, ?inFront:Bool = false):Bool
 	{
 		var game = PlayState.instance;
 		var object = getLuaObject(tag);
-		if (game == null || object == null || !Reflect.hasField(object, "destroy")) return false;
+		if (game == null || !Std.isOfType(object, FlxObject)) return false;
 		if (game.members.indexOf(object) >= 0) return true;
 		if (inFront) game.add(cast object); else game.insert(0, cast object);
 		return true;
@@ -1097,7 +1225,16 @@ class LuaScript extends Script
 		if (song == null || song.length == 0) return false;
 		var diff = difficulty == null || (Std.isOfType(difficulty, Int) && difficulty == -1)
 			? PlayState.difficulty : Std.string(difficulty);
-		PlayState.loadSong(song, diff);
+		var request = SongLoadRequest.forSong(song, diff, null, false, false, "psychLua");
+		if (FlxG.sound.music != null)
+		{
+			FlxG.sound.music.pause();
+			FlxG.sound.music.volume = 0;
+		}
+		SongLoader.start(request, () -> {
+			PlayState.loadSong(song, diff);
+			return PlayState.SONG;
+		});
 		return true;
 	}
 
@@ -1273,10 +1410,16 @@ class LuaScript extends Script
 		callbackScope.bind("addHealth", (value:Float) -> setGameValue("health", PlayState.instance == null ? value : PlayState.instance.health + value));
 		callbackScope.bind("setScore", (value:Int) -> setGameValue("songScore", value));
 		callbackScope.bind("addScore", (value:Int) -> setGameValue("songScore", PlayState.instance == null ? value : PlayState.instance.songScore + value));
-		callbackScope.bind("setMisses", (value:Int) -> setGameValue("misses", value));
-		callbackScope.bind("addMisses", (value:Int) -> setGameValue("misses", PlayState.instance == null ? value : PlayState.instance.misses + value));
-		callbackScope.bind("setHits", (value:Int) -> setGameValue("ratingNum", value));
-		callbackScope.bind("addHits", (value:Int) -> setGameValue("ratingNum", PlayState.instance == null ? value : PlayState.instance.ratingNum + value));
+		callbackScope.bind("setMisses", function(?value:Int = 0) return setGameValue("misses", value));
+		callbackScope.bind("addMisses", function(?value:Int = 0) return setGameValue("misses", PlayState.instance == null ? value : PlayState.instance.misses + value));
+		callbackScope.bind("setHits", function(?value:Int = 0) return setGameValue("ratingNum", value));
+		callbackScope.bind("addHits", function(?value:Int = 0) return setGameValue("ratingNum", PlayState.instance == null ? value : PlayState.instance.ratingNum + value));
+		if (psychLuaProfileName() == PsychLuaProfile.PSYCH_063)
+		{
+			callbackScope.bind("getScore", () -> PlayState.instance.songScore);
+			callbackScope.bind("getHits", () -> PlayState.instance == null ? 0 : PlayState.instance.ratingNum);
+			callbackScope.bind("getMisses", () -> PlayState.instance == null ? 0 : PlayState.instance.misses);
+		}
 		callbackScope.bind("setRatingPercent", setPsychRatingPercent);
 		callbackScope.bind("setRatingName", (value:String) -> { set("ratingName", value); psychVariables.set("ratingName", value); true; });
 		callbackScope.bind("setRatingFC", (value:String) -> { set("ratingFC", value); psychVariables.set("ratingFC", value); true; });
@@ -1332,66 +1475,113 @@ class LuaScript extends Script
 		callbackScope.bind("setTimeBarColors", setPsychTimeBarColors);
 		callbackScope.bind("restartSong", (?skipTransition:Bool = false) -> { if (PlayState.instance == null) false else { FlxG.resetState(); true; } });
 		callbackScope.bind("exitSong", exitPsychSong);
-		callbackScope.bind("loadSong", loadPsychSong);
-		callbackScope.bind("startDialogue", startPsychDialogue);
+		callbackScope.bind("loadSong", function(?name:String = null, ?difficulty:Dynamic = null):Void { loadPsychSong(name, difficulty); });
+		callbackScope.bind("startDialogue", function(dialogueFile:String, ?music:String = null):Dynamic
+		{
+			var started = startPsychDialogue(dialogueFile, music);
+			return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? started : null;
+		});
 		callbackScope.bind("startVideo", startPsychVideo);
-		callbackScope.bind("openCustomSubstate", openPsychCustomSubstate);
+		callbackScope.bind("openCustomSubstate", function(name:String, ?pauseGame:Bool = false):Void { openPsychCustomSubstate(name, pauseGame); });
 		callbackScope.bind("closeCustomSubstate", closePsychCustomSubstate);
-		callbackScope.bind("insertToCustomSubstate", insertPsychCustomSubstate);
+		if (psychLuaProfileName() != PsychLuaProfile.PSYCH_063)
+			callbackScope.bind("insertToCustomSubstate", insertPsychCustomSubstate);
 		callbackScope.bind("getModSetting", getPsychModSetting);
 	}
 
 	private function bindPsychTimerApi():Void
 	{
-		callbackScope.bind("runTimer", runLuaTimer);
-		callbackScope.bind("cancelTimer", cancelLuaTimer);
+		callbackScope.bind("runTimer", function(tag:String, ?time:Float = 1, ?loops:Int = 1):Dynamic
+		{
+			var result = runLuaTimer(tag, time, loops);
+			return result == null || psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : psychTaggedValue("timer", tag);
+		});
+		callbackScope.bind("cancelTimer", function(tag:String):Void { cancelLuaTimer(tag); });
+	}
+
+	private inline function psychTaggedValue(kind:String, tag:String):String
+	{
+		var normalized = StringTools.replace(StringTools.trim(tag), " ", "_");
+		normalized = StringTools.replace(normalized, ".", "");
+		return kind + "_" + normalized;
+	}
+
+	private function psychTweenReturn(tag:String, started:Bool):Dynamic
+	{
+		if (!started || tag == null) return null;
+		return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : psychTaggedValue("tween", tag);
+	}
+
+	private static function parsePsychTweenNumber(value:Dynamic):Float
+	{
+		if (value == null) return Math.NaN;
+		return Std.parseFloat(StringTools.trim(Std.string(value)));
 	}
 
 	private function bindPsychTweenApi():Void
 	{
-		callbackScope.bind("doTweenX", (tag:String, object:String, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaProperty(tag, object, "x", value, duration, ease));
-		callbackScope.bind("doTweenY", (tag:String, object:String, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaProperty(tag, object, "y", value, duration, ease));
-		callbackScope.bind("doTweenAngle", (tag:String, object:String, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaProperty(tag, object, "angle", value, duration, ease));
-		callbackScope.bind("doTweenAlpha", (tag:String, object:String, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaProperty(tag, object, "alpha", value, duration, ease));
-		callbackScope.bind("doTweenColor", tweenLuaColor);
-		callbackScope.bind("doTweenZoom", (tag:String, camera:String, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaTarget(tag, getLuaCamera(camera), camera, "zoom", value, duration, ease));
+		callbackScope.bind("doTweenX", (tag:String, object:String, value:Float, duration:Float, ?ease:String = "linear") -> psychTweenReturn(tag, tweenLuaProperty(tag, object, "x", value, duration, ease)));
+		callbackScope.bind("doTweenY", (tag:String, object:String, value:Float, duration:Float, ?ease:String = "linear") -> psychTweenReturn(tag, tweenLuaProperty(tag, object, "y", value, duration, ease)));
+		callbackScope.bind("doTweenAngle", (tag:String, object:String, value:Float, duration:Float, ?ease:String = "linear") -> psychTweenReturn(tag, tweenLuaProperty(tag, object, "angle", value, duration, ease)));
+		callbackScope.bind("doTweenAlpha", function(tag:String, object:String, value:Dynamic, duration:Dynamic, ?ease:String = "linear"):Dynamic
+		{
+			var alpha = parsePsychTweenNumber(value);
+			var seconds = parsePsychTweenNumber(duration);
+			if (Math.isNaN(alpha) || Math.isNaN(seconds))
+			{
+				trace('Psych doTweenAlpha could not parse values: tag=$tag, object=$object, alpha=$value, duration=$duration');
+				return psychTweenReturn(tag, false);
+			}
+			var started = tweenLuaProperty(tag, object, "alpha", alpha, seconds, ease);
+			return psychTweenReturn(tag, started);
+		});
+		callbackScope.bind("doTweenColor", function(tag:String, object:String, color:Dynamic, duration:Float, ?ease:String = "linear"):Dynamic
+			return psychTweenReturn(tag, tweenLuaColor(tag, object, color, duration, ease)));
+		callbackScope.bind("doTweenZoom", (tag:String, camera:String, value:Float, duration:Float, ?ease:String = "linear") -> psychTweenReturn(tag, tweenLuaTarget(tag, getLuaCamera(camera), camera, "zoom", value, duration, ease)));
 		callbackScope.bind("noteTweenX", (tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaNote(tag, note, "x", value, duration, ease));
 		callbackScope.bind("noteTweenY", (tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaNote(tag, note, "y", value, duration, ease));
 		callbackScope.bind("noteTweenAngle", (tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaNote(tag, note, "angle", value, duration, ease));
 		callbackScope.bind("noteTweenAlpha", (tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaNote(tag, note, "alpha", value, duration, ease));
 		callbackScope.bind("noteTweenDirection", (tag:String, note:Int, value:Float, duration:Float, ?ease:String = "linear") -> tweenLuaNote(tag, note, "direction", value, duration, ease));
-		callbackScope.bind("startTween", startLuaTween);
-		callbackScope.bind("cancelTween", cancelLuaTween);
+		if (psychLuaProfileName() != PsychLuaProfile.PSYCH_063) callbackScope.bind("startTween", startLuaTween);
+		callbackScope.bind("cancelTween", function(tag:String):Void { cancelLuaTween(tag); });
 	}
 
 	private function bindPsychSoundApi():Void
 	{
-		callbackScope.bind("playMusic", function(name:String, ?volume:Float = 1, ?loop:Bool = false):Bool
+		callbackScope.bind("playMusic", function(name:String, ?volume:Float = 1, ?loop:Bool = false):Void
 		{
 			FlxG.sound.playMusic(Paths.music(name), volume, loop);
-			return true;
 		});
-		callbackScope.bind("playSound", playLuaSound);
-		callbackScope.bind("stopSound", stopLuaSound);
-		callbackScope.bind("pauseSound", pauseLuaSound);
-		callbackScope.bind("resumeSound", resumeLuaSound);
+		callbackScope.bind("playSound", function(name:String, ?volume:Float = 1, ?tag:String = null, ?loop:Bool = false):Dynamic
+		{
+			var result = playLuaSound(name, volume, tag, loop);
+			return result == null || psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : psychTaggedValue("sound", tag);
+		});
+		callbackScope.bind("stopSound", function(tag:String):Void { stopLuaSound(tag); });
+		callbackScope.bind("pauseSound", function(tag:String):Void { pauseLuaSound(tag); });
+		callbackScope.bind("resumeSound", function(tag:String):Void { resumeLuaSound(tag); });
 		callbackScope.bind("luaSoundExists", (tag:String) -> luaSounds.exists(tag));
-		callbackScope.bind("getSoundVolume", (tag:String) -> { var snd = luaSounds.get(tag); snd == null ? 0 : snd.volume; });
-		callbackScope.bind("setSoundVolume", (tag:String, value:Float) -> { var snd = luaSounds.get(tag); if (snd == null) false else { snd.volume = value; true; } });
-		callbackScope.bind("getSoundTime", (tag:String) -> { var snd = luaSounds.get(tag); snd == null ? 0 : snd.time; });
-		callbackScope.bind("setSoundTime", (tag:String, value:Float) -> { var snd = luaSounds.get(tag); if (snd == null) false else { snd.time = value; true; } });
-		callbackScope.bind("getSoundPitch", (tag:String) -> { var snd = luaSounds.get(tag); snd == null ? 1 : snd.pitch; });
-		callbackScope.bind("setSoundPitch", (tag:String, value:Float) -> { var snd = luaSounds.get(tag); if (snd == null) false else { snd.pitch = value; true; } });
-		callbackScope.bind("soundFadeOut", (tag:String, duration:Float, ?to:Float = 0) -> fadeLuaSound(tag, duration, to, false));
-		callbackScope.bind("soundFadeIn", (tag:String, duration:Float, ?from:Float = 0, ?to:Float = 1) -> fadeLuaSound(tag, duration, to, true, from));
-		callbackScope.bind("soundFadeCancel", cancelLuaSoundFade);
-		callbackScope.bind("musicFadeOut", (duration:Float, ?to:Float = 0) -> { if (FlxG.sound.music == null) false else { FlxG.sound.music.fadeOut(duration, to); true; } });
-		callbackScope.bind("musicFadeIn", (duration:Float, ?from:Float = 0, ?to:Float = 1) -> { if (FlxG.sound.music == null) false else { FlxG.sound.music.fadeIn(duration, from, to); true; } });
-		callbackScope.bind("initSaveData", initLuaSaveData);
-		callbackScope.bind("flushSaveData", flushLuaSaveData);
+		callbackScope.bind("getSoundVolume", getLuaSoundVolume);
+		callbackScope.bind("setSoundVolume", function(tag:String, value:Float):Void { setLuaSoundVolume(tag, value); });
+		callbackScope.bind("getSoundTime", getLuaSoundTime);
+		callbackScope.bind("setSoundTime", function(tag:String, value:Float):Void { setLuaSoundTime(tag, value); });
+		if (psychLuaProfileName() != PsychLuaProfile.PSYCH_063)
+		{
+			callbackScope.bind("getSoundPitch", getLuaSoundPitch);
+			callbackScope.bind("setSoundPitch", function(tag:String, value:Float, ?doPause:Bool = false):Void { setLuaSoundPitch(tag, value, doPause); });
+		}
+		callbackScope.bind("soundFadeOut", function(tag:String, duration:Float, ?to:Float = 0):Void { fadeLuaSound(tag, duration, to, false); });
+		callbackScope.bind("soundFadeIn", function(tag:String, duration:Float, ?from:Float = 0, ?to:Float = 1):Void { fadeLuaSound(tag, duration, to, true, from); });
+		callbackScope.bind("soundFadeCancel", function(tag:String):Void { cancelLuaSoundFade(tag); });
+		callbackScope.bind("musicFadeOut", function(duration:Float, ?to:Float = 0):Void { if (FlxG.sound.music != null) FlxG.sound.music.fadeOut(duration, to); });
+		callbackScope.bind("musicFadeIn", function(duration:Float, ?from:Float = 0, ?to:Float = 1):Void { if (FlxG.sound.music != null) FlxG.sound.music.fadeIn(duration, from, to); });
+		callbackScope.bind("initSaveData", function(name:String, ?folder:String = "psychenginemods"):Void { initLuaSaveData(name, folder); });
+		callbackScope.bind("flushSaveData", function(name:String):Void { flushLuaSaveData(name); });
 		callbackScope.bind("getDataFromSave", getLuaSaveData);
-		callbackScope.bind("setDataFromSave", setLuaSaveData);
-		callbackScope.bind("eraseSaveData", eraseLuaSaveData);
+		callbackScope.bind("setDataFromSave", function(name:String, field:String, value:Dynamic):Void { setLuaSaveData(name, field, value); });
+		if (psychLuaProfileName() != PsychLuaProfile.PSYCH_063)
+			callbackScope.bind("eraseSaveData", function(name:String):Void { eraseLuaSaveData(name); });
 		callbackScope.bind("checkFileExists", checkLuaFileExists);
 		callbackScope.bind("saveFile", saveLuaFile);
 		callbackScope.bind("deleteFile", deleteLuaFile);
@@ -1417,11 +1607,21 @@ class LuaScript extends Script
 
 	private function initializePsychGlobals():Void
 	{
-		set("Function_Stop", PsychCallbackResult.FUNCTION_STOP);
-		set("Function_Continue", PsychCallbackResult.FUNCTION_CONTINUE);
-		set("Function_StopLua", PsychCallbackResult.FUNCTION_STOP_LUA);
-		set("Function_StopHScript", PsychCallbackResult.FUNCTION_STOP_HSCRIPT);
-		set("Function_StopAll", PsychCallbackResult.FUNCTION_STOP_ALL);
+		set("engine", {
+			commit: Flags.COMMIT_NUMBER,
+			hash: Flags.COMMIT_HASH,
+			build: 2675,
+			name: "Codename Engine",
+			displayName: "DBE (Debug Engine)",
+			modApiVersion: Flags.CURRENT_API_VERSION,
+			compatibility: ScriptCapabilities.getLuaCompatibilityInfo()
+		});
+		var callbackConstants = PsychCallbackResult.constantsForProfile(psychLuaProfileName());
+		set("Function_Stop", callbackConstants.stop);
+		set("Function_Continue", callbackConstants.continueValue);
+		set("Function_StopLua", callbackConstants.stopLua);
+		if (callbackConstants.stopHScript != null) set("Function_StopHScript", callbackConstants.stopHScript);
+		if (callbackConstants.stopAll != null) set("Function_StopAll", callbackConstants.stopAll);
 		set("scriptName", path);
 		set("screenWidth", FlxG.width);
 		set("screenHeight", FlxG.height);
@@ -1470,7 +1670,7 @@ class LuaScript extends Script
 		var game = PlayState.instance;
 		if (game == null) return null;
 		Reflect.setProperty(game, field, value);
-		if (field == "songScore" || field == "misses") @:privateAccess if (game.updateRatingStuff != null) game.updateRatingStuff();
+		if (field == "songScore" || field == "misses" || field == "ratingNum") @:privateAccess if (game.updateRatingStuff != null) game.updateRatingStuff();
 		return value;
 	}
 
@@ -1566,7 +1766,7 @@ class LuaScript extends Script
 	private function tweenLuaColor(tag:String, objectName:String, color:Dynamic, duration:Float, ?ease:String = "linear"):Bool
 	{
 		var target = getLuaObject(objectName);
-		if (tag == null || target == null || !Reflect.hasField(target, "color") || duration < 0) return false;
+		if (tag == null || target == null || Reflect.getProperty(target, "color") == null || duration < 0) return false;
 		cancelLuaTween(tag);
 		var startColor:FlxColor = cast Reflect.getProperty(target, "color");
 		var endColor = parseLuaColor(color);
@@ -1575,16 +1775,16 @@ class LuaScript extends Script
 			onComplete: function(_:FlxTween)
 			{
 				luaTweens.remove(tag);
-				callLua("onTweenCompleted", [tag, objectName]);
+				callLua("onTweenCompleted", PsychHookMap.makeTweenCompletedArguments(psychLuaProfileName(), tag, objectName, true));
 			}
 		}));
 		return true;
 	}
 
-	private function startLuaTween(tag:String, objectName:String, values:Dynamic, duration:Float, ?options:Dynamic):Bool
+	private function startLuaTween(tag:String, objectName:String, values:Dynamic, duration:Float, ?options:Dynamic):Dynamic
 	{
 		var target = getLuaObject(objectName);
-		if (tag == null || target == null || values == null || duration < 0) return false;
+		if (tag == null || target == null || values == null || duration < 0) return null;
 		var properties:Dynamic = {};
 		for (field in Reflect.fields(values)) Reflect.setField(properties, field, Reflect.field(values, field));
 		cancelLuaTween(tag);
@@ -1594,14 +1794,14 @@ class LuaScript extends Script
 			onComplete: function(_:FlxTween)
 			{
 				luaTweens.remove(tag);
-				callLua("onTweenCompleted", [tag, objectName]);
+				callLua("onTweenCompleted", PsychHookMap.makeTweenCompletedArguments(psychLuaProfileName(), tag, objectName));
 			}
 		};
 		if (options != null)
 			for (field in ["startDelay", "loopDelay", "loops", "type"])
 				if (Reflect.hasField(options, field)) Reflect.setField(tweenOptions, field, Reflect.field(options, field));
 		luaTweens.set(tag, FlxTween.tween(target, properties, duration, tweenOptions));
-		return true;
+		return tag;
 	}
 
 	private function tweenLuaTarget(tag:String, target:Dynamic, objectName:String, property:String, value:Dynamic, duration:Float, ?ease:String = "linear"):Bool
@@ -1615,7 +1815,7 @@ class LuaScript extends Script
 			onComplete: function(_:FlxTween)
 			{
 				luaTweens.remove(tag);
-				callLua("onTweenCompleted", [tag, objectName]);
+				callLua("onTweenCompleted", PsychHookMap.makeTweenCompletedArguments(psychLuaProfileName(), tag, objectName));
 			}
 		};
 		luaTweens.set(tag, FlxTween.tween(target, properties, duration, options));
@@ -1664,10 +1864,15 @@ class LuaScript extends Script
 		}
 		stopLuaSound(tag);
 		var sound = FlxG.sound.play(Paths.sound(name), volume, loop, null, true, () -> {
-			luaSounds.remove(tag);
+			if (!luaSoundLoops.exists(tag) || !luaSoundLoops.get(tag))
+			{
+				luaSounds.remove(tag);
+				luaSoundLoops.remove(tag);
+			}
 			callLua("onSoundFinished", [tag]);
 		});
 		luaSounds.set(tag, sound);
+		luaSoundLoops.set(tag, loop);
 		return tag;
 	}
 
@@ -1682,7 +1887,51 @@ class LuaScript extends Script
 		if (sound == null) return false;
 		sound.stop();
 		luaSounds.remove(tag);
+		luaSoundLoops.remove(tag);
 		return true;
+	}
+
+	private inline function getLuaSound(tag:String):FlxSound
+		return tag == null || tag.length == 0 ? FlxG.sound.music : luaSounds.get(tag);
+
+	private function getLuaSoundVolume(tag:String):Float
+	{
+		var sound = getLuaSound(tag);
+		return sound == null ? 0 : sound.volume;
+	}
+
+	private function setLuaSoundVolume(tag:String, value:Float):Void
+	{
+		var sound = getLuaSound(tag);
+		if (sound != null) sound.volume = value;
+	}
+
+	private function getLuaSoundTime(tag:String):Float
+	{
+		var sound = getLuaSound(tag);
+		return sound == null ? 0 : sound.time;
+	}
+
+	private function setLuaSoundTime(tag:String, value:Float):Void
+	{
+		var sound = getLuaSound(tag);
+		if (sound != null) sound.time = value;
+	}
+
+	private function getLuaSoundPitch(tag:String):Float
+	{
+		var sound = getLuaSound(tag);
+		return sound == null ? 1 : sound.pitch;
+	}
+
+	private function setLuaSoundPitch(tag:String, value:Float, ?doPause:Bool = false):Void
+	{
+		var sound = getLuaSound(tag);
+		if (sound == null) return;
+		var wasPlaying = sound.playing;
+		if (doPause) sound.pause();
+		sound.pitch = value;
+		if (doPause && wasPlaying) sound.play();
 	}
 
 	private function pauseLuaSound(tag:String):Bool
@@ -1736,7 +1985,10 @@ class LuaScript extends Script
 	private function getLuaSaveData(name:String, field:String, ?defaultValue:Dynamic):Dynamic
 	{
 		var save = findLuaSave(name);
-		return save == null || save.data == null || !Reflect.hasField(save.data, field) ? defaultValue : Reflect.field(save.data, field);
+		if (save == null || save.data == null) return defaultValue;
+		if (!Reflect.hasField(save.data, field))
+			return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : defaultValue;
+		return Reflect.field(save.data, field);
 	}
 
 	private function setLuaSaveData(name:String, field:String, value:Dynamic):Bool
@@ -1776,6 +2028,8 @@ class LuaScript extends Script
 	private function checkLuaFileExists(path:String, ?absolute:Bool = false):Bool
 	{
 		if (path == null || path.length == 0) return false;
+		var deletedKey = getLuaFileStateKey(path, absolute);
+		if (luaDeletedFiles.exists(deletedKey)) return false;
 		if (!absolute)
 		{
 			var assetPath = Paths.getPath(path);
@@ -1792,15 +2046,21 @@ class LuaScript extends Script
 	{
 		#if sys
 		if (path == null || content == null) return false;
+		var target:String = null;
 		try
 		{
-			var target = resolveLuaFilePath(path, absolute, true);
+			target = resolveLuaFilePath(path, absolute, true);
 			var folder = haxe.io.Path.directory(target);
 			if (folder != null && folder.length > 0 && !FileSystem.exists(folder)) FileSystem.createDirectory(folder);
 			File.saveContent(target, content);
+			luaDeletedFiles.remove(getLuaFileStateKey(path, absolute));
 			return true;
 		}
-		catch (_:Dynamic) return false;
+		catch (error:Dynamic)
+		{
+			Logs.trace('saveFile: could not write "$target": ${Std.string(error)}', WARNING, YELLOW);
+			return false;
+		}
 		#else
 		return false;
 		#end
@@ -1815,6 +2075,7 @@ class LuaScript extends Script
 			var target = absolute ? path : (ignoreModFolders ? Paths.getPath(path) : resolveLuaFilePath(path, false, true));
 			if (!FileSystem.exists(target) || FileSystem.isDirectory(target)) return false;
 			FileSystem.deleteFile(target);
+			luaDeletedFiles.set(getLuaFileStateKey(path, absolute), true);
 			return true;
 		}
 		catch (_:Dynamic) return false;
@@ -1826,6 +2087,7 @@ class LuaScript extends Script
 	private function getLuaTextFromFile(path:String, ?ignoreModFolders:Bool = false):String
 	{
 		if (path == null || path.length == 0) return null;
+		if (luaDeletedFiles.exists(getLuaFileStateKey(path, false))) return null;
 		var assetPath = ignoreModFolders ? Paths.getPath(path) : Paths.getPath(path);
 		if (Assets.exists(assetPath)) return Assets.getText(assetPath);
 		#if sys
@@ -1834,6 +2096,13 @@ class LuaScript extends Script
 			try return File.getContent(filePath) catch (_:Dynamic) return null;
 		#end
 		return null;
+	}
+
+	private static function getLuaFileStateKey(path:String, absolute:Bool):String
+	{
+		var normalized = StringTools.replace(path, "\\", "/");
+		var modName = ModsFolder.currentModFolder == null ? "(default)" : ModsFolder.currentModFolder;
+		return (absolute ? "absolute:" : 'mod:$modName:') + normalized;
 	}
 
 	private function listLuaDirectoryFiles(folder:String):Array<String>
@@ -1918,6 +2187,8 @@ class LuaScript extends Script
 	{
 		var object = luaObjects.get(tag);
 		if (object != null) return object;
+		object = stageLuaObjects.get(PsychLuaObjectRegistry.normalizeTag(tag));
+		if (object != null) return object;
 		var char = getCharacter(tag);
 		if (char != null) return char;
 		return PsychLuaPropertyPath.read(PlayState.instance, tag);
@@ -1926,6 +2197,7 @@ class LuaScript extends Script
 	private function getLuaSprite(tag:String):FlxSprite
 	{
 		var object = luaObjects.get(tag);
+		if (object == null) object = stageLuaObjects.get(PsychLuaObjectRegistry.normalizeTag(tag));
 		return Std.isOfType(object, FlxSprite) ? cast object : null;
 	}
 
@@ -1934,11 +2206,19 @@ class LuaScript extends Script
 		var sprite = getLuaSprite(tag);
 		if (sprite == null)
 		{
-			sprite = new FlxSprite();
+			sprite = new LuaGraphicSprite();
 			if (PlayState.instance != null) sprite.cameras = [PlayState.instance.camGame];
 			registerLuaObject(tag, sprite);
 		}
 		return sprite;
+	}
+
+	private function makeLuaSpriteGraphic(sprite:FlxSprite, width:Int, height:Int, color:FlxColor):Void
+	{
+		if (Std.isOfType(sprite, LuaGraphicSprite))
+			(cast sprite:LuaGraphicSprite).makeLuaGraphic(width, height, color);
+		else
+			sprite.makeGraphic(width, height, color);
 	}
 
 	private function addLuaSprite(tag:String, ?inFront:Bool = false):Bool
@@ -1998,25 +2278,61 @@ class LuaScript extends Script
 		return true;
 	}
 
-	private function addLuaAnimationByPrefix(tag:String, name:String, prefix:String, ?frameRate:Float = 24, ?looped:Bool = true):Bool
+	private function addLuaAnimationByPrefix(tag:String, name:String, prefix:String, ?frameRate:Float = 24, ?looped:Bool = true):Dynamic
+	{
+		var sprite = getLuaSprite(tag);
+		if (sprite == null || sprite.frames == null) return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : false;
+		sprite.animation.addByPrefix(name, prefix, frameRate, looped);
+		cne.compat.PsychLuaAnimation.playIfNeeded(sprite, name, psychLuaProfileName() != PsychLuaProfile.PSYCH_063);
+		return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : true;
+	}
+
+	private function addLuaAnimation(tag:String, name:String, frames:Array<Dynamic>, ?frameRate:Float = 24, ?looped:Bool = true):Dynamic
+	{
+		var sprite = getLuaSprite(tag);
+		if (sprite == null || sprite.frames == null || frames == null) return false;
+		var frameIndices:Array<Int> = [for (index in frames) Std.int(Std.parseFloat(Std.string(index)))];
+		sprite.animation.add(name, frameIndices, frameRate, looped);
+		cne.compat.PsychLuaAnimation.playIfNeeded(sprite, name, psychLuaProfileName() != PsychLuaProfile.PSYCH_063);
+		return psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? null : true;
+	}
+
+	private function addLuaAnimationByIndices(tag:String, name:String, prefix:String, indices:Dynamic, ?frameRate:Float = 24, ?looped:Bool = false):Bool
 	{
 		var sprite = getLuaSprite(tag);
 		if (sprite == null || sprite.frames == null) return false;
-		sprite.animation.addByPrefix(name, prefix, frameRate, looped);
-		return true;
-	}
-
-	private function addLuaAnimationByIndices(tag:String, name:String, prefix:String, indices:Array<Dynamic>, ?frameRate:Float = 24, ?looped:Bool = true, ?postfix:String = ""):Bool
-	{
-		var sprite = getLuaSprite(tag);
-		if (sprite == null || sprite.frames == null || indices == null) return false;
-		var frameIndices:Array<Int> = [for (index in indices) Std.int(Std.parseFloat(Std.string(index)))];
-		sprite.animation.addByIndices(name, prefix, frameIndices, postfix, frameRate, looped);
+		var frameIndices:Array<Int> = [];
+		if (Std.isOfType(indices, String))
+		{
+			for (index in (cast indices:String).trim().split(","))
+				frameIndices.push(Std.int(Std.parseFloat(index)));
+		}
+		else if (Std.isOfType(indices, Array))
+		{
+			for (index in (cast indices:Array<Dynamic>))
+				frameIndices.push(Std.int(Std.parseFloat(Std.string(index))));
+		}
+		else if (indices == null && psychLuaProfileName() != PsychLuaProfile.PSYCH_063)
+			frameIndices.push(0);
+		else
+			return false;
+		var effectiveLooped = psychLuaProfileName() == PsychLuaProfile.PSYCH_063 ? false : looped;
+		sprite.animation.addByIndices(name, prefix, frameIndices, "", frameRate, effectiveLooped);
+		cne.compat.PsychLuaAnimation.playIfNeeded(sprite, name, psychLuaProfileName() != PsychLuaProfile.PSYCH_063);
 		return true;
 	}
 
 	private function playLuaAnimation(tag:String, animation:String, ?force:Bool = false, ?reverse:Bool = false, ?startFrame:Int = 0):Bool
 	{
+		var animateController = getLuaAnimateController(tag);
+		if (animateController != null)
+		{
+			var exists = Reflect.field(animateController, "exists");
+			var play = Reflect.field(animateController, "play");
+			if (exists == null || play == null || !Reflect.callMethod(animateController, exists, [animation])) return false;
+			Reflect.callMethod(animateController, play, [animation, force, reverse, startFrame]);
+			return true;
+		}
 		var sprite = getLuaSprite(tag);
 		if (sprite == null || !sprite.animation.exists(animation)) return false;
 		sprite.animation.play(animation, force, reverse, startFrame);
@@ -2035,12 +2351,7 @@ class LuaScript extends Script
 	{
 		var game = PlayState.instance;
 		if (game == null) return FlxG.camera;
-		return switch (camera == null ? "game" : StringTools.trim(camera).toLowerCase())
-		{
-			case "hud" | "camhud": game.camHUD;
-			case "game" | "camgame" | "other" | "": game.camGame;
-			default: FlxG.camera;
-		};
+		return PsychLuaCamera.resolve(camera, game.camGame, game.camHUD, game.camOther, FlxG.camera);
 	}
 
 	private function setLuaScrollFactor(tag:String, x:Float, ?y:Float):Bool
@@ -2176,7 +2487,15 @@ class LuaScript extends Script
 			case "skipCountdown": return game != null ? game.skipCountdown : false;
 			case "health": return game != null ? game.health : 1.0;
 			case "defaultCamZoom": return game != null ? game.defaultCamZoom : 1.0;
-			case "cameraSpeed": return 1.0;
+			case "cameraSpeed": return game != null ? game.cameraSpeed : 1.0;
+			case "isCameraOnForcedPos": return game != null ? game.isCameraOnForcedPos : false;
+			case "camFollow.x": return game != null && game.camFollow != null ? game.camFollow.x : (FlxG.camera.scroll.x + FlxG.camera.width * 0.5);
+			case "camFollow.y": return game != null && game.camFollow != null ? game.camFollow.y : (FlxG.camera.scroll.y + FlxG.camera.height * 0.5);
+			case "camFollowPos.x": return game != null && game.camFollowPos != null ? game.camFollowPos.x : (FlxG.camera.scroll.x + FlxG.camera.width * 0.5);
+			case "camFollowPos.y": return game != null && game.camFollowPos != null ? game.camFollowPos.y : (FlxG.camera.scroll.y + FlxG.camera.height * 0.5);
+			case "camGame.zoom" | "camera.zoom": return FlxG.camera.zoom;
+			case "camGame.scroll.x" | "camera.scroll.x": return FlxG.camera.scroll.x;
+			case "camGame.scroll.y" | "camera.scroll.y": return FlxG.camera.scroll.y;
 			case "curBeat": return Conductor.curBeat;
 			case "curStep": return Conductor.curStep;
 			case "songPosition": return Conductor.songPosition;
@@ -2224,15 +2543,18 @@ class LuaScript extends Script
 		var normalized = StringTools.replace(path, "[", ".");
 		var rootName = normalized.split(".")[0];
 		var root:Dynamic = luaObjects.get(rootName);
-		if (root == null && ["notes", "unspawnNotes", "strumLineNotes", "playerStrums", "opponentStrums"].contains(rootName))
+		if (root == null) root = stageLuaObjects.get(PsychLuaObjectRegistry.normalizeTag(rootName));
+		if (root == null && ["notes", "unspawnNotes", "strumLineNotes", "playerStrums", "opponentStrums", "eventNotes"].contains(rootName))
 			root = getPsychGroupMembers(rootName);
 		else if (root == null && game != null)
 		{
 			root = switch (rootName)
 			{
-				case "camGame": game.camGame;
+				case "camGame" | "camera": game.camGame;
 				case "camHUD": game.camHUD;
 				case "camOther": game.camOther;
+				case "camFollow": game.camFollow;
+				case "camFollowPos": game.camFollowPos;
 				case "iconP1": game.iconP1;
 				case "iconP2": game.iconP2;
 				case "healthBar": game.healthBar;
@@ -2285,6 +2607,95 @@ class LuaScript extends Script
 		return PsychLuaPropertyPath.read(root != null ? root : PlayState.instance, targetPath);
 	}
 
+	private function psychLuaProfileName():String
+	{
+		return ModsFolder.currentPsychLuaProfile == null ? PsychLuaProfile.UNSPECIFIED : ModsFolder.currentPsychLuaProfile.profile;
+	}
+
+	private function setPsychProperty(path:String, value:Dynamic):Dynamic
+	{
+		writePsychProperty(path, value);
+		return switch (psychLuaProfileName())
+		{
+			case PsychLuaProfile.PSYCH_063: true;
+			case PsychLuaProfile.PSYCH_104: value;
+			default:
+				// These DBE camera aliases already translate to camera.scroll.
+				// Returning null here makes Lua `a or b` fall through and write the
+				// same position again as raw scroll, accumulating a viewport offset.
+				(path == "camFollowPos.x" || path == "camFollowPos.y") ? value : null;
+		};
+	}
+
+	private function setPsychPropertyFromClass(className:String, path:String, value:Dynamic):Dynamic
+	{
+		writePath(resolveClass(className), path, value);
+		return switch (psychLuaProfileName())
+		{
+			case PsychLuaProfile.PSYCH_063: true;
+			case PsychLuaProfile.PSYCH_104: value;
+			default: null;
+		};
+	}
+
+	private function setPsychPropertyFromGroup(groupName:String, index:Float, path:String, value:Dynamic):Dynamic
+	{
+		writePath(getGroupMember(groupName, Std.int(index)), path, value);
+		return psychLuaProfileName() == PsychLuaProfile.PSYCH_104 ? value : null;
+	}
+
+	private function setPsychLuaSpriteProperty(tag:String, property:String, value:Dynamic):Bool
+	{
+		var object = getLuaObject(tag);
+		if (object == null) return false;
+		PsychLuaPropertyPath.write(object, property, value);
+		return true;
+	}
+
+	private function removePsychObjectFromGroup(groupName:String, ?index:Int = -1, ?tagOrDontDestroy:Dynamic = null, ?destroy:Dynamic = null):Dynamic
+	{
+		if (psychLuaProfileName() == PsychLuaProfile.PSYCH_063)
+		{
+			removeLegacyPsychGroupMember(groupName, index, tagOrDontDestroy == true);
+			return null;
+		}
+
+		var tag:String = tagOrDontDestroy == null || Std.isOfType(tagOrDontDestroy, Bool) ? null : Std.string(tagOrDontDestroy);
+		var shouldDestroy = destroy == null ? true : destroy == true;
+		removeLuaObjectFromGroup(groupName, index, tag, shouldDestroy);
+		return null;
+	}
+
+	private function removeLegacyPsychGroupMember(groupName:String, index:Int, dontDestroy:Bool):Void
+	{
+		var group = getLuaGroup(groupName);
+		var members:Dynamic = getLuaGroupMembers(group);
+		if (!Std.isOfType(members, Array)) return;
+		var list:Array<Dynamic> = cast members;
+		if (index < 0 || index >= list.length) return;
+		var object = list[index];
+		if (object == null) return;
+
+		if (Std.isOfType(group, Array))
+			list.remove(object);
+		else
+		{
+			if (!dontDestroy)
+			{
+				var kill = Reflect.field(object, "kill");
+				if (kill != null) Reflect.callMethod(object, kill, []);
+			}
+			var remove = Reflect.field(group, "remove");
+			if (remove == null) return;
+			Reflect.callMethod(group, remove, [object, true]);
+			if (!dontDestroy)
+			{
+				var dispose = Reflect.field(object, "destroy");
+				if (dispose != null) Reflect.callMethod(object, dispose, []);
+			}
+		}
+	}
+
 	private function writePsychProperty(path:String, value:Dynamic):Dynamic
 	{
 		if (path == null) return null;
@@ -2303,6 +2714,50 @@ class LuaScript extends Script
 				return value;
 			case "defaultCamZoom":
 				if (game != null) game.defaultCamZoom = Std.parseFloat(Std.string(value));
+				return value;
+			case "camFollow.x":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v) && game != null && game.camFollow != null) game.camFollow.x = v;
+				return value;
+			case "camFollow.y":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v) && game != null && game.camFollow != null) game.camFollow.y = v;
+				return value;
+			case "camFollowPos.x":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v)) {
+					if (game != null && game.camFollowPos != null) game.camFollowPos.x = v;
+					FlxG.camera.scroll.x = v - FlxG.camera.width * 0.5;
+				}
+				return value;
+			case "camFollowPos.y":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v)) {
+					if (game != null && game.camFollowPos != null) game.camFollowPos.y = v;
+					FlxG.camera.scroll.y = v - FlxG.camera.height * 0.5;
+				}
+				return value;
+			case "cameraSpeed":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v) && game != null) game.cameraSpeed = v;
+				return value;
+			case "isCameraOnForcedPos":
+				var forced = value == true || value == 1 || Std.string(value).toLowerCase() == "true";
+				if (game != null) game.isCameraOnForcedPos = forced;
+				psychVariables.set(path, forced);
+				if (game != null && game.variables != null) game.variables.set(path, forced);
+				return value;
+			case "camGame.zoom" | "camera.zoom":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v)) FlxG.camera.zoom = v;
+				return value;
+			case "camGame.scroll.x" | "camera.scroll.x":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v)) FlxG.camera.scroll.x = v;
+				return value;
+			case "camGame.scroll.y" | "camera.scroll.y":
+				var v = Std.parseFloat(Std.string(value));
+				if (!Math.isNaN(v)) FlxG.camera.scroll.y = v;
 				return value;
 			case "opponentCameraOffset[0]":
 				PsychLuaPropertyPath.cameraOffsets.get("opponentCameraOffset")[0] = Std.parseFloat(Std.string(value));
@@ -2349,15 +2804,18 @@ class LuaScript extends Script
 		var normalized = StringTools.replace(path, "[", ".");
 		var rootName = normalized.split(".")[0];
 		var root:Dynamic = luaObjects.get(rootName);
+		if (root == null) root = stageLuaObjects.get(PsychLuaObjectRegistry.normalizeTag(rootName));
 		if (root == null && ["notes", "unspawnNotes", "strumLineNotes", "playerStrums", "opponentStrums"].contains(rootName))
 			root = getPsychGroupMembers(rootName);
 		else if (root == null && game != null)
 		{
 			root = switch (rootName)
 			{
-				case "camGame": game.camGame;
+				case "camGame" | "camera": game.camGame;
 				case "camHUD": game.camHUD;
 				case "camOther": game.camOther;
+				case "camFollow": game.camFollow;
+				case "camFollowPos": game.camFollowPos;
 				case "iconP1": game.iconP1;
 				case "iconP2": game.iconP2;
 				case "healthBar": game.healthBar;
@@ -2441,7 +2899,7 @@ class LuaScript extends Script
 		return switch (className)
 		{
 			case "PlayState": PlayState;
-			case "FlxG": FlxG;
+			case "FlxG" | "flixel.FlxG": FlxG;
 			case "Conductor" | "backend.Conductor": Conductor;
 			case "Paths" | "backend.Paths": Paths;
 			case "ClientPrefs" | "backend.ClientPrefs": Options;
@@ -2470,26 +2928,53 @@ class LuaScript extends Script
 		return index < list.length ? list[index] : null;
 	}
 
+	private function getPsychChartEventNotes():Array<Dynamic>
+	{
+		var chart = PlayState.SONG;
+		if (chart == null || chart.events == null) return [];
+
+		var eventNotes:Array<Dynamic> = [];
+		for (event in chart.events)
+		{
+			if (event == null) continue;
+			var params = event.params == null ? [] : event.params;
+			eventNotes.push({
+				strumTime: event.time,
+				event: event.name,
+				value1: params.length > 0 && params[0] != null ? params[0] : "",
+				value2: params.length > 1 && params[1] != null ? params[1] : ""
+			});
+		}
+		return eventNotes;
+	}
+
 	private function getPsychGroupMembers(groupName:String):Array<Dynamic>
 	{
 		var game = PlayState.instance;
 		if (game == null || groupName == null) return null;
 		switch (groupName)
 		{
+			case "eventNotes":
+				return getPsychChartEventNotes();
 			case "notes" | "unspawnNotes":
-				var notes:Array<Dynamic> = [];
+				var notesByStrumline:Array<Array<Dynamic>> = [];
 				for (line in game.strumLines.members)
 				{
 					if (line == null || line.notes == null || line.notes.members == null) continue;
-					var spawnLimit = Conductor.songPosition + line.notes.limit;
+					var lineNotes:Array<Dynamic> = [];
 					for (note in line.notes.members)
 					{
 						if (note == null || !note.exists || !note.alive) continue;
-						var spawned = note.strumTime <= spawnLimit;
-						if ((groupName == "notes") == spawned) notes.push(note);
+						var noteSpeed:Float = 1;
+						var sourceNoteSpeed:Dynamic = Reflect.field(note, "multSpeed");
+						if (Std.isOfType(sourceNoteSpeed, Int) || Std.isOfType(sourceNoteSpeed, Float)) noteSpeed = cast sourceNoteSpeed;
+						var songSpeed:Float = game.scrollSpeed <= 0 ? 1 : game.scrollSpeed;
+						var spawned = PsychHookMap.isPsychNoteSpawned(note.strumTime, Conductor.songPosition, songSpeed, noteSpeed);
+						if ((groupName == "notes") == spawned) lineNotes.push(note);
 					}
+					notesByStrumline.push(lineNotes);
 				}
-				return PsychHookMap.sortPsychNotes(notes, groupName == "notes");
+				return PsychHookMap.combinePsychNotes(notesByStrumline, groupName == "notes");
 			case "strumLineNotes" | "playerStrums" | "opponentStrums":
 				var strums:Array<Dynamic> = [];
 				for (line in game.strumLines.members)
@@ -2554,6 +3039,16 @@ class LuaScript extends Script
 		updatePsychGlobals();
 		if (funcName == "update") dispatchPsychSpawnCallbacks();
 		var args = parameters == null ? [] : parameters;
+		if ((funcName == "onScriptCreated" || funcName == "onScriptSetup") && args.length > 0 && Std.isOfType(args[0], Script))
+		{
+			var sourceScript:Script = cast args[0];
+			args = args.copy();
+			args[0] = {
+				fileName: sourceScript.fileName,
+				path: sourceScript.path,
+				active: sourceScript.active
+			};
+		}
 		if (funcName == "onPlayerHit" || funcName == "onDadHit")
 		{
 			var psychArgs = getPsychHitArgs(args);
@@ -2576,6 +3071,7 @@ class LuaScript extends Script
 			case "onGamePause": return callPsychCancellable(args, "onPause");
 			case "onGameOver": return callPsychCancellable(args, "onGameOver");
 			case "onEvent": return callPsychChartEvent(args);
+			case "eventEarlyTrigger": return callPsychEventEarlyTrigger(args);
 			case "onCountdown": return callPsychCountdown(args);
 			case "onCameraMove": return callPsychCameraMove(args);
 			case "onInputUpdate": return callPsychInput(args, false);
@@ -2600,8 +3096,17 @@ class LuaScript extends Script
 
 	private function applyPsychStop(args:Array<Dynamic>, result:Dynamic):Void
 	{
-		if (result == "##PSYCHLUA_FUNCTIONSTOP" && args != null && args.length > 0 && Std.isOfType(args[0], CancellableEvent))
-			(cast args[0]:CancellableEvent).preventDefault(true);
+		if (args == null || args.length == 0 || !Std.isOfType(args[0], CancellableEvent)) return;
+		var profile = psychLuaProfileName();
+		if (!PsychCallbackResult.includeResult(result, PsychCallbackResult.defaultExcludeValues(profile))) return;
+		var event:CancellableEvent = cast args[0];
+		if (event.psychLuaCancelled) event.cancelled = false;
+		event.psychLuaCancelled = false;
+		if (result == PsychCallbackResult.stopValueForProfile(profile))
+		{
+			event.preventDefault(true);
+			event.psychLuaCancelled = true;
+		}
 	}
 
 	private function callPsychChartEvent(args:Array<Dynamic>):Dynamic
@@ -2612,7 +3117,20 @@ class LuaScript extends Script
 		var params = event.event.params == null ? [] : event.event.params;
 		var value1:Dynamic = params.length > 0 && params[0] != null ? params[0] : "";
 		var value2:Dynamic = params.length > 1 && params[1] != null ? params[1] : "";
-		return callLua("onEvent", [event.event.name, value1, value2, event.event.time]);
+		var normalizedPath = StringTools.replace(rawLuaPath, "\\", "/").toLowerCase();
+		if (event.event.name == "BlackFlash" && StringTools.endsWith(normalizedPath, "/custom_events/blackflash.lua"))
+			trace('Psych BlackFlash callback: script=$rawLuaPath, v1=$value1, v2=$value2');
+		return callLua("onEvent", PsychHookMap.makeEventArguments(psychLuaProfileName(), event.event.name, value1, value2, event.event.time));
+	}
+
+	private function callPsychEventEarlyTrigger(args:Array<Dynamic>):Dynamic
+	{
+		if (args == null || args.length == 0) return null;
+		var name:String = cast args[0];
+		var value1:Dynamic = args.length > 1 ? args[1] : null;
+		var value2:Dynamic = args.length > 2 ? args[2] : null;
+		var chartTime:Float = args.length > 3 && (Std.isOfType(args[3], Int) || Std.isOfType(args[3], Float)) ? cast args[3] : 0;
+		return callLua("eventEarlyTrigger", PsychHookMap.makeEventEarlyTriggerArguments(psychLuaProfileName(), name, value1, value2, chartTime));
 	}
 
 	private function callPsychCountdown(args:Array<Dynamic>):Dynamic
@@ -2640,8 +3158,13 @@ class LuaScript extends Script
 	private function callPsychInput(args:Array<Dynamic>, postUpdate:Bool):Dynamic
 	{
 		if (args == null || args.length == 0 || !Std.isOfType(args[0], InputSystemEvent)) return null;
+		var profile = psychLuaProfileName();
+		// Psych 0.6.3 exposes only post-input key callbacks; pre-input cancellation starts in 1.0.4.
+		if (!postUpdate && profile == PsychLuaProfile.PSYCH_063) return null;
 		var event:InputSystemEvent = cast args[0];
 		if (event.strumLine == null || event.strumLine.cpu) return null;
+		var stopValue = PsychCallbackResult.stopValueForProfile(profile);
+		var continueValues = PsychCallbackResult.defaultExcludeValues(profile);
 		var laneCount = event.strumLine.members == null ? 0 : event.strumLine.members.length;
 		var blockedAnyLane = false;
 		for (lane in 0...laneCount)
@@ -2649,17 +3172,29 @@ class LuaScript extends Script
 			if (event.justPressed != null && lane < event.justPressed.length && event.justPressed[lane])
 			{
 				if (postUpdate) callLua("onKeyPress", [lane]);
-				else if (callLua("onKeyPressPre", [lane]) == "##PSYCHLUA_FUNCTIONSTOP")
-					blockedAnyLane = PsychHookMap.blockInputLane(event.psychBlockedPress, event.psychBlockedRelease, lane, true) || blockedAnyLane;
+				else
+				{
+					var result = callLua("onKeyPressPre", [lane]);
+					if (result == stopValue)
+						blockedAnyLane = PsychHookMap.blockInputLane(event.psychBlockedPress, event.psychBlockedRelease, lane, true) || blockedAnyLane;
+					else if (PsychCallbackResult.includeResult(result, continueValues) && event.psychBlockedPress != null && lane < event.psychBlockedPress.length)
+						event.psychBlockedPress[lane] = false;
+				}
 			}
 			if (event.justReleased != null && lane < event.justReleased.length && event.justReleased[lane])
 			{
 				if (postUpdate) callLua("onKeyRelease", [lane]);
-				else if (callLua("onKeyReleasePre", [lane]) == "##PSYCHLUA_FUNCTIONSTOP")
-					blockedAnyLane = PsychHookMap.blockInputLane(event.psychBlockedPress, event.psychBlockedRelease, lane, false) || blockedAnyLane;
+				else
+				{
+					var result = callLua("onKeyReleasePre", [lane]);
+					if (result == stopValue)
+						blockedAnyLane = PsychHookMap.blockInputLane(event.psychBlockedPress, event.psychBlockedRelease, lane, false) || blockedAnyLane;
+					else if (PsychCallbackResult.includeResult(result, continueValues) && event.psychBlockedRelease != null && lane < event.psychBlockedRelease.length)
+						event.psychBlockedRelease[lane] = false;
+				}
 			}
 		}
-		return blockedAnyLane ? "##PSYCHLUA_FUNCTIONSTOP" : null;
+		return blockedAnyLane ? stopValue : null;
 	}
 
 	private function dispatchPsychSpawnCallbacks():Void
@@ -2668,13 +3203,14 @@ class LuaScript extends Script
 		for (note in PsychHookMap.collectNewlySpawnedNotes(spawnedPsychNotes, spawned))
 		{
 			var noteType:String = note.noteType == null ? "" : note.noteType;
-			callLua("onSpawnNote", [PsychHookMap.indexOfNote(spawned, note), note.noteData, noteType, note.isSustainNote, note.strumTime]);
+			callLua("onSpawnNote", PsychHookMap.makeSpawnNoteArguments(psychLuaProfileName(), PsychHookMap.indexOfNote(spawned, note), note.noteData, noteType, note.isSustainNote, note.strumTime));
 		}
 	}
 
 	private function callLua(functionName:String, args:Array<Dynamic>):Dynamic
 	{
 		if (lua == null || scriptClosed) return null;
+		syncPsychStrumY();
 		var originalTop = Lua.gettop(lua);
 		Lua.getglobal(lua, functionName);
 		if (Lua.isfunction(lua, -1) == 0)
@@ -2683,7 +3219,20 @@ class LuaScript extends Script
 			return null;
 		}
 
-		for (argument in args)
+		for (index in 0...args.length)
+		{
+			var argument = args[index];
+			var unsupportedPath = findUnsupportedLuaValue(argument, 'arg[${index + 1}]', 0, new ObjectMap<Dynamic, Bool>());
+			if (unsupportedPath != null)
+			{
+				Lua.settop(lua, originalTop);
+				if (!unsupportedHooks.exists(functionName))
+				{
+					unsupportedHooks.set(functionName, true);
+					error('Lua callback "${functionName}" was skipped: unsupported Haxe value at ${unsupportedPath}.');
+				}
+				return null;
+			}
 			if (!Convert.toLua(lua, argument))
 			{
 				Lua.settop(lua, originalTop);
@@ -2694,6 +3243,7 @@ class LuaScript extends Script
 				}
 				return null;
 			}
+		}
 
 		var status = Lua.pcall(lua, args.length, 1, 0);
 		if (status != Lua.LUA_OK)
@@ -2709,13 +3259,90 @@ class LuaScript extends Script
 		return result;
 	}
 
+	private function syncPsychStrumY():Void
+	{
+		var game = PlayState.instance;
+		if (game == null || game.strumLines == null) return;
+
+		// Some older Psych custom events use StrumY as a global base position.
+		// Keep a value explicitly supplied by a script, but fill the missing
+		// compatibility global from the first generated receptor when available.
+		Lua.getglobal(lua, "StrumY");
+		var hasScriptValue = Lua.type(lua, -1) != Lua.LUA_TNIL;
+		Lua.pop(lua, 1);
+		if (hasScriptValue) return;
+
+		for (line in game.strumLines.members)
+		{
+			if (line == null || line.members == null) continue;
+			for (strum in line.members)
+				if (strum != null)
+				{
+					setNumberConstant("StrumY", strum.y);
+					return;
+				}
+		}
+	}
+
+	private function findUnsupportedLuaValue(value:Dynamic, path:String, depth:Int, seen:ObjectMap<Dynamic, Bool>):String
+	{
+		if (depth > 32) return '${path} (maximum nesting depth exceeded)';
+
+		return switch (Type.typeof(value))
+		{
+			case TNull | TBool | TInt | TFloat | TClass(String): null;
+			case TClass(Array):
+				if (seen.exists(value)) null;
+				else
+				{
+					seen.set(value, true);
+					var unsupported:String = null;
+					var items:Array<Dynamic> = cast value;
+					for (index in 0...items.length)
+					{
+						unsupported = findUnsupportedLuaValue(items[index], '${path}[${index + 1}]', depth + 1, seen);
+						if (unsupported != null) break;
+					}
+					unsupported;
+				}
+			case TClass(haxe.ds.StringMap):
+				if (seen.exists(value)) null;
+				else
+				{
+					seen.set(value, true);
+					var unsupported:String = null;
+					var items:haxe.ds.StringMap<Dynamic> = cast value;
+					for (key => item in items)
+					{
+						unsupported = findUnsupportedLuaValue(item, '${path}["${key}"]', depth + 1, seen);
+						if (unsupported != null) break;
+					}
+					unsupported;
+				}
+			case TObject:
+				if (seen.exists(value)) null;
+				else
+				{
+					seen.set(value, true);
+					var unsupported:String = null;
+					for (field in Reflect.fields(value))
+					{
+						unsupported = findUnsupportedLuaValue(Reflect.field(value, field), '${path}.${field}', depth + 1, seen);
+						if (unsupported != null) break;
+					}
+					unsupported;
+				}
+			default: '${path} (${Type.typeof(value)})';
+		};
+	}
+
 	private function getPsychHitArgs(args:Array<Dynamic>):Array<Dynamic>
 	{
 		if (args.length == 0 || !Std.isOfType(args[0], NoteHitEvent)) return null;
 		var event:NoteHitEvent = cast args[0];
 		if (event.note == null) return null;
 		var noteIndex = PsychHookMap.indexOfNote(getPsychGroupMembers("notes"), event.note);
-		return PsychHookMap.makeNoteHitArguments(noteIndex, event.direction, event.noteType, event.note.isSustainNote);
+		return PsychHookMap.makeNoteHitArguments(noteIndex, PsychHookMap.noteDirectionForHit(event.note.noteData), event.noteType, event.note.isSustainNote);
 	}
 
 	private function callPsychMiss(args:Array<Dynamic>):Dynamic
@@ -2725,7 +3352,7 @@ class LuaScript extends Script
 		if (event.ghostMiss || event.note == null)
 			return callLua("noteMissPress", [event.direction]);
 		var noteIndex = PsychHookMap.indexOfNote(getPsychGroupMembers("notes"), event.note);
-		return callLua("noteMiss", PsychHookMap.makeNoteMissArguments(noteIndex, event.direction, event.noteType, event.note.isSustainNote));
+		return callLua("noteMiss", PsychHookMap.makeNoteMissArguments(noteIndex, event.note.noteData, event.noteType, event.note.isSustainNote));
 	}
 
 	public override function get(variable:String):Dynamic
@@ -2740,6 +3367,12 @@ class LuaScript extends Script
 	public override function set(variable:String, value:Dynamic):Void
 	{
 		if (lua == null || variable == null) return;
+		var unsupportedPath = findUnsupportedLuaValue(value, variable, 0, new ObjectMap<Dynamic, Bool>());
+		if (unsupportedPath != null)
+		{
+			error('Lua global "${variable}" was not set: unsupported Haxe value at ${unsupportedPath}.');
+			return;
+		}
 		var originalTop = Lua.gettop(lua);
 		if (Convert.toLua(lua, value)) Lua.setglobal(lua, variable);
 		else Lua.settop(lua, originalTop);
@@ -2770,3 +3403,4 @@ class LuaScript extends Script
 		super.destroy();
 	}
 }
+#end

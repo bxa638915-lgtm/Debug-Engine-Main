@@ -1,6 +1,7 @@
 package funkin.backend.scripting;
 
 import flixel.util.FlxStringUtil;
+import dbe.diagnostics.ScriptTimingProfiler;
 import funkin.backend.scripting.events.CancellableEvent;
 
 /**
@@ -85,9 +86,16 @@ class ScriptPack extends Script {
 	 * @param parameters Parameters to pass to the function
 	**/
 	public override function call(func:String, ?parameters:Array<Dynamic>):Dynamic {
+		var profileCallback = ScriptTimingProfiler.enabled && (func == "update" || func == "postUpdate");
 		for(e in scripts)
-			if (e.active)
-				e.call(func, parameters);
+			if (e.active) {
+				if (profileCallback) {
+					var startedAt = ScriptTimingProfiler.startTimer();
+					e.call(func, parameters);
+					ScriptTimingProfiler.finishScriptCallback(e.path, func, startedAt);
+				} else
+					e.call(func, parameters);
+			}
 		return null;
 	}
 
@@ -194,7 +202,13 @@ class ScriptPack extends Script {
 	private function __configureNewScript(script:Script) {
 		if (parent != null) script.setParent(parent);
 		script.setPublicMap(publicVariables);
-		for(k=>e in additionalDefaultVariables) script.set(k, e);
+		for(k=>e in additionalDefaultVariables) {
+			#if LUA_ALLOWED
+			// llua.Convert cannot expose Haxe functions; Lua already has addLuaScript.
+			if (k == "importScript" && Std.isOfType(script, LuaScript)) continue;
+			#end
+			script.set(k, e);
+		}
 	}
 
 	override public function toString():String {

@@ -628,18 +628,22 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 			animList = cast data.animations;
 		}
 
-		var spriteName:String = data.image != null ? data.image : (data.sprite != null ? data.sprite : 'characters/$charName');
-		var isPlayer:Bool = data.isPlayer == true;
+		var spriteName:String = CharacterJSONAdapter.getSpritePath(data, charName);
+		var isPlayer:Bool = CharacterJSONAdapter.getIsPlayer(data);
 		var flipX:Bool = data.flip_x == true || data.flipX == true;
 		var holdTime:Float = data.sing_duration != null ? data.sing_duration : (data.holdTime != null ? data.holdTime : 4);
 		var scale:Float = data.scale != null ? data.scale : 1;
 		var antialiasing:Bool = data.no_antialiasing != null ? !data.no_antialiasing : (data.antialiasing != null ? data.antialiasing : true);
 		var icon:String = data.healthicon != null ? data.healthicon : (data.icon != null ? data.icon : charName);
 
-		var posX:Float = (data.position != null && (data.position is Array) && data.position.length >= 1) ? data.position[0] : (data.x != null ? data.x : 0);
-		var posY:Float = (data.position != null && (data.position is Array) && data.position.length >= 2) ? data.position[1] : (data.y != null ? data.y : 0);
+		var posX:Float = CharacterJSONAdapter.getGlobalOffset(data, 0);
+		var posY:Float = CharacterJSONAdapter.getGlobalOffset(data, 1);
 		var camX:Float = (data.camera_position != null && (data.camera_position is Array) && data.camera_position.length >= 1) ? data.camera_position[0] : (data.camx != null ? data.camx : 0);
 		var camY:Float = (data.camera_position != null && (data.camera_position is Array) && data.camera_position.length >= 2) ? data.camera_position[1] : (data.camy != null ? data.camy : 0);
+		// Psych subtracts the BF's camera_position.x, while DBE adds camx.
+		// Convert only Psych's camera_position field; native camx already uses DBE's sign.
+		if (isPlayer && data.camera_position != null && (data.camera_position is Array) && data.camera_position.length >= 1)
+			camX = -camX;
 
 		var colorStr:String = null;
 		if (data.healthbar_colors != null && (data.healthbar_colors is Array) && data.healthbar_colors.length >= 3) {
@@ -669,23 +673,26 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 		for (anim in animList) {
 			if (anim == null) continue;
 			var animXml = Xml.createElement("anim");
-			var name:String = anim.anim != null ? anim.anim : (anim.name != null ? anim.name : "idle");
-			var animPrefix:String = anim.name != null ? anim.name : (anim.anim != null ? anim.anim : name);
-			var fps:Float = anim.fps != null ? anim.fps : 24;
-			var loop:Bool = anim.loop == true;
+			var name:String = CharacterJSONAdapter.getAnimationName(anim);
+			var animPrefix:String = CharacterJSONAdapter.getAnimationPrefix(anim, name);
+			var fps:Float = CharacterJSONAdapter.getAnimationFrameRate(anim);
+			var loop:Bool = CharacterJSONAdapter.isAnimationLooped(anim);
 
 			animXml.set("name", name);
 			animXml.set("anim", animPrefix);
 			animXml.set("fps", Std.string(fps));
 			animXml.set("loop", loop ? "true" : "false");
+			var labelMode:Null<Bool> = CharacterJSONAdapter.getAnimationLabelMode(anim);
+			if (labelMode != null) animXml.set("label", labelMode ? "true" : "false");
 
 			var offX:Float = (anim.offsets != null && (anim.offsets is Array) && anim.offsets.length >= 1) ? anim.offsets[0] : (anim.x != null ? anim.x : 0);
 			var offY:Float = (anim.offsets != null && (anim.offsets is Array) && anim.offsets.length >= 2) ? anim.offsets[1] : (anim.y != null ? anim.y : 0);
 			animXml.set("x", Std.string(offX));
 			animXml.set("y", Std.string(offY));
 
-			if (anim.indices != null && (anim.indices is Array) && anim.indices.length > 0) {
-				var arr:Array<Dynamic> = cast anim.indices;
+			var indices:Array<Dynamic> = CharacterJSONAdapter.getAnimationIndices(anim);
+			if (indices != null && indices.length > 0) {
+				var arr:Array<Dynamic> = indices;
 				animXml.set("indices", arr.join(","));
 			}
 

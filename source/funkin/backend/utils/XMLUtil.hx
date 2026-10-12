@@ -121,11 +121,37 @@ final class XMLUtil {
 	 */
 	public static function appendSpriteSheetsFromXML(spr:FunkinSprite, node:Access, ?parentFolder:String = ''):FlxFramesCollection {
 		if (spr == null) return null;
-		var defaultPath = '$parentFolder${node.getAtt("sprite").getDefault(spr.name)}';
+		if (parentFolder == null) parentFolder = '';
+		var sheets = getSpriteSheetPathsFromXML(node, spr.name, parentFolder);
+		var defaultPath = sheets[0];
 		if (!node.hasNode.spritesheet && !node.hasNode.sheet) {
 			spr.loadSprite(Paths.image(defaultPath, null, true));
 			return spr.frames;
 		}
+		var seenSheets:Array<String> = [defaultPath];
+		for (path in sheets) {
+			if (path == defaultPath) continue;
+			if (!Paths.framesExists(path, true)) {
+				Logs.warn('Could not find a BitmapData asset with ID "${Paths.image(path)}". Skipping...');
+				continue;
+			}
+			seenSheets.push(path);
+		}
+		return spr.frames = Paths.getMultiFrames(seenSheets, false, false, null, false, null, spr.animateSettings);
+	}
+
+	/**
+	 * Lists the default sprite sheet and any additional sheets declared in XML.
+	 * Paths remain in the same relative form consumed by appendSpriteSheetsFromXML.
+	 */
+	public static function getSpriteSheetPathsFromXML(node:Access, spriteName:String, parentFolder:String = ''):Array<String> {
+		if (node == null) return [];
+		if (parentFolder == null) parentFolder = '';
+
+		var defaultPath = '$parentFolder${node.getAtt("sprite").getDefault(spriteName)}';
+		var sheets:Array<String> = [defaultPath];
+		if (!node.hasNode.spritesheet && !node.hasNode.sheet) return sheets;
+
 		var seenSheets:Array<String> = [defaultPath];
 		for (n in node.elements) {
 			if (n.name != 'spritesheet' && n.name != 'sheet') continue;
@@ -138,13 +164,10 @@ final class XMLUtil {
 				Logs.warn('Spritesheet "${Paths.image(path)}" was already added. Skipping...');
 				continue;
 			}
-			if (!Paths.framesExists(path, true)) {
-				Logs.warn('Could not find a BitmapData asset with ID "${Paths.image(path)}". Skipping...');
-				continue;
-			}
 			seenSheets.push(path);
+			sheets.push(path);
 		}
-		return spr.frames = Paths.getMultiFrames(seenSheets, false, false, null, false, null, spr.animateSettings);
+		return sheets;
 	}
 	/**
 	 * Sets the properties of a sprite based on a XML node.

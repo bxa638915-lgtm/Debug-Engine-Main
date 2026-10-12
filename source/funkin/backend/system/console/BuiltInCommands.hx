@@ -8,6 +8,8 @@ import funkin.editors.character.CharacterEditor;
 import funkin.options.OptionsMenu;
 import funkin.editors.charter.Charter;
 import funkin.backend.chart.Chart;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import funkin.menus.TitleState;
 import funkin.menus.MainMenuState;
 import funkin.menus.FreeplayState;
@@ -69,13 +71,13 @@ class BuiltInCommands {
 		var diff:String = args[1];
 		var variation:String = args[2] != null ? (args[2] == "default" ? null : args[2]) : null;
 
-		var chartPath:String = Paths.chart(name, diff, variation);
-		if (Assets.exists(chartPath)) {
+		var opponentMode = args[3] != null ? args[3] == "true" : false;
+		var coopMode = args[4] != null ? args[4] == "true" : false;
+		var request = SongLoadRequest.forSong(name, diff, variation, opponentMode, coopMode, "console");
+		SongLoader.start(request, () -> {
 			PlayState.loadSong(name, diff, variation, args[3] != null ? args[3] == "true" : false, args[4] != null ? args[4] == "true" : false);
-			FlxG.switchState(new PlayState());
-		} else {
-			Logs.error('Chart for song $name at "$chartPath" was not found.');
-		}
+			return PlayState.SONG;
+		});
 	});
 	static var endSong = new FuncCommand("endSong", "", "(Ends the current song if in PlayState)", function(args) {
 		if (PlayState.instance != null) {
@@ -89,8 +91,12 @@ class BuiltInCommands {
 			if (args[0] == w.id) {
 				var diff = args[1] != null ? args[1] : w.difficulties[w.difficulties.length-1];
 				if (w.difficulties.contains(diff)) {
-					PlayState.loadWeek(w, diff);
-					FlxG.switchState(new PlayState());
+					var firstSong = w.songs[0];
+					var request = new SongLoadRequest(firstSong.name, diff, firstSong.variation, false, false, true, false, "console", Paths.getAssetsRoot());
+					SongLoader.start(request, () -> {
+						PlayState.loadWeek(w, diff);
+						return PlayState.SONG;
+					});
 					return;
 				}
 				Logs.error('Difficulty $diff for week ${w.id} was not found.');
@@ -103,7 +109,12 @@ class BuiltInCommands {
 	static var reloadMod = new FuncCommand("reloadMod", "", "(Reload current mod)", function(args) { funkin.backend.assets.ModsFolder.reloadMods(); });
 
 	static var reloadState = new FuncCommand("reloadState", "", "(Reload current state)", function(args) { FlxG.resetState(); });
-	static var goToPlayState = new FuncCommand("goToPlayState", "", "(switches state to PlayState, only works if a song is already loaded)", function(args) { if (PlayState.SONG != null) FlxG.switchState(new PlayState()); });
+	static var goToPlayState = new FuncCommand("goToPlayState", "", "(switches state to PlayState, only works if a song is already loaded)", function(args) {
+		if (PlayState.SONG != null) {
+			var request = SongLoadRequest.fromPlayState("console");
+			SongLoader.start(request, () -> PlayState.SONG);
+		}
+	});
 	static var goToMainMenu = new FuncCommand("goToMainMenu", "", "(switches state to MainMenuState)", function(args) { FlxG.switchState(new MainMenuState()); });
 	static var goToStoryMode = new FuncCommand("goToStoryMode", "", "(switches state to StoryMenuState)", function(args) { FlxG.switchState(new StoryMenuState()); });
 	static var goToFreeplay = new FuncCommand("goToFreeplay", "", "(switches state to FreeplayState)", function(args) { FlxG.switchState(new FreeplayState()); });

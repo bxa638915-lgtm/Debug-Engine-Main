@@ -10,6 +10,8 @@ import funkin.backend.assets.AssetSource;
 import funkin.backend.assets.ModsFolder;
 import funkin.backend.assets.ModsFolderLibrary;
 import funkin.backend.assets.ZipFolderLibrary;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import dbe.compatibility.assets.VSliceAssetsConfig;
 import funkin.backend.chart.EventsData;
 import funkin.backend.system.framerate.Framerate;
@@ -57,7 +59,7 @@ class MainState extends FlxState {
 
 		var blockedConversionReports:Array<Dynamic> = [];
 		inline function loadLib(path:String, name:String) {
-			var library = ModsFolder.loadModLib(path, name);
+			var library = ModsFolder.loadModLib(path, false, name);
 			if (library == null) {
 				if (ModsFolder.lastRuntimeConversionBlocked && ModsFolder.lastRuntimeConversionReport != null)
 					blockedConversionReports.push(ModsFolder.lastRuntimeConversionReport);
@@ -152,6 +154,7 @@ class MainState extends FlxState {
 
 		TranslationUtil.findAllLanguages();
 		TranslationUtil.setLanguage(Flags.DISABLE_LANGUAGES ? Flags.DEFAULT_LANGUAGE : null);
+		ModsFolder.resolvePsychLuaProfile();
 		ModsFolder.onModSwitch.dispatch(ModsFolder.currentModFolder); // Loads global.hx
 		MusicBeatTransition.script = Flags.DEFAULT_TRANSITION_SCRIPT;
 		WindowUtils.resetAffixes(false);
@@ -178,8 +181,11 @@ class MainState extends FlxState {
 			if (Main.goToSong != null) {
 				if (Main.goToCharter) FlxG.switchState(new funkin.editors.charter.Charter(Main.goToSong, Main.goToDifficulty, Main.goToVariation));
 				else {
-					PlayState.loadSong(Main.goToSong, Main.goToDifficulty, Main.goToVariation);
-					FlxG.switchState(new PlayState());
+					var request = SongLoadRequest.forSong(Main.goToSong, Main.goToDifficulty, Main.goToVariation, false, false, "autoStart");
+					SongLoader.start(request, () -> {
+						PlayState.loadSong(Main.goToSong, Main.goToDifficulty, Main.goToVariation);
+						return PlayState.SONG;
+					});
 				}
 			}
 		}
@@ -195,7 +201,7 @@ class MainState extends FlxState {
 		if (@:privateAccess FlxG.game._nextState == null) {
 			var outdatedAPI:Bool = (Flags.MOD_API_VERSION ?? Flags.CURRENT_API_VERSION) < Flags.CURRENT_API_VERSION;
 			// In this case if the mod we just loaded a compressed modpack, we can't edit or modify files without decompressing it.
-			if (Options.devMode && Options.allowConfigWarning && !isZipMod) {
+			if (Options.devMode && Options.allowConfigWarning && !isZipMod && ModsFolder.currentModLoadPath == null) {
 				var lib:ModsFolderLibrary;
 				for (e in Paths.assetsTree.libraries) if ((lib = cast AssetsLibraryList.getCleanLibrary(e)) is ModsFolderLibrary
 					&& lib.modName == ModsFolder.currentModFolder)

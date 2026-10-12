@@ -7,6 +7,8 @@ import funkin.backend.scripting.Script;
 import funkin.backend.scripting.events.CancellableEvent;
 import funkin.backend.scripting.events.gameover.*;
 import funkin.backend.system.Conductor;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import funkin.editors.charter.Charter;
 import funkin.menus.FreeplayState;
 import funkin.menus.StoryMenuState;
@@ -168,7 +170,8 @@ class GameOverSubstate extends MusicBeatSubstate
 			FlxG.camera.fade(FlxColor.BLACK, fadeOutTime, false, function()
 			{
 				MusicBeatState.skipTransOut = true;
-				FlxG.switchState(new PlayState());
+				var request = SongLoadRequest.fromPlayState("retry");
+				SongLoader.start(request, () -> PlayState.SONG);
 			});
 		});
 	}

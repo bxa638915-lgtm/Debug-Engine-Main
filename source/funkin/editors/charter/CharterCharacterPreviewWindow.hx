@@ -1,8 +1,10 @@
 package funkin.editors.charter;
 
+import flixel.animation.FlxAnimation;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
 import funkin.game.Character;
+import funkin.backend.scripting.events.sprite.PlayAnimContext;
 import funkin.backend.system.Conductor;
 
 /** A movable, independently closable character preview pane for the chart editor. */
@@ -27,8 +29,6 @@ class CharterCharacterPreviewWindow extends UISliceSprite {
 	private var uiCamera:FlxCamera;
 	private var windowWidth:Int;
 	private var windowHeight:Int;
-	private var characterBaseScaleX:Float = 1;
-	private var characterBaseScaleY:Float = 1;
 
 	public function new(x:Float, y:Float, width:Int, height:Int, isPlayer:Bool, uiCamera:FlxCamera, onClose:Void->Void, ?onFocus:CharterCharacterPreviewWindow->Void) {
 		super(x, y, width, height, "editors/ui/normal-popup");
@@ -78,8 +78,6 @@ class CharterCharacterPreviewWindow extends UISliceSprite {
 		character.cameras = [previewCamera];
 		character.scrollFactor.set();
 		members.push(character);
-		characterBaseScaleX = character.scale.x;
-		characterBaseScaleY = character.scale.y;
 		titleText.text = '${TU.translate(isPlayer ? "charter.view.playerPreview" : "charter.view.opponentPreview")}: ${character.curCharacter}';
 		danceTimer = 0;
 		fitCharacter();
@@ -89,6 +87,38 @@ class CharterCharacterPreviewWindow extends UISliceSprite {
 		visible = value;
 		active = value;
 		previewCamera.visible = value && !collapsed;
+	}
+
+	public inline function canPlayTimelineAnimation():Bool
+		return visible && !collapsed && character != null;
+
+	public function playSingAnimation(direction:Int, suffix:String, singEndTime:Float):Void {
+		if (character != null) {
+			danceTimer = 0;
+			character.playSingAnim(direction, suffix);
+			// Gameplay refreshes lastHit as sustain pieces are hit. Position it at
+			// the chart's tail so Character.tryDance waits through the whole hold,
+			// using the character's configured holdTime after that point.
+			character.lastHit = singEndTime;
+		}
+	}
+
+	public function playPreviewAnimation(animationName:String, force:Null<Bool>, context:PlayAnimContext):Void {
+		if (character != null && character.hasAnim(animationName)) {
+			danceTimer = 0;
+			character.playAnim(animationName, force, context);
+		}
+	}
+
+	public function setPreviewIdleSuffix(suffix:String):Void {
+		if (character != null) character.idleSuffix = suffix;
+	}
+
+	public function resetTimelineAnimation(idleSuffix:String):Void {
+		if (character == null) return;
+		character.idleSuffix = idleSuffix;
+		character.dance();
+		danceTimer = 0;
 	}
 
 	public function setChromeCamera(camera:FlxCamera):Void {
@@ -112,35 +142,81 @@ class CharterCharacterPreviewWindow extends UISliceSprite {
 		updatePreviewCamera();
 	}
 
+	// Measure every animation frame using Character's own animation path so the
+	// envelope includes DBE offsets and Animate timelines without changing scale.
 	private function fitCharacter():Void {
 		if (character == null || previewCamera == null) return;
 
-		var viewportWidth = Math.max(previewCamera.width, 1);
-		var viewportHeight = Math.max(previewCamera.height, 1);
-		character.scale.set(characterBaseScaleX, characterBaseScaleY);
+		// Keep the scale supplied by the character data adapter, like CharacterPlayer.
 		character.updateHitbox();
-		character.offset.set((character.isPlayer != character.playerOffsets) ? character.globalOffset.x : -character.globalOffset.x, -character.globalOffset.y);
 		character.setPosition(0, 0);
-		character.getScreenBounds(characterBounds, previewCamera);
-		var fitScale:Float = Math.min(0.9, Math.min((viewportWidth * 0.82) / Math.max(characterBounds.width, 1), (viewportHeight * 0.82) / Math.max(characterBounds.height, 1)));
-		character.scale.set(characterBaseScaleX * fitScale, characterBaseScaleY * fitScale);
-		character.updateHitbox();
-		character.offset.set((character.isPlayer != character.playerOffsets) ? character.globalOffset.x : -character.globalOffset.x, -character.globalOffset.y);
-		character.setPosition(0, 0);
-		character.getScreenBounds(characterBounds, previewCamera);
-		character.x = (viewportWidth - characterBounds.width) * 0.5 - characterBounds.x;
-		character.y = viewportHeight - characterBounds.height - 8 - characterBounds.y;
+
+		var originalAnimation = character.getAnimName();
+		var originalFrame = character.globalCurFrame;
+		var originalReversed = character.isAnimReversed();
+		var originalContext = character.lastAnimContext;
+		var originalFinished = character.isAnimFinished();
+		var envelope:Array<Float> = null;
+
+		for (animationName in character.getNameList()) {
+			var animation:FlxAnimation = cast character.getAnim(animationName);
+			if (animation == null) continue;
+
+			for (frameIndex in 0...animation.numFrames) {
+				// The preview character has scripts disabled; using its normal play
+				// path here reproduces Character offsets and FlxAnimate frame bounds.
+				character.playAnim(animationName, true, PlayAnimContext.NONE, false, frameIndex);
+				character.getScreenBounds(characterBounds, previewCamera);
+				envelope = CharterCharacterPreviewLayout.includeBounds(
+					envelope,
+					characterBounds.x,
+					characterBounds.y,
+					characterBounds.width,
+					characterBounds.height);
+			}
+		}
+
+		// Measuring should not leave the pane on the last frame scanned.
+		if (originalAnimation != null && character.hasAnim(originalAnimation)) {
+			var originalAnimationData:FlxAnimation = cast character.getAnim(originalAnimation);
+			var restoreFrame = originalReversed && originalAnimationData != null ? originalAnimationData.numFrames - 1 - originalFrame : originalFrame;
+			character.playAnim(originalAnimation, true, originalContext, originalReversed, restoreFrame);
+			if (originalFinished && character.animation.curAnim != null)
+				character.animation.curAnim.finish();
+		} else {
+			character.dance();
+		}
+
+		if (envelope == null) {
+			character.getScreenBounds(characterBounds, previewCamera);
+			envelope = CharterCharacterPreviewLayout.includeBounds(
+				envelope,
+				characterBounds.x,
+				characterBounds.y,
+				characterBounds.width,
+				characterBounds.height);
+		}
+
+		character.setPosition(
+			CharterCharacterPreviewLayout.getCharacterPositionX(envelope[0]),
+			CharterCharacterPreviewLayout.getCharacterPositionY(envelope[1]));
+
+		windowWidth = CharterCharacterPreviewLayout.getWindowWidth(envelope[2] - envelope[0]);
+		windowHeight = CharterCharacterPreviewLayout.getWindowHeight(envelope[3] - envelope[1]);
+		resize(windowWidth, collapsed ? 34 : windowHeight);
+		updatePreviewCamera();
+
+		// Character changes can alter the auto-sized window; keep it reachable.
+		x = FlxMath.bound(x, 0, Math.max(FlxG.width - windowWidth, 0));
+		y = FlxMath.bound(y, 0, Math.max(FlxG.height - (collapsed ? 34 : windowHeight), 0));
 	}
 
 	private function updatePreviewCamera():Void {
 		if (previewCamera == null) return;
-		var oldWidth = previewCamera.width;
-		var oldHeight = previewCamera.height;
 		previewCamera.setPosition(x + 4, y + 33);
 		previewCamera.setSize(Std.int(Math.max(windowWidth - 8, 1)), Std.int(Math.max((collapsed ? 34 : windowHeight) - 37, 1)));
 		previewCamera.visible = visible && !collapsed;
 		previewCamera.scroll.set();
-		if (oldWidth != previewCamera.width || oldHeight != previewCamera.height) fitCharacter();
 	}
 
 	public override function update(elapsed:Float):Void {
@@ -180,14 +256,13 @@ class CharterCharacterPreviewWindow extends UISliceSprite {
 		danceTimer += elapsed;
 		var danceInterval:Float = Conductor.bpm > 0 ? 60 / Conductor.bpm : 0.5;
 		danceInterval = Math.max(0.25, Math.min(1.5, danceInterval));
-		if (character != null && danceTimer >= danceInterval && character.isAnimFinished()) {
+		if (character != null && character.lastAnimContext == PlayAnimContext.DANCE && danceTimer >= danceInterval && character.isAnimFinished()) {
 			danceTimer = 0;
 			character.dance();
 			var currentAnimation = character.getAnimName();
 			if (currentAnimation != null && character.isAnimFinished())
 				character.playAnim(currentAnimation, true, character.lastAnimContext);
 		}
-		fitCharacter();
 	}
 
 	public override function destroy():Void {

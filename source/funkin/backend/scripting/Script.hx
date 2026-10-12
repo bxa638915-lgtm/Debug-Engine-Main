@@ -28,6 +28,13 @@ class Script extends FlxBasic implements IFlxDestroyable
 		var copy = vars.copy();
 		copy.set("state", flixel.FlxG.state); // `state` changes on state switch, so it can't be cached
 		copy.set("window", lime.app.Application.current.window); // same for `window`: evaluated at script creation time like before
+		var engine = copy.get("engine");
+		if (engine != null)
+		{
+			var currentEngine = Reflect.copy(engine);
+			Reflect.setField(currentEngine, "compatibility", ScriptCapabilities.getCompatibilityInfo());
+			copy.set("engine", currentEngine);
+		}
 		return copy;
 	}
 

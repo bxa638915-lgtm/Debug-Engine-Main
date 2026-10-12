@@ -1,0 +1,18 @@
+{
+  "dialogue": [
+    {
+      "portrait": "bf",
+      "expression": "idle",
+      "boxState": "normal",
+      "text": "DBE Psych dialogue fixture.",
+      "speed": 0.01
+    },
+    {
+      "portrait": "dad",
+      "expression": "idle",
+      "boxState": "normal",
+      "text": "The second line checks portrait resolution.",
+      "speed": 0.01
+    }
+  ]
+}

@@ -89,16 +89,22 @@ class Paths
 			file = file.substr(0, idx);
 		}
 
-		p = library == null ? getExistingPath(p, 'assets/', true) : getExistingPath('$library/$p', '$library:assets/', true);
-		if (p == null) return library == null ? 'assets/$file.${e[0]}' : '$library:assets/$library/$file.${e[0]}';
-		else p += "/";
+		var prefix = library == null ? 'assets/' : '$library:assets/';
+		var resolvedFolder = (p == null || p == "") ? prefix : (prefix + p + "/");
+
+		#if (sys && !windows)
+		if (p != null && p != "") {
+			var resolved = getExistingPath(p, prefix, true);
+			if (resolved != null) resolvedFolder = resolved + "/";
+		}
+		#end
 
 		for (extension in e) {
-			final path = getExistingPath('$file.$extension', p, true);
+			final path = getExistingPath('$file.$extension', resolvedFolder, true);
 			if (path != null) return path;
 		}
 
-		return '$p$file.${e[0]}';
+		return '$resolvedFolder$file.${e[0]}';
 	}
 
 	public static inline function video(key:String, ?ext:OneOfTwo<String, Array<String>>)

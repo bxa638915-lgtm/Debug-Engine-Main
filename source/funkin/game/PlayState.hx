@@ -2,11 +2,14 @@ package funkin.game;
 
 import cne.compat.PsychHookMap;
 import cne.compat.PsychTimeBar;
+import dbe.diagnostics.ScriptTimingProfiler;
 import flixel.FlxState;
 import flixel.FlxSubState;
 import flixel.graphics.FlxGraphic;
 import flixel.math.FlxPoint;
 import flixel.sound.FlxSound;
+import flixel.sound.FlxSoundData;
+import flixel.system.FlxAssets.FlxSoundAsset;
 import flixel.text.FlxText;
 import flixel.text.FlxText.FlxTextAlign;
 import flixel.text.FlxText.FlxTextBorderStyle;
@@ -17,6 +20,9 @@ import flixel.util.FlxColor;
 import flixel.util.FlxSort;
 import flixel.util.FlxTimer;
 import funkin.backend.FunkinText;
+import funkin.backend.assets.PreparedSong;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import funkin.backend.chart.Chart;
 import funkin.backend.chart.ChartData;
 import funkin.backend.chart.EventsData;
@@ -27,6 +33,7 @@ import funkin.backend.scripting.events.*;
 import funkin.backend.scripting.events.gameplay.*;
 import funkin.backend.scripting.events.note.*;
 import funkin.backend.system.Conductor;
+import funkin.backend.system.PlayStateDiagnostics;
 import funkin.backend.system.RotatingSpriteGroup;
 import funkin.editors.SaveWarning;
 import funkin.editors.charter.Charter;
@@ -46,6 +53,10 @@ using StringTools;
 @:access(funkin.game.StrumLine)
 class PlayState extends MusicBeatState
 {
+	var preparedSong:PreparedSong;
+	var botplayEnabled:Bool = false;
+	var fullSongDiagnosticArmed:Bool = false;
+
 	/**
 	 * Current PlayState instance.
 	 */
@@ -196,6 +207,18 @@ class PlayState extends MusicBeatState
 	 * Object defining the camera follow target.
 	 */
 	public var camFollow:FlxObject;
+	/**
+	 * Psych compatibility flag that lets Lua scripts hold and move camFollow.
+	 */
+	public var isCameraOnForcedPos:Bool = false;
+	/**
+	 * Psych Engine compatible camera follow position.
+	 */
+	public var camFollowPos:FlxObject;
+	/**
+	 * Psych Engine compatible camera follow speed.
+	 */
+	public var cameraSpeed:Float = 1.0;
 
 	/**
 	 * Point defining the camera follow offset.
@@ -704,11 +727,20 @@ class PlayState extends MusicBeatState
 
 	@:dox(hide) override public function create()
 	{
+		ScriptTimingProfiler.reset();
 		Note.__customNoteTypeExists = [];
 
 		// SCRIPTING & DATA INITIALIZATION
 		#if REGION
 		instance = this;
+		var pendingSong = SongLoader.takePrepared();
+		if (pendingSong != null && pendingSong.request.matchesCurrentPlayState()) {
+			preparedSong = pendingSong;
+			SONG = pendingSong.chart;
+		}
+		fullSongDiagnosticArmed = !chartingMode && SONG != null && SONG.meta != null && SONG.meta.name != null && SONG.meta.name.toLowerCase() == "genocide-d3r";
+		if (fullSongDiagnosticArmed)
+			Logs.infos("Full-song diagnostic armed for genocide-d3r; report will save when the song ends.", "PlayState");
 		if (FlxG.sound.music != null) FlxG.sound.music.stop();
 
 		PauseSubState.script = Flags.DEFAULT_PAUSE_SCRIPT;
@@ -765,6 +797,8 @@ class PlayState extends MusicBeatState
 		#if REGION
 		camFollow = new FlxObject(0, 0, 2, 2);
 		add(camFollow);
+		camFollowPos = new FlxObject(0, 0, 2, 2);
+		add(camFollowPos);
 
 		cameraFocusOffset = FlxPoint.get();
 
@@ -777,7 +811,7 @@ class PlayState extends MusicBeatState
 					// ADD YOUR HARDCODED SCRIPTS HERE!
 				default:
 					var normal = 'songs/${SONG.meta.name}/scripts';
-					var scriptsFolders:Array<String> = [normal, normal + '/$difficulty/', 'data/charts/', 'songs/'];
+					var scriptsFolders:Array<String> = ['scripts/', normal, normal + '/$difficulty/', 'data/charts/', 'songs/'];
 
 					for (folder in scriptsFolders) {
 						for (file in Paths.getFolderContent(folder, true, fromMods ? MODS : BOTH)) {
@@ -793,7 +827,7 @@ class PlayState extends MusicBeatState
 
 					for (file in Paths.getFolderContent('data/events/', true, fromMods ? MODS : BOTH)) {
 						var fileName:String = CoolUtil.getFilename(file);
-						if (EventsData.eventsList.contains(fileName) && songEvents.contains(fileName)) {
+						if (songEvents.contains(fileName)) {
 							addScript(file);
 						}
 					}
@@ -879,6 +913,7 @@ class PlayState extends MusicBeatState
 		}
 
 		add(strumLines);
+		preparedSong = null;
 
 		splashHandler = new SplashHandler();
 		add(splashHandler);
@@ -912,6 +947,7 @@ class PlayState extends MusicBeatState
 		} else {
 			FlxG.camera.focusOn(camFollow.getPosition(FlxPoint.weak()));
 		}
+		camFollowPos.setPosition(FlxG.camera.scroll.x + FlxG.camera.width * 0.5, FlxG.camera.scroll.y + FlxG.camera.height * 0.5);
 		smoothTransitionData = null;
 
 		FlxG.worldBounds.set(0, 0, FlxG.width, FlxG.height);
@@ -1154,9 +1190,11 @@ class PlayState extends MusicBeatState
 	}
 
 	public override function destroy() {
+		ScriptTimingProfiler.stop();
 		var notNull = stage != null;
 		if (notNull) PlayState.instance.gameAndCharsCall("onStageDestroy", [stage]);
 		scripts.call("destroy");
+		PlayStateDiagnostics.clear(this);
 
 		for (g in __cachedGraphics) g.decrementUseCount();
 		@:privateAccess {
@@ -1226,11 +1264,17 @@ class PlayState extends MusicBeatState
 		curSong = songData.meta.name.toLowerCase();
 		curSongID = curSong.replace(" ", "-");
 
-		FlxG.sound.setMusic(inst = FlxG.sound.load(Paths.inst(SONG.meta.name, difficulty, SONG.meta.instSuffix)));
+		var instPath = Paths.inst(SONG.meta.name, difficulty, SONG.meta.instSuffix);
+		var preparedInst:FlxSoundData = preparedSong == null ? null : preparedSong.getAudioData(instPath);
+		var instSource:FlxSoundAsset = preparedInst != null ? preparedInst : instPath;
+		FlxG.sound.setMusic(inst = FlxG.sound.load(instSource));
 
 		var vocalsPath = Paths.voices(SONG.meta.name, difficulty, SONG.meta.vocalsSuffix);
-		if (SONG.meta.needsVoices && Assets.exists(vocalsPath))
-			vocals = FlxG.sound.load(Options.streamedVocals ? Assets.getMusic(vocalsPath) : vocalsPath);
+		if (SONG.meta.needsVoices && Assets.exists(vocalsPath)) {
+			var preparedVocals:FlxSoundData = preparedSong == null ? null : preparedSong.getAudioData(vocalsPath);
+			var vocalsSource:FlxSoundAsset = preparedVocals != null ? preparedVocals : (Options.streamedVocals ? Assets.getMusic(vocalsPath) : vocalsPath);
+			vocals = FlxG.sound.load(vocalsSource);
+		}
 		else
 			vocals = new FlxSound();
 
@@ -1238,6 +1282,11 @@ class PlayState extends MusicBeatState
 		vocals.persist = false;
 
 		generatedMusic = true;
+	}
+
+	/** Gets a cached voice file prepared for the initial chart strumlines. */
+	public function getPreparedAudioData(path:String):Null<FlxSoundData> {
+		return preparedSong == null ? null : preparedSong.getAudioData(path);
 	}
 
 	private function applyPsychEventEarlyTriggers():Void
@@ -1520,6 +1569,32 @@ class PlayState extends MusicBeatState
 	@:dox(hide)
 	override public function update(elapsed:Float)
 	{
+		var frameStartedAt = ScriptTimingProfiler.beginFrame(Conductor.songPosition);
+		if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.F8)
+			PlayStateDiagnostics.capture(this);
+		if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.F9) {
+			fullSongDiagnosticArmed = !fullSongDiagnosticArmed;
+			Logs.infos(fullSongDiagnosticArmed
+				? "Full-song diagnostic armed; it will save at song end. Press Ctrl+Shift+F9 again to cancel."
+				: "Full-song diagnostic cancelled.", "PlayState");
+		}
+		if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.B) {
+			botplayEnabled = !botplayEnabled;
+			for (strumLine in strumLines.members)
+				if (strumLine != null)
+					strumLine.botplay = botplayEnabled;
+			Logs.infos('Botplay ${botplayEnabled ? "enabled" : "disabled"} (Ctrl+Shift+B)', "PlayState");
+		}
+
+		if (camFollowPos != null)
+			camFollowPos.setPosition(FlxG.camera.scroll.x + FlxG.camera.width * 0.5, FlxG.camera.scroll.y + FlxG.camera.height * 0.5);
+
+		// Match Psych's camera follow speed and move the engine target before scripts
+		// run, so Lua onUpdate camera adjustments are not overwritten this frame.
+		FlxG.camera.followLerp = inCutscene ? 0 : Flags.DEFAULT_CAMERA_FOLLOW_SPEED * cameraSpeed;
+		if (generatedMusic && !inCutscene)
+			moveCamera();
+
 		_ONE_ARG[0] = elapsed;
 		scripts.call("update", _ONE_ARG);
 		if (__psychTimeTxt != null && inst != null)
@@ -1528,6 +1603,7 @@ class PlayState extends MusicBeatState
 		if (inCutscene) {
 			super.update(elapsed);
 			scripts.call("postUpdate", _ONE_ARG);
+			ScriptTimingProfiler.finishPlayStateUpdate(frameStartedAt);
 			return;
 		}
 
@@ -1579,9 +1655,6 @@ class PlayState extends MusicBeatState
 		if (controls.PAUSE && startedCountdown && canPause)
 			pauseGame();
 
-		if (generatedMusic)
-			moveCamera();
-
 		if (camZooming) {
 			if (useCamZoomMult) {
 				camZoomingMult = lerp(camZoomingMult, defaultZoom, camZoomLerp) - defaultZoom;
@@ -1613,13 +1686,16 @@ class PlayState extends MusicBeatState
 		super.update(elapsed);
 
 		scripts.call("postUpdate", _ONE_ARG);
+		ScriptTimingProfiler.finishPlayStateUpdate(frameStartedAt);
 	}
 
 	override function draw() {
+		var drawStartedAt = ScriptTimingProfiler.startTimer();
 		var e = scripts.event("draw", EventManager.get(DrawEvent).recycle());
 		if (!e.cancelled)
 			super.draw();
 		scripts.event("postDraw", e);
+		ScriptTimingProfiler.finishPlayStateDraw(drawStartedAt);
 	}
 
 	public function doBopZoom()
@@ -1645,7 +1721,7 @@ class PlayState extends MusicBeatState
 		gameAndCharsEvent("onPostBopZoom", event);
 	}
 
-	public function moveCamera() if (strumLines.members[curCameraTarget] != null) {
+	public function moveCamera() if (!isCameraOnForcedPos && strumLines.members[curCameraTarget] != null) {
 		var data:CamPosData = getStrumlineCamPos(curCameraTarget);
 		data.pos.add(cameraFocusOffset.x, cameraFocusOffset.y);
 
@@ -1694,6 +1770,66 @@ class PlayState extends MusicBeatState
 
 	public var eventsTween:Map<String, FlxTween> = [];
 
+	/** Applies Psych Engine's built-in Change Character event to the matching DBE strumline. */
+	private function changePsychCharacter(params:Array<Dynamic>):Void {
+		if (params == null || params.length < 2 || params[0] == null || params[1] == null) return;
+
+		var target = StringTools.trim(Std.string(params[0])).toLowerCase();
+		var psychCharacterType:Null<Int> = switch (target) {
+			case "bf" | "boyfriend" | "player": 0;
+			case "dad" | "opponent": 1;
+			case "gf" | "girlfriend": 2;
+			default: Std.parseInt(target);
+		}
+		if (psychCharacterType == null || psychCharacterType < 0 || psychCharacterType > 2) return;
+
+		// Psych indexes characters as BF=0, Dad=1, GF=2; DBE's strumline types
+		// are Opponent=0, Player=1, Additional=2.
+		var strumLineType:Int = switch (psychCharacterType) {
+			case 0: 1;
+			case 1: 0;
+			default: 2;
+		}
+		var characterName = StringTools.trim(Std.string(params[1]));
+		if (characterName.length == 0) return;
+
+		var targetLine:StrumLine = null;
+		for (line in strumLines.members)
+			if (line != null && line.data != null && line.data.type == strumLineType) {
+				targetLine = line;
+				break;
+			}
+		if (targetLine == null || targetLine.characters == null || targetLine.characters.length == 0) return;
+
+		var oldCharacter = targetLine.characters[0];
+		if (oldCharacter != null && oldCharacter.curCharacter == characterName) return;
+
+		var charPosName:String = targetLine.data.position == null ? (switch (strumLineType) {
+			case 0: "dad";
+			case 1: "boyfriend";
+			default: "girlfriend";
+		}) : targetLine.data.position;
+		var flipCharacter = stage != null
+			? stage.isCharFlipped(stage.characterPoses[characterName] != null ? characterName : charPosName, strumLineType == 1)
+			: strumLineType == 1;
+		var newCharacter = new Character(0, 0, characterName, flipCharacter);
+
+		if (oldCharacter != null) {
+			newCharacter.alpha = oldCharacter.alpha;
+			newCharacter.visible = oldCharacter.visible;
+			newCharacter.active = oldCharacter.active;
+		}
+
+		if (stage != null) stage.applyCharStuff(newCharacter, charPosName, 0);
+		else add(newCharacter);
+
+		targetLine.characters[0] = newCharacter;
+		if (oldCharacter != null) remove(oldCharacter, true);
+
+		if (strumLineType == 1 && iconP1 != null) iconP1.setIcon(newCharacter.getIcon());
+		else if (strumLineType == 0 && iconP2 != null) iconP2.setIcon(newCharacter.getIcon());
+	}
+
 	public function executeEvent(event:ChartEvent) @:privateAccess {
 		if (event == null || event.params == null) return;
 
@@ -1701,8 +1837,26 @@ class PlayState extends MusicBeatState
 		gameAndCharsEvent("onEvent", e);
 		if (e.cancelled) return;
 		var event = e.event;
+		PlayStateDiagnostics.recordCameraEvent(this, event, Conductor.songPosition);
 
 		switch(event.name) {
+			case "Camera Follow Pos":
+				var followX:Float = Math.NaN;
+				var followY:Float = Math.NaN;
+				if (event.params.length > 0 && event.params[0] != null) {
+					var value = Std.string(event.params[0]).trim();
+					if (value.length > 0) followX = Std.parseFloat(value);
+				}
+				if (event.params.length > 1 && event.params[1] != null) {
+					var value = Std.string(event.params[1]).trim();
+					if (value.length > 0) followY = Std.parseFloat(value);
+				}
+
+				// Psych releases the forced position when both chart values are blank.
+				isCameraOnForcedPos = !Math.isNaN(followX) || !Math.isNaN(followY);
+				if (isCameraOnForcedPos) {
+					camFollow.setPosition(Math.isNaN(followX) ? 0 : followX, Math.isNaN(followY) ? 0 : followY);
+				}
 			case "HScript Call":
 				var scriptPacks:Array<ScriptPack> = [scripts, stateScripts];
 				for (strLine in strumLines.members) for (char in strLine.characters) scriptPacks.push(char.scripts);
@@ -1824,6 +1978,8 @@ class PlayState extends MusicBeatState
 					camera.fade(event.params[1], (Conductor.stepCrochet / 1000) * event.params[2], false, () -> {camera._fxFadeAlpha = 0;}, true);
 				else // Not Reversed
 					camera.flash(event.params[1], (Conductor.stepCrochet / 1000) * event.params[2], null, true);
+			case "Change Character":
+				changePsychCharacter(event.params);
 			case "BPM Change": // automatically handled by conductor
 			case "Scroll Speed Change":
 				var tween = eventsTween.get("scrollSpeedTween");
@@ -1900,6 +2056,11 @@ class PlayState extends MusicBeatState
 		openSubState(new GameOverSubstate(event.x, event.y, event.deathCharID, event.isPlayer, event.gameOverSong, event.lossSFX, event.retrySFX));
 
 		gameAndCharsEvent("onPostGameOver", event);
+		if (fullSongDiagnosticArmed) {
+			fullSongDiagnosticArmed = false;
+			var reportPath = PlayStateDiagnostics.capture(this, "partial: game over");
+			Logs.infos('Partial song diagnostic saved: $reportPath', "PlayState");
+		}
 	}
 
 	/**
@@ -1908,6 +2069,11 @@ class PlayState extends MusicBeatState
 	public function endSong():Void
 	{
 		if (gameAndCharsEvent("onSongEnd", new CancellableEvent()).cancelled) return;
+		if (fullSongDiagnosticArmed) {
+			fullSongDiagnosticArmed = false;
+			var reportPath = PlayStateDiagnostics.capture(this, "song completed");
+			Logs.infos('Full-song diagnostic saved: $reportPath', "PlayState");
+		}
 		endingSong = true;
 		canPause = false;
 
@@ -1974,8 +2140,13 @@ class PlayState extends MusicBeatState
 
 				registerSmoothTransition();
 
-				__loadSong(storyPlaylist[0], difficulty, storyVariations[0]);
-				FlxG.switchState(new PlayState());
+				var nextSong = storyPlaylist[0];
+				var nextVariation = storyVariations[0];
+				var request = new SongLoadRequest(nextSong, difficulty, nextVariation, opponentMode, coopMode, true, chartingMode, "story", Paths.getAssetsRoot());
+				SongLoader.start(request, () -> {
+					__loadSong(nextSong, difficulty, nextVariation);
+					return SONG;
+				});
 			}
 		}
 		else if (chartingMode)

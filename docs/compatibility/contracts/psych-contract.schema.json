@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dbe.local/schemas/psych-contract.schema.json",
+  "title": "Psych Lua compatibility contract catalog",
+  "type": "object",
+  "required": ["schemaVersion", "profile", "source", "functions", "callbacks", "dbeOnly", "profileDifferences"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "profile": {"enum": ["0.6.3", "1.0.4"]},
+    "source": {
+      "type": "object",
+      "required": ["repository", "tag", "commit", "snapshotSha256"],
+      "properties": {
+        "repository": {"const": "https://github.com/ShadowMario/FNF-PsychEngine.git"},
+        "tag": {"type": "string"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "snapshotSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "functions": {"type": "array", "items": {"$ref": "#/$defs/function"}},
+    "callbacks": {"type": "array", "items": {"$ref": "#/$defs/callback"}},
+    "dbeOnly": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "classification", "explanation", "bindingSource"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "classification": {"enum": ["dbe-surface-only", "profile-gated-off"]},
+          "explanation": {"type": "string", "minLength": 1},
+          "bindingSource": {"$ref": "#/$defs/sourceLocation"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "profileDifferences": {"type": "array", "items": {"type": "object", "required": ["kind", "name", "otherProfile", "classification", "behaviorStatus"], "properties": {"kind": {"enum": ["function", "callback"]}, "name": {"type": "string"}, "otherProfile": {"enum": ["0.6.3", "1.0.4"]}, "classification": {"const": "source-surface-only"}, "behaviorStatus": {"const": "not-verified"}}, "additionalProperties": false}}
+  },
+  "$defs": {
+    "state": {"enum": ["compatible", "adapted", "incompatible", "not-verified"]},
+    "sourceLocation": {"type": "object", "required": ["path", "line"], "properties": {"path": {"type": "string", "minLength": 1}, "line": {"type": "integer", "minimum": 1}}, "additionalProperties": false},
+    "binding": {"type": "object", "required": ["status", "name", "explanation"], "properties": {"status": {"enum": ["matched", "unmatched", "alias", "dynamic", "unclassified"]}, "name": {"type": ["string", "null"]}, "explanation": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+    "evidence": {"type": "object", "required": ["kind", "note"], "properties": {"kind": {"type": "string", "minLength": 1}, "note": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+    "common": {
+      "type": "object",
+      "required": ["name", "kind", "status", "dbeBinding", "fixtureId", "source", "evidence"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["function", "callback"]},
+        "status": {"$ref": "#/$defs/state"},
+        "dbeBinding": {"$ref": "#/$defs/binding"},
+        "fixtureId": {"type": ["string", "null"]},
+        "source": {"$ref": "#/$defs/sourceLocation"},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "function": {
+      "allOf": [
+        {"$ref": "#/$defs/common"},
+        {"type": "object", "required": ["signature", "defaults", "return", "effects", "preconditions", "platform", "errors"], "properties": {
+          "kind": {"const": "function"},
+          "signature": {"type": "object", "required": ["parameters", "variadic"], "properties": {"parameters": {"type": "array", "items": {"type": "object", "required": ["name", "acceptedValues", "default"], "properties": {"name": {"type": "string"}, "acceptedValues": {"type": "array"}, "optional": {"type": "boolean"}, "default": {"type": "object", "required": ["present", "value"], "properties": {"present": {"type": "boolean"}, "value": {}}, "additionalProperties": false}}, "additionalProperties": true}}, "variadic": {"type": "boolean"}, "observation": {"type": "string"}}, "additionalProperties": false},
+          "defaults": {"type": "object"},
+          "return": {"type": "object", "required": ["type", "conversion"], "properties": {"type": {"type": "string"}, "conversion": {"type": "string"}}, "additionalProperties": true},
+          "effects": {"type": "array"}, "preconditions": {"type": "array"},
+          "platform": {"type": "object", "required": ["targets", "buildRequirements"], "properties": {"targets": {"type": "array"}, "buildRequirements": {"type": "array"}}, "additionalProperties": true},
+          "errors": {"type": "object", "required": ["behavior"], "properties": {"behavior": {"type": "string"}}, "additionalProperties": true}
+        }}
+      ],
+      "additionalProperties": true
+    },
+    "callback": {
+      "allOf": [
+        {"$ref": "#/$defs/common"},
+        {"type": "object", "required": ["eventSource", "triggerBoundary", "order", "arguments", "returnCancellation"], "properties": {
+          "kind": {"const": "callback"}, "eventSource": {"type": "string"}, "triggerBoundary": {"type": "string"}, "order": {"type": "array"}, "arguments": {"type": "array"}, "returnCancellation": {"type": "string"}
+        }}
+      ],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -2,6 +2,7 @@ package funkin.backend.chart;
 
 import funkin.backend.chart.ChartData.ChartEvent;
 import funkin.backend.system.Conductor;
+import dbe.compatibility.chart.PsychEventsParser;
 
 /**
  * Legacy FNF chart parser.
@@ -9,6 +10,12 @@ import funkin.backend.system.Conductor;
 **/
 class FNFLegacyParser {
 	public static function parse(data:Dynamic, result:ChartData) {
+		// Psych charts can store custom events directly in song.events. Keep them
+		// in ChartData so PlayState can dispatch them and load matching event Lua.
+		var psychEvents:Array<ChartEvent> = cast PsychEventsParser.parse(data);
+		for (event in psychEvents)
+			if (event != null) result.events.push(event);
+
 		// base fnf chart parsing
 		var data:SwagSong = Chart.cleanSongData(data);
 

@@ -1,6 +1,16 @@
 # Auditoria da Universal Compatibility Engine
 
-Atualizada em 6 de outubro de 2026. Projeto: `CodenameEngine-main`, Codename Engine 1.1.0. A pasta de código não contém `.git`; não há commit ou estado Git confiável para registrar.
+Atualizada em 10 de outubro de 2026. Projeto: DBE, fork Codename Engine 1.1.0. Este checkout é um repositório Git na branch `main`, baseline `3d5e5be2d179`; mudanças locais preexistentes foram preservadas.
+
+## Execução Psych Lua 0.6.3 e 1.0.4 (10 de outubro de 2026)
+
+- Fontes oficiais fixadas nos commits `eb0ade39e8d1c5437db2166a9ddb6eb3c05956e1` (0.6.3) e `5c67ced49e5a98535298a6daa3f8f4ec79ac8399` (1.0.4); SHA-256 por snapshot consta em `docs/compatibility/contracts/source-lock.json`.
+- Catálogos reconciliam 201 funções + 39 callbacks para 0.6.3 e 233 funções + 45 callbacks para 1.0.4. Quatro contratos de função estão `adapted` (dois por perfil: `addAnimationByPrefix` e `addAnimationByIndices`); 514 continuam `not-verified` (238 em 0.6.3 e 276 em 1.0.4).
+- `python -m unittest discover -s tests/psych_contracts -p "test_*.py"`: PASS 30/30. `building/psych-lua-test.ps1 -ValidateOnly`: PASS. Verificador estrutural e reconciliação dos nomes: PASS.
+- `building/psych-lua-test.ps1 -BuildEngine`: PASS para Windows x64 com LuaJIT. `building/psych-lua-test.ps1 -GameplaySmoke -Profiles 0.6.3,1.0.4`: PASS para 14 fixtures por perfil, em oito grupos; logs e execução estão em `export/compat-tests/` e o [relatório de evidências](COMPATIBILITY-EVIDENCE.md).
+- Gate final de paridade: BLOQUEADO intencionalmente, porque 514 contratos seguem `not-verified`. Portanto os dois perfis permanecem não certificados; chamadas presentes nos fixtures não são tratadas como equivalência de API.
+- Build Windows HScript-only: PASS; o build sem `LUA_ALLOWED` encontrou uma referência Lua sem guarda em `LuaScript.hx`, corrigida envolvendo a classe com `#if LUA_ALLOWED`. O build Lua-enabled e o smoke completo foram repetidos depois da correção.
+- Alvos Linux/macOS continuam sem validação: toolchains não estão disponíveis neste host Windows.
 
 ## Tecnologias e dependências confirmadas
 
@@ -42,7 +52,7 @@ Diferenças restantes: `setTimeBarColors` cria uma barra de tempo CNE sob demand
 
 ## Backup, checkpoints e restauração
 
-Backup integral verificado antes das alterações: `backups/CNE-compat-master-20261003-213953`, fora da árvore da engine. Ele contém o snapshot do código e da instalação identificados no início: 2.977 arquivos, 1.053.663.535 bytes, caminhos/tamanhos/hashes SHA-256 verificados. A pasta da engine continua sem Git.
+Backup integral verificado antes das alterações: `backups/CNE-compat-master-20261003-213953`, fora da árvore da engine. Ele contém o snapshot do código e da instalação identificados no início: 2.977 arquivos, 1.053.663.535 bytes, caminhos/tamanhos/hashes SHA-256 verificados. O checkout permanece dentro do repositório Git; os backups e checkpoints antigos são arquivos históricos externos a esta árvore.
 
 Checkpoints incrementais, todos fora do projeto:
 
@@ -55,7 +65,7 @@ Checkpoints incrementais, todos fora do projeto:
 
 Cada checkpoint tem `checkpoint-manifest.json` com SHA-256 e instruções `RESTORE.txt`. Para recuperar, restaure arquivos selecionados para uma pasta separada, confira o manifesto e revise as diferenças antes de substituir arquivos de trabalho. O backup integral preserva o estado original.
 
-## Validação desta rodada
+## Validação histórica (6 de outubro de 2026)
 
 | Verificação | Resultado |
 |---|---|

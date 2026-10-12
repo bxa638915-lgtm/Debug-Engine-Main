@@ -2,6 +2,8 @@ package funkin.game;
 
 import flixel.math.FlxPoint;
 import flixel.sound.FlxSound;
+import flixel.sound.FlxSoundData;
+import flixel.system.FlxAssets.FlxSoundAsset;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import funkin.backend.chart.ChartData;
@@ -46,6 +48,10 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	 * Whenever this strumline is controlled by cpu or not.
 	 */
 	public var cpu(default, set):Bool = false;
+	/**
+	 * Automatically hits player notes while preserving player hit callbacks and scoring.
+	 */
+	public var botplay(default, set):Bool = false;
 	/**
 	 * Whenever this strumline is from the opponent side or the player side.
 	 */
@@ -120,7 +126,9 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		this.notes = new NoteGroup();
 
 		var v = Paths.voices(PlayState.SONG.meta.name, PlayState.difficulty, vocalPrefix);
-		vocals = vocalPrefix != "" ? FlxG.sound.load(Options.streamedVocals ? Assets.getMusic(v) : v) : new FlxSound();
+		var preparedVocals:FlxSoundData = PlayState.instance == null ? null : PlayState.instance.getPreparedAudioData(v);
+		var vocalsSource:FlxSoundAsset = preparedVocals != null ? preparedVocals : (Options.streamedVocals ? Assets.getMusic(v) : v);
+		vocals = vocalPrefix != "" ? FlxG.sound.load(vocalsSource) : new FlxSound();
 		vocals.persist = false;
 	}
 
@@ -228,7 +236,7 @@ class StrumLine extends FlxTypedGroup<Strum> {
 				daNote.tooLate = true;
 		}
 
-		if (cpu && __updateNote_event.__autoCPUHit && !daNote.avoid && !daNote.wasGoodHit && daNote.strumTime < __updateNote_songPos)
+		if ((cpu || botplay) && __updateNote_event.__autoCPUHit && !daNote.avoid && !daNote.wasGoodHit && daNote.strumTime < __updateNote_songPos)
 			PlayState.instance.goodNoteHit(this, daNote);
 
 		if (daNote.wasGoodHit && daNote.isSustainNote && daNote.strumTime + daNote.sustainLength < __updateNote_songPos && !daNote.noSustainClip) {
@@ -237,7 +245,7 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		}
 
 		if (daNote.tooLate) {
-			if (!cpu) PlayState.instance.noteMiss(this, daNote);
+			if (!cpu && !botplay) PlayState.instance.noteMiss(this, daNote);
 			else deleteNote(daNote);
 			return;
 		}
@@ -293,7 +301,7 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	public function updateInput(id:Int = 0) {
 		updateNotes();
 
-		if (cpu) return;
+		if (cpu || botplay) return;
 
 		final membersLength = members.length;
 
@@ -476,8 +484,14 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	private inline function set_cpu(b:Bool):Bool {
 		for(s in members)
 			if (s != null)
-				s.cpu = b;
+				s.cpu = b || botplay;
 		return cpu = b;
+	}
+	private inline function set_botplay(b:Bool):Bool {
+		for(s in members)
+			if (s != null)
+				s.cpu = b || cpu;
+		return botplay = b;
 	}
 	private inline function set_animSuffix(str:String):String {
 		for(s in members)

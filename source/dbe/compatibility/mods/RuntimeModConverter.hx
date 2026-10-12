@@ -677,7 +677,7 @@ class RuntimeModConverter {
 			var first = parts[0].toLowerCase();
 			var extension = Path.extension(parts[parts.length - 1]).toLowerCase();
 			if (first == "characters") return "data/characters/" + parts.slice(1).join("/");
-			if (first == "custom_events" && (extension == "lua" || extension == "txt" || extension == "json"))
+			if (first == "custom_events" && (extension == "lua" || extension == "hx" || extension == "txt" || extension == "json"))
 				return "data/events/" + parts.slice(1).join("/");
 			if (first == "stages") {
 				if (extension == "json") return _replaceJsonExtension("data/stages/" + parts.slice(1).join("/"));
@@ -689,7 +689,7 @@ class RuntimeModConverter {
 				return extension == "json" ? _replaceJsonExtension(weekPath) : weekPath;
 			}
 			if (parts.length >= 2 && first == "data" && parts[1].toLowerCase() == "custom_events"
-				&& (extension == "lua" || extension == "txt" || extension == "json"))
+				&& (extension == "lua" || extension == "hx" || extension == "txt" || extension == "json"))
 				return "data/events/" + parts.slice(2).join("/");
 			if (parts.length >= 3 && first == "data" && parts[1].toLowerCase() == "stages") {
 				var extWithDot = '.' + extension;
@@ -762,10 +762,11 @@ class RuntimeModConverter {
 			if (!_isIgnored(name)) existingTargets.set(_mappedDestination(name, packageRoot, format).toLowerCase(), true);
 		}
 
-		// 1. Generate event stubs for custom_events .lua scripts
+		// 1. Generate event metadata for Psych custom event scripts and editor descriptions.
 		for (file in files) {
 			var name = normalizeRelativePath(file.name);
-			if (_isIgnored(name) || Path.extension(name).toLowerCase() != "lua") continue;
+			var extension = Path.extension(name).toLowerCase();
+			if (_isIgnored(name) || (extension != "lua" && extension != "hx" && extension != "txt")) continue;
 			var parts = name.split("/");
 			if (!_startsWithParts(parts, packageRoot)) continue;
 			var relative = parts.slice(packageRoot.length);
@@ -774,8 +775,12 @@ class RuntimeModConverter {
 				isCustomEvent = true;
 			if (!isCustomEvent) continue;
 			var target = _replaceExtension(_mappedDestination(name, packageRoot, format), ".json");
-			if (!existingTargets.exists(target.toLowerCase()))
-				generated.push({source: '(generated from $name)', target: target, contents: Bytes.ofString('{"params":[]}\n'), reason: "generated DBE event registry metadata"});
+			var targetKey = target.toLowerCase();
+			if (!existingTargets.exists(targetKey)) {
+				var params = '{"params":[{"name":"Value 1","type":"String","defaultValue":""},{"name":"Value 2","type":"String","defaultValue":""}]}\n';
+				generated.push({source: '(generated from $name)', target: target, contents: Bytes.ofString(params), reason: "generated DBE event registry metadata"});
+				existingTargets.set(targetKey, true);
+			}
 		}
 
 		// 2. Generate meta.json for each Psych song in data/<songName>/<songName>.json
@@ -873,6 +878,10 @@ class RuntimeModConverter {
 			var contents = file.read();
 			if (contents == null || contents.length != file.size) throw new haxe.Exception('Could not preserve the original Psych metadata: $name');
 			generated.push({source: name, target: target, contents: contents, reason: "preserved original Psych metadata"});
+		}
+		if (!existingTargets.exists("data/config/modpack.ini")) {
+			var ini = '[Common]\nNAME="Converted Psych Mod"\nAPI_VERSION=1\n';
+			generated.push({source: "pack.json", target: "data/config/modpack.ini", contents: Bytes.ofString(ini), reason: "generated CNE modpack config"});
 		}
 		generated.sort(function(a, b) return Reflect.compare(a.target, b.target));
 		return generated;

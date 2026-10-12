@@ -1,5 +1,7 @@
 package funkin.backend.chart;
 
+import dbe.compatibility.chart.PsychEventsParser;
+
 import funkin.backend.chart.ChartData;
 import flixel.util.FlxColor;
 import funkin.backend.chart.ChartData;
@@ -77,7 +79,7 @@ class Chart {
 		var data:Array<ChartEvent> = null;
 		if (Assets.exists(path)) {
 			try {
-				data = Json.parse(Assets.getText(path)).events;
+				data = cast PsychEventsParser.parse(Json.parse(Assets.getText(path)));
 				for (event in data) event.global = true;
 			} catch(e) Logs.trace('Failed to load song event data for ${songName} ($path): ${Std.string(e)}', ERROR);
 		}

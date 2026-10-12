@@ -1,6 +1,8 @@
 package funkin.menus;
 
 import funkin.editors.charter.Charter;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 
 class GitarooPause extends MusicBeatState
 {
@@ -60,7 +62,8 @@ class GitarooPause extends MusicBeatState
 			else {
 				if (replaySelect)
 				{
-					FlxG.switchState(new PlayState());
+					var request = SongLoadRequest.fromPlayState("replay");
+					SongLoader.start(request, () -> PlayState.SONG);
 				}
 				else
 				{

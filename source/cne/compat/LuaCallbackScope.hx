@@ -1,6 +1,8 @@
 package cne.compat;
 
 import llua.Lua;
+import llua.Lua.Lua_helper;
+import llua.Convert;
 import llua.State;
 
 /**
@@ -25,6 +27,35 @@ class LuaCallbackScope
 		this.errorHandler = errorHandler;
 		scopeId = nextScopeId++;
 		Lua.init_callbacks(state);
+		// linc_luajit's default dispatcher converts each argument by its original
+		// stack index, while Convert.fromLuaTable expects the value at the top of
+		// the stack. Copy each argument to the top before converting it so tables
+		// followed by other arguments (for example addAnimation(..., frames, fps))
+		// are read safely.
+		Lua.set_callbacks_function(cpp.Callable.fromStaticFunction(callbackHandler));
+	}
+
+	@:keep
+	public static function callbackHandler(callbackState:State, callbackName:String):Int
+	{
+		var callback = Lua_helper.callbacks.get(callbackName);
+		if (callback == null) return 0;
+
+		var args:Array<Dynamic> = [];
+		var argCount = Lua.gettop(callbackState);
+		for (index in 1...(argCount + 1))
+		{
+			Lua.pushvalue(callbackState, index);
+			args.push(Convert.fromLua(callbackState, -1));
+			Lua.pop(callbackState, 1);
+		}
+
+		var result:Dynamic = Reflect.callMethod(null, callback, args);
+		if (result == null || !canConvert(result, 0))
+			Lua.pushnil(callbackState);
+		else
+			Convert.toLua(callbackState, result);
+		return 1;
 	}
 
 	/** Registers a Haxe callback and exposes it under the requested Lua name. */

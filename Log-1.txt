@@ -1,0 +1,170 @@
+DBE PLAYSTATE / CAMERA DIAGNOSTIC
+Captured: 2026-10-11 19:55:34
+Report: C:/Users/esque/AppData/Roaming/Yoshman29/CodenameEngine/dbe-playstate-diagnostic-20261011-195534.txt
+Working directory: C:\Users\esque\Downloads\A_1\A\Vs Impostor alternated Scripts Converts\DBE-Tests-Source\Debug Engine-Main\export\release\windows\bin/
+
+=== GAME STATE ===
+song=last-chance-d3r difficulty=d3r variation=<null>
+songPosition=841.869ms generatedMusic=true startingSong=false
+inCutscene=false chartingMode=true
+cameraSpeed=1 forcedPosition=true curCameraTarget=0
+screen=1280x720
+worldBounds=0,0 1280x720
+
+=== PLAYSTATE CAMERAS ===
+camGame id=0 exists=true visible=true alpha=1 viewport=0,0 1280x720 zoom=1.096 scroll=27534.521,15824.403 followEnabled=true followLerp=0.04 target=flixel.FlxObject#3622 bgColor=-16777216
+camHUD id=1 exists=true visible=true alpha=1 viewport=0,0 1280x720 zoom=1 scroll=0,0 followEnabled=true followLerp=1 target=<null> bgColor=0
+camOther id=2 exists=true visible=true alpha=1 viewport=0,0 1280x720 zoom=1 scroll=0,0 followEnabled=true followLerp=1 target=<null> bgColor=0
+camFollow=flixel.FlxObject#3622
+camFollowPos=flixel.FlxObject#3623
+cameraCenter=28118.482,16152.881 targetDelta=-27218.482,-15306.775
+NOTE: a Camera Follow Pos event or script is holding the camera at a forced position.
+
+=== CAMERA MANAGER ===
+manager[0] id=0 exists=true visible=true alpha=1 viewport=0,0 1280x720 zoom=1.096 scroll=27534.521,15824.403 followEnabled=true followLerp=0.04 target=flixel.FlxObject#3622 bgColor=-16777216
+manager[1] id=1 exists=true visible=true alpha=1 viewport=0,0 1280x720 zoom=1 scroll=0,0 followEnabled=true followLerp=1 target=<null> bgColor=0
+manager[2] id=2 exists=true visible=true alpha=1 viewport=0,0 1280x720 zoom=1 scroll=0,0 followEnabled=true followLerp=1 target=<null> bgColor=0
+
+=== STAGE ===
+stageFile=Restaurant New stageName=Restaurant New
+stagePath=assets/data/stages/Restaurant New.xml stageXMLLoaded=true
+stageSprites=3
+  stageSprite[chandelier] rootIndex=5 funkin.backend.FunkinSprite#3627 exists=true active=true visible=true name=chandelier xy=891,-400 size=906x443 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/Restaurant New/chandelier.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+  stageSprite[fg] rootIndex=20 funkin.backend.FunkinSprite#3631 exists=true active=true visible=true name=fg xy=-100,900 size=3601x507 scrollFactor=1.2,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/Restaurant New/fg.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+  stageSprite[normal_stage] rootIndex=4 funkin.backend.FunkinSprite#3626 exists=true active=true visible=true name=normal_stage xy=-550,-290 size=3601x1694 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/Restaurant New/normal_stage.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+
+=== CHARACTERS ===
+strumLine[0] visible=true exists=true characters=1
+  character[0] id=TabiSnap animation=<null>
+    character[0][0] funkin.game.Character#3656 exists=true active=true visible=true name=TabiSnap xy=300,300 size=677x1060 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/characters/Tabi_snap.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+strumLine[1] visible=true exists=true characters=1
+  character[0] id=bf animation=<null>
+    character[1][0] funkin.game.Character#3662 exists=true active=true visible=true name=bf xy=1725,400 size=415x418 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/characters/bf.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+strumLine[2] visible=false exists=true characters=1
+  character[0] id=gf-tabi animation=<null>
+    character[2][0] funkin.game.Character#3668 exists=true active=true visible=true name=gf-tabi xy=1000,350 size=527x613 scrollFactor=0.95,0.95 alpha=1 color=0xFFFFFFFF graphic=assets/images/characters/GF_TABI.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+
+=== RECENT CAMERA EVENTS ===
+No camera chart events recorded in this PlayState yet.
+=== UPCOMING CAMERA EVENTS ===
+time=203368.421ms name="Camera Movement" params=[1]
+time=202105.263ms name="Camera Switch" params=[0.1,off]
+time=202105.263ms name="Camera Movement" params=[0]
+time=201473.684ms name="Add Camera Zoom" params=[0.08,0.08]
+time=201000ms name="Add Camera Zoom" params=[0.08,0.08]
+time=200526.316ms name="Add Camera Zoom" params=[0.08,0.08]
+time=200052.632ms name="Add Camera Zoom" params=[0.08,0.08]
+time=199578.947ms name="Add Camera Zoom" params=[0.08,0.08]
+time=198947.368ms name="Add Camera Zoom" params=[0.08,0.08]
+time=198473.684ms name="Add Camera Zoom" params=[0.08,0.08]
+time=198000ms name="Add Camera Zoom" params=[0.08,0.08]
+time=197526.316ms name="Add Camera Zoom" params=[0.08,0.08]
+time=197052.632ms name="Camera Movement" params=[1]
+time=197052.632ms name="Add Camera Zoom" params=[0.08,0.08]
+time=196736.842ms name="Add Camera Zoom" params=[0.08,0.08]
+time=196421.053ms name="Add Camera Zoom" params=[0.08,0.08]
+time=195947.368ms name="Add Camera Zoom" params=[0.08,0.08]
+time=195473.684ms name="Add Camera Zoom" params=[0.08,0.08]
+time=195000ms name="Add Camera Zoom" params=[0.08,0.08]
+time=194526.316ms name="Add Camera Zoom" params=[0.08,0.08]
+time=193894.737ms name="Add Camera Zoom" params=[0.08,0.08]
+time=193421.053ms name="Add Camera Zoom" params=[0.08,0.08]
+time=192947.368ms name="Add Camera Zoom" params=[0.08,0.08]
+time=192473.684ms name="Add Camera Zoom" params=[0.08,0.08]
+time=192000ms name="Flash Camera" params=[1,]
+time=192000ms name="Add Camera Zoom" params=[0.08,0.08]
+time=192000ms name="Camera Movement" params=[0]
+time=191684.211ms name="Add Camera Zoom" params=[0.08,0.08]
+time=191368.421ms name="Add Camera Zoom" params=[0.08,0.08]
+time=190894.737ms name="Add Camera Zoom" params=[0.08,0.08]
+time=190421.053ms name="Add Camera Zoom" params=[0.08,0.08]
+time=189947.368ms name="Add Camera Zoom" params=[0.08,0.08]
+time=189467.763ms name="Add Camera Zoom" params=[0.08,0.08]
+time=188368.421ms name="Add Camera Zoom" params=[0.08,0.08]
+time=187894.737ms name="Add Camera Zoom" params=[0.08,0.08]
+time=187421.053ms name="Add Camera Zoom" params=[0.08,0.08]
+time=186947.368ms name="Add Camera Zoom" params=[0.08,0.08]
+time=186947.368ms name="Camera Movement" params=[1]
+time=186631.579ms name="Add Camera Zoom" params=[0.08,0.08]
+time=186315.789ms name="Add Camera Zoom" params=[0.08,0.08]
+
+=== LOADED SCRIPTS ===
+active=true name=Restaurant New.lua path=assets/data/stages/Restaurant New.lua
+active=true name=HealthBarTabiRemade.lua path=scripts/HealthBarTabiRemade.lua
+active=true name=hiddenbotplay.lua path=scripts/hiddenbotplay.lua
+active=true name=rtxLighting.lua path=scripts/rtxLighting.lua
+active=true name=RWQXST.lua path=scripts/RWQXST.lua
+active=true name=smoothcam.lua path=scripts/smoothcam.lua
+active=true name=storyintro.lua path=scripts/storyintro.lua
+active=true name=black.lua path=songs/last-chance-d3r/scripts/black.lua
+active=true name=CoolStart.lua path=songs/last-chance-d3r/scripts/CoolStart.lua
+active=true name=Credits.lua path=songs/last-chance-d3r/scripts/Credits.lua
+active=true name=EndingCinematics.lua path=songs/last-chance-d3r/scripts/EndingCinematics.lua
+active=true name=Healt.lua path=songs/last-chance-d3r/scripts/Healt.lua
+active=true name=NotTheEnd.lua path=songs/last-chance-d3r/scripts/NotTheEnd.lua
+active=true name=TabiPause.lua path=songs/last-chance-d3r/scripts/TabiPause.lua
+active=true name=toggleTrailTween.lua path=songs/last-chance-d3r/scripts/toggleTrailTween.lua
+active=true name=Window Change Script.lua path=songs/last-chance-d3r/scripts/Window Change Script.lua
+active=true name=WnB.lua path=songs/last-chance-d3r/scripts/WnB.lua
+active=true name=Better Cinematics.lua path=data/events/Better Cinematics.lua
+active=true name=Bitto's zoom event.lua path=data/events/Bitto's zoom event.lua
+active=true name=BlackFlash.lua path=data/events/BlackFlash.lua
+active=true name=Camera Switch.lua path=data/events/Camera Switch.lua
+active=true name=Flash Camera.lua path=data/events/Flash Camera.lua
+active=true name=HideUI.lua path=data/events/HideUI.lua
+active=true name=ScreenStuff.lua path=data/events/ScreenStuff.lua
+
+=== RENDER TREE ===
+state[0] flixel.FlxSprite#3684 exists=true active=true visible=false xy=-1000,-2000 size=4000x4000 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=4000x4000:-1 cameras=0
+state[1] flixel.FlxSprite#3681 exists=true active=true visible=true xy=-640,-360 size=2560x1440 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=1280x720:-16777216 cameras=0
+state[2] flixel.FlxObject#3622 exists=true active=true visible=true xy=900,846.106 size=2x2 scrollFactor=1,1
+state[3] flixel.FlxObject#3623 exists=true active=true visible=true xy=28130.77,16159.668 size=2x2 scrollFactor=1,1
+state[6] flixel.FlxSprite#3675 exists=true active=true visible=true xy=-550,-290 size=3601x1694 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/Restaurant New/normal_stage.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+state[7] flixel.FlxSprite#3682 exists=true active=true visible=true xy=-600,-320 size=3601x415 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=assets/images/gradientWhite.png cameras=0
+state[8] flixel.FlxSprite#3676 exists=true active=true visible=true xy=891,-400 size=906x443 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/Restaurant New/chandelier.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+state[9] flixel.FlxSprite#3683 exists=true active=true visible=true xy=0,0 size=1280x720 scrollFactor=1,1 alpha=0 color=0xFFFFFFFF graphic=1280x720:-16777216 cameras=2
+state[10] flixel.text.FlxText#3685 exists=true active=true visible=true xy=-1000,290 size=198x112 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=text cameras=2
+state[11] flixel.text.FlxText#5659 exists=true active=true visible=true xy=440,6 size=402x21 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=text105 cameras=1
+state[12] flixel.FlxSprite#5643 exists=true active=true visible=true xy=-110,-280 size=1500x350 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=1500x350:-16777216 cameras=1 [LIKELY OUTSIDE camGame VIEW]
+state[13] flixel.FlxSprite#5644 exists=true active=true visible=true xy=-110,650 size=1500x350 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=1500x350:-16777216 cameras=1 [LIKELY OUTSIDE camGame VIEW]
+state[15] funkin.game.StageCharPos#3628 exists=true active=false visible=false name=girlfriend xy=1000,350 size=0x0 scrollFactor=0.95,0.95
+state[17] funkin.game.StageCharPos#3629 exists=true active=false visible=false name=dad xy=300,300 size=0x0 scrollFactor=1,1
+state[19] funkin.game.StageCharPos#3630 exists=true active=false visible=false name=boyfriend xy=1725,400 size=0x0 scrollFactor=1,1
+state[21] funkin.game.Stage#3624 exists=true active=true visible=true
+state[22] funkin.backend.system.RotatingSpriteGroup#3621 exists=true active=true visible=true xy=704,300 size=0x0 scrollFactor=1,1 alpha=1 color=0xFFFFFFFF graphic=<null> cameras=0
+state[23] flixel.group.FlxTypedGroup#3601 exists=true active=true visible=true
+  state[23].members[0] funkin.game.StrumLine#0 exists=true active=true visible=true
+    state[23].members[0].members[0] funkin.game.Strum#0 exists=true active=true visible=true xy=96,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[0].members[1] funkin.game.Strum#1 exists=true active=true visible=true xy=208,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[0].members[2] funkin.game.Strum#2 exists=true active=true visible=true xy=320,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[0].members[3] funkin.game.Strum#3 exists=true active=true visible=true xy=432,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+  state[23].members[1] funkin.game.StrumLine#1 exists=true active=true visible=true
+    state[23].members[1].members[0] funkin.game.Strum#0 exists=true active=true visible=true xy=736,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[1].members[1] funkin.game.Strum#1 exists=true active=true visible=true xy=848,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[1].members[2] funkin.game.Strum#2 exists=true active=true visible=true xy=960,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[1].members[3] funkin.game.Strum#3 exists=true active=true visible=true xy=1072,-30 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+  state[23].members[2] funkin.game.StrumLine#2 exists=true active=true visible=false
+    state[23].members[2].members[0] funkin.game.Strum#0 exists=true active=true visible=true xy=96,50 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[2].members[1] funkin.game.Strum#1 exists=true active=true visible=true xy=208,50 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[2].members[2] funkin.game.Strum#2 exists=true active=true visible=true xy=320,50 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+    state[23].members[2].members[3] funkin.game.Strum#3 exists=true active=true visible=true xy=432,50 size=109x106.917 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=assets/images/game/notes/default.png cameras=0
+state[24] funkin.game.SplashHandler#3674 exists=true active=true visible=true
+state[25] flixel.FlxSprite#3677 exists=true active=true visible=true xy=-100,900 size=3601x507 scrollFactor=1.2,1 alpha=1 color=0xFFFFFFFF graphic=assets/images/Restaurant New/fg.png cameras=0 [LIKELY OUTSIDE camGame VIEW]
+state[26] flixel.text.FlxText#3678 exists=true active=true visible=true xy=438,80 size=404x57 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=text95 cameras=1
+state[27] flixel.FlxSprite#3680 exists=true active=true visible=true xy=0,0 size=2560x1440 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=2560x1440:-16777216 cameras=1
+state[28] flixel.text.FlxText#3686 exists=true active=true visible=true xy=2280,390 size=314x112 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=text cameras=2
+state[29] flixel.FlxSprite#5626 exists=true active=true visible=true xy=339.5,648 size=601x19 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=assets/images/game/healthBar.png cameras=1
+state[30] flixel.ui.FlxBar#5627 exists=true active=true visible=true xy=343.5,652 size=593x11 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=empty: 593x11:0xFF5D6A85 cameras=1
+state[31] funkin.game.HealthIcon#5628 exists=true active=true visible=true xy=614,577 size=150.22x150.22 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=assets/images/icons/bf/icon.png cameras=1
+state[32] funkin.game.HealthIcon#5629 exists=true active=true visible=true xy=515.78,577 size=150.22x150.22 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=assets/images/icons/tabi-last.png cameras=1
+state[33] funkin.backend.FunkinText#5630 exists=true active=true visible=true xy=389.5,678 size=503x21 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=text101 cameras=1
+state[34] funkin.backend.FunkinText#5631 exists=true active=true visible=true xy=389.5,678 size=503x21 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=text102 cameras=1
+state[35] funkin.backend.FunkinText#5632 exists=true active=true visible=true xy=389.5,678 size=503x21 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=text103 cameras=1
+state[36] cne.compat.PsychTimeBar#5660 exists=true active=true visible=true xy=480,27 size=320x8 scrollFactor=0,0 alpha=0 color=0xFFFFFFFF graphic=empty: 320x8:0xFF000000 cameras=1
+state[37] flixel.text.FlxText#5661 exists=true active=true visible=true xy=-14.945,300 size=1004x86 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=text108 cameras=2
+state[38] flixel.text.FlxText#5662 exists=true active=true visible=true xy=-14.945,370 size=1004x72 scrollFactor=0,0 alpha=1 color=0xFFFFFFFF graphic=text109 cameras=2
+state[39] flixel.FlxSprite#5663 exists=true active=true visible=true xy=0,0 size=1280x720 scrollFactor=0,0 alpha=0.911 color=0xFFFFFFFF graphic=1280x720:-16777216 cameras=0 [FULL-SCREEN OVERLAY CANDIDATE]
+SUMMARY nodes=55 sprites=44 hiddenOrMissing=5 zeroAlpha=13 noGraphic=1 likelyOffscreen=11 fullScreenCandidates=1 truncated=false
+NOTE: hiddenOrMissing includes intentionally inactive helper objects; inspect the listed entries before treating them as errors.
+NOTE: likelyOffscreen is heuristic; parallax and decorative sprites can intentionally be outside the current camera.
+NOTE: full-screen candidates can be normal backgrounds; use rootIndex and draw order to identify an overlay above the stage.

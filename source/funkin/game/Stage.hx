@@ -9,6 +9,9 @@ import funkin.backend.utils.XMLUtil.XMLImportedScriptInfo;
 import funkin.backend.system.interfaces.IBeatReceiver;
 import funkin.backend.scripting.DummyScript;
 import funkin.backend.scripting.Script;
+#if LUA_ALLOWED
+import funkin.backend.scripting.LuaScript;
+#end
 import funkin.backend.scripting.events.stage.*;
 import funkin.backend.system.interfaces.IBeatReceiver;
 import haxe.io.Path;
@@ -50,7 +53,16 @@ class Stage extends FlxBasic implements IBeatReceiver {
 	 * Sets the sprites in the script, so you can access them by the name.
 	**/
 	public function setStagesSprites(script:Script)
+	{
+		#if LUA_ALLOWED
+		if (Std.isOfType(script, LuaScript))
+		{
+			(cast script:LuaScript).setStageSprites(stageSprites);
+			return;
+		}
+		#end
 		for (k=>e in stageSprites) script.set(k, e);
+	}
 
 	public function prepareInfos(node:Access)
 		return  PlayState.instance == null ? null : XMLImportedScriptInfo.prepareInfos(node, PlayState.instance.scripts, (infos) -> xmlImportedScripts.push(infos));
@@ -64,24 +76,36 @@ class Stage extends FlxBasic implements IBeatReceiver {
 
 		stageFile = stage;
 		stagePath = Paths.xml('stages/$stageFile');
+		stageXML = getStageXML(stageFile);
+
+		if (autoLoad) loadXml(stageXML);
+	}
+
+	/**
+	 * Reads the stage XML, falling back to a Psych JSON stage when needed.
+	 * This only resolves stage data; it does not instantiate the stage or load scripts.
+	 */
+	public static function getStageXML(stageName:String):Access {
+		var stagePath = Paths.xml('stages/$stageName');
+		var stageXML:Access = null;
 		try if (Assets.exists(stagePath)) stageXML = new Access(Xml.parse(Assets.getText(stagePath)).firstElement())
-		catch(e) Logs.trace('Couldn\'t load stage "$stageFile": ${e.message}', ERROR);
+		catch(e) Logs.trace('Couldn\'t load stage "$stageName": ${e.message}', ERROR);
 
 		// Fallback: try Psych Engine stages/<name>.json and convert on-the-fly
 		if (stageXML == null) {
-			var jsonPath = Paths.file('stages/$stageFile.json');
+			var jsonPath = Paths.file('stages/$stageName.json');
 			try if (Assets.exists(jsonPath)) {
 				var contents = Assets.getText(jsonPath);
-				var luaPath = Paths.file('stages/$stageFile.lua');
+				var luaPath = Paths.file('stages/$stageName.lua');
 				var luaContents:String = null;
 				try if (Assets.exists(luaPath)) luaContents = Assets.getText(luaPath) catch(_) {}
 				var converted = dbe.compatibility.mods.RuntimeModConverter.convertPsychStageJson(jsonPath, contents, luaContents);
 				if (converted != null)
 					stageXML = new Access(Xml.parse(converted).firstElement());
-			} catch(e) Logs.trace('Couldn\'t convert Psych stage "$stageFile" from JSON: ${e.message}', ERROR);
+			} catch(e) Logs.trace('Couldn\'t convert Psych stage "$stageName" from JSON: ${e.message}', ERROR);
 		}
 
-		if (autoLoad) loadXml(stageXML);
+		return stageXML;
 	}
 
 	public static var DEFAULT_ATTRIBUTES:Array<String> = ["name", "startCamPosX", "startCamPosY", "zoom", "folder"];

@@ -6,10 +6,17 @@ import hscript.Parser;
 import openfl.Assets;
 
 class HScript extends Script {
+	private static inline var RUN_HAXE_EXPR_CACHE_LIMIT:Int = 64;
+
 	public var interp:Interp;
 	public var parser:Parser;
 	public var expr:Expr;
 	public var code:String = null;
+	public var lastExecutionResult:Dynamic;
+	private var runHaxeExprCache:haxe.ds.StringMap<Expr> = new haxe.ds.StringMap<Expr>();
+	private var runHaxeExprCacheOrder:Array<String> = [];
+	public var runHaxeCodeCacheHits(default, null):Int = 0;
+	public var runHaxeCodeCacheMisses(default, null):Int = 0;
 	//public var folderlessPath:String;
 	var __importedPaths:Map<String, Bool>;
 
@@ -68,6 +75,9 @@ class HScript extends Script {
 	}
 
 	public override function loadFromString(code:String) {
+		this.code = code;
+		this.expr = null;
+		if (parser != null) parser.line = 1;
 		try {
 			if (code != null && code.length > 0)
 				expr = parser.parseString(code, fileName);
@@ -160,7 +170,7 @@ class HScript extends Script {
 		@:privateAccess
 		interp.execute(parser.mk(EBlock([]), 0, 0));
 		if (expr != null) {
-			interp.execute(expr);
+			lastExecutionResult = interp.execute(expr);
 			call("new", []);
 		}
 
@@ -169,7 +179,55 @@ class HScript extends Script {
 		#end
 	}
 
+	/** Parses and executes a Psych runHaxeCode snippet in this script's persistent interpreter. */
+	public function executeString(source:String):Dynamic
+	{
+		if (source == null || source.length == 0)
+		{
+			loadFromString(source);
+		}
+		else
+		{
+			var cachedExpr = runHaxeExprCache.get(source);
+			if (cachedExpr != null)
+			{
+				code = source;
+				expr = cachedExpr;
+				runHaxeCodeCacheHits++;
+			}
+			else
+			{
+				runHaxeCodeCacheMisses++;
+				loadFromString(source);
+				if (expr != null)
+				{
+					if (runHaxeExprCacheOrder.length >= RUN_HAXE_EXPR_CACHE_LIMIT)
+					{
+						var oldestSource = runHaxeExprCacheOrder.shift();
+						if (oldestSource != null)
+							runHaxeExprCache.remove(oldestSource);
+					}
+					runHaxeExprCache.set(source, expr);
+					runHaxeExprCacheOrder.push(source);
+				}
+			}
+		}
+
+		lastExecutionResult = expr == null ? null : interp.execute(expr);
+		return lastExecutionResult;
+	}
+
+	private function clearRunHaxeExprCache():Void
+	{
+		runHaxeExprCache = new haxe.ds.StringMap<Expr>();
+		runHaxeExprCacheOrder = [];
+		runHaxeCodeCacheHits = 0;
+		runHaxeCodeCacheMisses = 0;
+		expr = null;
+	}
+
 	public override function reload() {
+		clearRunHaxeExprCache();
 		// save variables
 
 		interp.allowStaticVariables = interp.allowPublicVariables = false;
@@ -229,6 +287,7 @@ class HScript extends Script {
 	}
 
 	override public function destroy() {
+		clearRunHaxeExprCache();
 		returnParser(parser);
 		parser = null;
 		interp = null;

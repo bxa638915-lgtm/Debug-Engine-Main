@@ -1,0 +1,1627 @@
+{
+  "schemaVersion": 1,
+  "status": "fixtures-present",
+  "note": "The manifest declares fixture calls and expected markers. Passing execution results are stored separately under export/compat-tests; calls and a fixture pass do not certify every API contract.",
+  "fixtures": [
+    {
+      "id": "psych-0.6.3-profile-selection",
+      "profile": "0.6.3",
+      "expectedProfile": "0.6.3",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/profile-selection.lua",
+      "covers": {
+        "apis": [],
+        "callbacks": []
+      },
+      "physicalStatus": "present",
+      "ownerTask": 3,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-profile-selection"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-lifecycle",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/lifecycle.lua",
+      "covers": {
+        "apis": [
+          "addCharacterToList",
+          "addLuaScript",
+          "close",
+          "debugPrint",
+          "getCharacterX",
+          "getCharacterY",
+          "getMidpointX",
+          "getMidpointY",
+          "getRandomBool",
+          "getRandomFloat",
+          "getRandomInt",
+          "getRunningScripts",
+          "isRunning",
+          "precacheImage",
+          "removeLuaScript",
+          "setCharacterX",
+          "setCharacterY",
+          "characterDance",
+          "characterPlayAnim",
+          "stringEndsWith",
+          "stringSplit",
+          "stringStartsWith",
+          "stringTrim"
+        ],
+        "callbacks": [
+          "onCreatePost"
+        ],
+        "observedApis": [
+          "addCharacterToList",
+          "addLuaScript",
+          "characterDance",
+          "characterPlayAnim",
+          "close",
+          "debugPrint",
+          "getCharacterX",
+          "getCharacterY",
+          "getMidpointX",
+          "getMidpointY",
+          "getRandomBool",
+          "getRandomFloat",
+          "getRandomInt",
+          "getRunningScripts",
+          "isRunning",
+          "precacheImage",
+          "removeLuaScript",
+          "setCharacterX",
+          "setCharacterY",
+          "stringEndsWith",
+          "stringSplit",
+          "stringStartsWith",
+          "stringTrim"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 4,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-lifecycle"
+      ],
+      "expectedCallbackOrder": [
+        "onCreatePost"
+      ]
+    },
+    {
+      "id": "psych-0.6.3-properties-groups",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/properties-groups.lua",
+      "covers": {
+        "apis": [
+          "getProperty",
+          "setProperty",
+          "getPropertyFromClass",
+          "setPropertyFromClass",
+          "getPropertyFromGroup",
+          "setPropertyFromGroup",
+          "getPropertyLuaSprite",
+          "setPropertyLuaSprite",
+          "removeFromGroup",
+          "updateHitboxFromGroup"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "getProperty",
+          "getPropertyFromClass",
+          "getPropertyFromGroup",
+          "getPropertyLuaSprite",
+          "removeFromGroup",
+          "setProperty",
+          "setPropertyFromClass",
+          "setPropertyFromGroup",
+          "setPropertyLuaSprite",
+          "updateHitboxFromGroup"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 4,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-properties-groups"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-objects-rendering",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/objects-rendering.lua",
+      "covers": {
+        "apis": [
+          "addAnimation",
+          "addAnimationByIndices",
+          "addAnimationByIndicesLoop",
+          "addAnimationByPrefix",
+          "addLuaSprite",
+          "addLuaText",
+          "addOffset",
+          "cameraFade",
+          "cameraFlash",
+          "cameraSetTarget",
+          "cameraShake",
+          "getColorFromHex",
+          "getGraphicMidpointX",
+          "getGraphicMidpointY",
+          "getObjectOrder",
+          "getPixelColor",
+          "getScreenPositionX",
+          "getScreenPositionY",
+          "getTextFont",
+          "getTextSize",
+          "getTextString",
+          "getTextWidth",
+          "loadFrames",
+          "loadGraphic",
+          "luaSpriteAddAnimationByIndices",
+          "luaSpriteAddAnimationByPrefix",
+          "luaSpriteExists",
+          "luaSpriteMakeGraphic",
+          "luaSpritePlayAnimation",
+          "luaTextExists",
+          "makeAnimatedLuaSprite",
+          "makeGraphic",
+          "makeLuaSprite",
+          "makeLuaText",
+          "objectPlayAnimation",
+          "objectsOverlap",
+          "removeLuaSprite",
+          "removeLuaText",
+          "scaleLuaSprite",
+          "scaleObject",
+          "screenCenter",
+          "setBlendMode",
+          "setGraphicSize",
+          "setHealthBarColors",
+          "setLuaSpriteCamera",
+          "setLuaSpriteScrollFactor",
+          "setObjectCamera",
+          "setObjectOrder",
+          "setTextAlignment",
+          "setTextBorder",
+          "setTextColor",
+          "setTextFont",
+          "setTextItalic",
+          "setTextSize",
+          "setTextString",
+          "setTextWidth",
+          "setTimeBarColors",
+          "playAnim",
+          "setScrollFactor"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "addAnimation",
+          "addAnimationByIndices",
+          "addAnimationByIndicesLoop",
+          "addAnimationByPrefix",
+          "addLuaSprite",
+          "addLuaText",
+          "addOffset",
+          "cameraFade",
+          "cameraFlash",
+          "cameraSetTarget",
+          "cameraShake",
+          "getColorFromHex",
+          "getGraphicMidpointX",
+          "getGraphicMidpointY",
+          "getObjectOrder",
+          "getPixelColor",
+          "getScreenPositionX",
+          "getScreenPositionY",
+          "getTextFont",
+          "getTextSize",
+          "getTextString",
+          "getTextWidth",
+          "loadFrames",
+          "loadGraphic",
+          "luaSpriteAddAnimationByIndices",
+          "luaSpriteAddAnimationByPrefix",
+          "luaSpriteExists",
+          "luaSpriteMakeGraphic",
+          "luaSpritePlayAnimation",
+          "luaTextExists",
+          "makeAnimatedLuaSprite",
+          "makeGraphic",
+          "makeLuaSprite",
+          "makeLuaText",
+          "objectPlayAnimation",
+          "objectsOverlap",
+          "playAnim",
+          "removeLuaSprite",
+          "removeLuaText",
+          "scaleLuaSprite",
+          "scaleObject",
+          "screenCenter",
+          "setBlendMode",
+          "setGraphicSize",
+          "setHealthBarColors",
+          "setLuaSpriteCamera",
+          "setLuaSpriteScrollFactor",
+          "setObjectCamera",
+          "setObjectOrder",
+          "setScrollFactor",
+          "setTextAlignment",
+          "setTextBorder",
+          "setTextColor",
+          "setTextFont",
+          "setTextItalic",
+          "setTextSize",
+          "setTextString",
+          "setTextWidth",
+          "setTimeBarColors"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 4,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-objects-rendering"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-callbacks",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/callbacks.lua",
+      "covers": {
+        "apis": [
+          "callOnLuas",
+          "callScript",
+          "startCountdown",
+          "getGlobalFromScript",
+          "setGlobalFromScript"
+        ],
+        "callbacks": [
+          "eventEarlyTrigger",
+          "onCreatePost",
+          "onStartCountdown",
+          "onCountdownStarted",
+          "onCountdownTick",
+          "onSongStart",
+          "onEvent",
+          "onUpdate",
+          "onUpdatePost",
+          "onStepHit",
+          "onBeatHit",
+          "onSectionHit",
+          "onEndSong",
+          "onGameOver",
+          "onGameOverConfirm",
+          "onGameOverStart",
+          "onMoveCamera",
+          "onPause",
+          "onRecalculateRating",
+          "onResume",
+          "onUpdateScore"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 5,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-callbacks"
+      ],
+      "expectedCallbackOrder": [
+        "onCreatePost"
+      ]
+    },
+    {
+      "id": "psych-0.6.3-notes-scheduler",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/notes-scheduler.lua",
+      "covers": {
+        "apis": [
+          "addHits",
+          "addMisses",
+          "getHits",
+          "getMisses",
+          "noteTweenAlpha",
+          "noteTweenAngle",
+          "noteTweenDirection",
+          "noteTweenX",
+          "noteTweenY",
+          "setHits",
+          "setMisses",
+          "updateHitbox"
+        ],
+        "callbacks": [
+          "goodNoteHit",
+          "noteMiss",
+          "noteMissPress",
+          "onSpawnNote",
+          "opponentNoteHit"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 5,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-notes-scheduler",
+        "DBE_PSYCH_NOTE_SPAWN:0.6.3"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-input-cancellation",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/input-cancellation.lua",
+      "covers": {
+        "apis": [
+          "anyGamepadJustPressed",
+          "anyGamepadPressed",
+          "anyGamepadReleased",
+          "gamepadAnalogX",
+          "gamepadAnalogY",
+          "gamepadJustPressed",
+          "gamepadPressed",
+          "gamepadReleased",
+          "getMouseX",
+          "getMouseY",
+          "keyboardJustPressed",
+          "keyboardPressed",
+          "keyboardReleased",
+          "keyJustPressed",
+          "keyPressed",
+          "keyReleased",
+          "mouseClicked",
+          "mousePressed",
+          "mouseReleased"
+        ],
+        "callbacks": [
+          "onGhostTap",
+          "onKeyPress",
+          "onKeyRelease"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 5,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-input-cancellation"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-timers-tweens-audio",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/timers-tweens-audio.lua",
+      "covers": {
+        "apis": [
+          "addLuaSprite",
+          "cancelTimer",
+          "cancelTween",
+          "debugPrint",
+          "doTweenAlpha",
+          "doTweenAngle",
+          "doTweenColor",
+          "doTweenX",
+          "doTweenY",
+          "doTweenZoom",
+          "getShaderBool",
+          "getShaderBoolArray",
+          "getShaderFloat",
+          "getShaderFloatArray",
+          "getShaderInt",
+          "getShaderIntArray",
+          "getSoundTime",
+          "getSoundVolume",
+          "initLuaShader",
+          "luaSoundExists",
+          "makeGraphic",
+          "makeLuaSprite",
+          "musicFadeIn",
+          "musicFadeOut",
+          "pauseSound",
+          "playMusic",
+          "playSound",
+          "precacheMusic",
+          "precacheSound",
+          "removeSpriteShader",
+          "resumeSound",
+          "runTimer",
+          "setShaderBool",
+          "setShaderBoolArray",
+          "setShaderFloat",
+          "setShaderFloatArray",
+          "setShaderInt",
+          "setShaderIntArray",
+          "setShaderSampler2D",
+          "setSoundTime",
+          "setSoundVolume",
+          "setSpriteShader",
+          "soundFadeCancel",
+          "soundFadeIn",
+          "soundFadeOut",
+          "stopSound"
+        ],
+        "callbacks": [
+          "onSoundFinished",
+          "onTimerCompleted",
+          "onTweenCompleted"
+        ],
+        "observedApis": [
+          "addLuaSprite",
+          "cancelTimer",
+          "cancelTween",
+          "debugPrint",
+          "doTweenAlpha",
+          "doTweenAngle",
+          "doTweenColor",
+          "doTweenX",
+          "doTweenY",
+          "doTweenZoom",
+          "getShaderBool",
+          "getShaderBoolArray",
+          "getShaderFloat",
+          "getShaderFloatArray",
+          "getShaderInt",
+          "getShaderIntArray",
+          "getSoundTime",
+          "getSoundVolume",
+          "initLuaShader",
+          "luaSoundExists",
+          "makeGraphic",
+          "makeLuaSprite",
+          "musicFadeIn",
+          "musicFadeOut",
+          "pauseSound",
+          "playMusic",
+          "playSound",
+          "precacheMusic",
+          "precacheSound",
+          "removeSpriteShader",
+          "resumeSound",
+          "runTimer",
+          "setShaderBool",
+          "setShaderBoolArray",
+          "setShaderFloat",
+          "setShaderFloatArray",
+          "setShaderInt",
+          "setShaderIntArray",
+          "setShaderSampler2D",
+          "setSoundTime",
+          "setSoundVolume",
+          "setSpriteShader",
+          "soundFadeCancel",
+          "soundFadeIn",
+          "soundFadeOut",
+          "stopSound"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-timers-tweens-audio",
+        "DBE_PSYCH_FIXTURE_ASYNC_PASS:psych-0.6.3-timers-tweens-audio"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-saves-settings-achievements",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/saves-settings-achievements.lua",
+      "covers": {
+        "apis": [
+          "addHealth",
+          "addScore",
+          "changePresence",
+          "checkFileExists",
+          "debugPrint",
+          "deleteFile",
+          "directoryFileList",
+          "flushSaveData",
+          "getDataFromSave",
+          "getHealth",
+          "getProperty",
+          "getScore",
+          "getSongPosition",
+          "getTextFromFile",
+          "initSaveData",
+          "restartSong",
+          "saveFile",
+          "setDataFromSave",
+          "setHealth",
+          "setRatingFC",
+          "setRatingName",
+          "setRatingPercent",
+          "setScore",
+          "startVideo",
+          "triggerEvent"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "addHealth",
+          "addScore",
+          "changePresence",
+          "checkFileExists",
+          "debugPrint",
+          "deleteFile",
+          "directoryFileList",
+          "flushSaveData",
+          "getDataFromSave",
+          "getHealth",
+          "getProperty",
+          "getScore",
+          "getSongPosition",
+          "getTextFromFile",
+          "initSaveData",
+          "restartSong",
+          "saveFile",
+          "setDataFromSave",
+          "setHealth",
+          "setRatingFC",
+          "setRatingName",
+          "setRatingPercent",
+          "setScore",
+          "startVideo",
+          "triggerEvent"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-saves-settings-achievements",
+        "DBE_PRESENCE_UPDATE_CANCELLED"
+      ],
+      "expectedCallbackOrder": [],
+      "supportFiles": [
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/settings.json",
+          "modPath": "data/settings.json"
+        },
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/cancel-discord-presence.hx",
+          "modPath": "data/globals/cancel-discord-presence.hx"
+        }
+      ]
+    },
+    {
+      "id": "psych-0.6.3-dialogue-substates",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/dialogue-substates.lua",
+      "covers": {
+        "apis": [
+          "addHaxeLibrary",
+          "closeCustomSubstate",
+          "debugPrint",
+          "getProperty",
+          "openCustomSubstate",
+          "runHaxeCode",
+          "startDialogue"
+        ],
+        "callbacks": [
+          "onCustomSubstateCreate",
+          "onCustomSubstateCreatePost",
+          "onCustomSubstateDestroy",
+          "onCustomSubstateUpdate",
+          "onCustomSubstateUpdatePost",
+          "onNextDialogue",
+          "onSkipDialogue"
+        ],
+        "observedApis": [
+          "addHaxeLibrary",
+          "closeCustomSubstate",
+          "debugPrint",
+          "getProperty",
+          "openCustomSubstate",
+          "runHaxeCode",
+          "startDialogue"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-dialogue-substates"
+      ],
+      "expectedCallbackOrder": [
+        "onCustomSubstateCreate",
+        "onCustomSubstateCreatePost",
+        "onCustomSubstateUpdate",
+        "onCustomSubstateUpdatePost",
+        "onCustomSubstateDestroy",
+        "onNextDialogue",
+        "onSkipDialogue"
+      ],
+      "supportFiles": [
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/dialogue.json",
+          "modPath": "data/bopeebo/dialogue.json"
+        }
+      ]
+    },
+    {
+      "id": "psych-0.6.3-hscript-interop",
+      "profile": "0.6.3",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/hscript-interop.lua",
+      "covers": {
+        "apis": [
+          "addHaxeLibrary",
+          "debugPrint",
+          "runHaxeCode"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "addHaxeLibrary",
+          "debugPrint",
+          "runHaxeCode"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-hscript-interop"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-profile-selection",
+      "profile": "1.0.4",
+      "expectedProfile": "1.0.4",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/profile-selection.lua",
+      "covers": {
+        "apis": [],
+        "callbacks": []
+      },
+      "physicalStatus": "present",
+      "ownerTask": 3,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-profile-selection"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-profile-unspecified-no-config",
+      "profile": "unspecified",
+      "expectedProfile": "unspecified",
+      "configScenario": "missing",
+      "scriptPath": "tests/fixtures/psych-lua/profile-cases/no-config.lua",
+      "covers": {
+        "apis": [],
+        "callbacks": []
+      },
+      "physicalStatus": "present",
+      "ownerTask": 3,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:unspecified",
+        "DBE_PSYCH_FIXTURE_PASS:psych-profile-unspecified-no-config"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-profile-unspecified-malformed",
+      "profile": "unspecified",
+      "expectedProfile": "unspecified",
+      "configScenario": "malformed",
+      "configText": "{\"psychLuaProfile\":",
+      "scriptPath": "tests/fixtures/psych-lua/profile-cases/malformed-config.lua",
+      "covers": {
+        "apis": [],
+        "callbacks": []
+      },
+      "physicalStatus": "present",
+      "ownerTask": 3,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:unspecified",
+        "DBE_PSYCH_FIXTURE_PASS:psych-profile-unspecified-malformed"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-profile-unspecified-unsupported",
+      "profile": "unspecified",
+      "expectedProfile": "unspecified",
+      "configScenario": "unsupported",
+      "configText": "{\"psychLuaProfile\":\"9.9.9\"}",
+      "scriptPath": "tests/fixtures/psych-lua/profile-cases/unsupported-profile.lua",
+      "covers": {
+        "apis": [],
+        "callbacks": []
+      },
+      "physicalStatus": "present",
+      "ownerTask": 3,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:unspecified",
+        "DBE_PSYCH_FIXTURE_PASS:psych-profile-unspecified-unsupported"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-lifecycle",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/lifecycle.lua",
+      "covers": {
+        "apis": [
+          "addCharacterToList",
+          "addLuaScript",
+          "characterDance",
+          "characterPlayAnim",
+          "debugPrint",
+          "getCharacterX",
+          "getCharacterY",
+          "getMidpointX",
+          "getMidpointY",
+          "getRandomBool",
+          "getRandomFloat",
+          "getRandomInt",
+          "getRunningScripts",
+          "getVar",
+          "isRunning",
+          "precacheImage",
+          "playAnim",
+          "removeLuaScript",
+          "setCharacterX",
+          "setCharacterY",
+          "setVar",
+          "stringEndsWith",
+          "stringSplit",
+          "stringStartsWith",
+          "stringTrim"
+        ],
+        "callbacks": [
+          "onCreatePost"
+        ],
+        "observedApis": [
+          "addCharacterToList",
+          "addLuaScript",
+          "characterDance",
+          "characterPlayAnim",
+          "debugPrint",
+          "getCharacterX",
+          "getCharacterY",
+          "getMidpointX",
+          "getMidpointY",
+          "getRandomBool",
+          "getRandomFloat",
+          "getRandomInt",
+          "getRunningScripts",
+          "getVar",
+          "isRunning",
+          "playAnim",
+          "precacheImage",
+          "removeLuaScript",
+          "setCharacterX",
+          "setCharacterY",
+          "setVar",
+          "stringEndsWith",
+          "stringSplit",
+          "stringStartsWith",
+          "stringTrim"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 4,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-lifecycle"
+      ],
+      "expectedCallbackOrder": [
+        "onCreatePost"
+      ]
+    },
+    {
+      "id": "psych-1.0.4-properties-groups",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/properties-groups.lua",
+      "covers": {
+        "apis": [
+          "getProperty",
+          "setProperty",
+          "getPropertyFromClass",
+          "setPropertyFromClass",
+          "getPropertyFromGroup",
+          "setPropertyFromGroup",
+          "getPropertyLuaSprite",
+          "setPropertyLuaSprite",
+          "removeFromGroup",
+          "updateHitboxFromGroup",
+          "addToGroup"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "addToGroup",
+          "getProperty",
+          "getPropertyFromClass",
+          "getPropertyFromGroup",
+          "getPropertyLuaSprite",
+          "removeFromGroup",
+          "setProperty",
+          "setPropertyFromClass",
+          "setPropertyFromGroup",
+          "setPropertyLuaSprite",
+          "updateHitboxFromGroup"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 4,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-properties-groups"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-objects-rendering",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/objects-rendering.lua",
+      "covers": {
+        "apis": [
+          "FlxColor",
+          "addAnimation",
+          "addAnimationByIndices",
+          "addAnimationByIndicesLoop",
+          "addAnimationByPrefix",
+          "addAnimationBySymbol",
+          "addAnimationBySymbolIndices",
+          "addCameraFollowPoint",
+          "addCameraScroll",
+          "addInstance",
+          "addLuaSprite",
+          "addLuaText",
+          "addOffset",
+          "callMethod",
+          "callMethodFromClass",
+          "cameraFade",
+          "cameraFlash",
+          "cameraSetTarget",
+          "cameraShake",
+          "createInstance",
+          "getCameraFollowX",
+          "getCameraFollowY",
+          "getCameraScrollX",
+          "getCameraScrollY",
+          "getColorFromHex",
+          "getColorFromName",
+          "getColorFromString",
+          "getGraphicMidpointX",
+          "getGraphicMidpointY",
+          "getObjectOrder",
+          "getPixelColor",
+          "getScreenPositionX",
+          "getScreenPositionY",
+          "getTextFont",
+          "getTextSize",
+          "getTextString",
+          "getTextWidth",
+          "instanceArg",
+          "loadAnimateAtlas",
+          "loadFrames",
+          "loadGraphic",
+          "loadMultipleFrames",
+          "luaSpriteAddAnimationByIndices",
+          "luaSpriteAddAnimationByPrefix",
+          "luaSpriteExists",
+          "luaSpriteMakeGraphic",
+          "luaSpritePlayAnimation",
+          "luaTextExists",
+          "makeAnimatedLuaSprite",
+          "makeFlxAnimateSprite",
+          "makeGraphic",
+          "makeLuaSprite",
+          "makeLuaText",
+          "objectPlayAnimation",
+          "objectsOverlap",
+          "playAnim",
+          "removeLuaSprite",
+          "removeLuaText",
+          "scaleLuaSprite",
+          "scaleObject",
+          "screenCenter",
+          "setBlendMode",
+          "setCameraFollowPoint",
+          "setCameraScroll",
+          "setGraphicSize",
+          "setHealthBarColors",
+          "setLuaSpriteCamera",
+          "setLuaSpriteScrollFactor",
+          "setObjectCamera",
+          "setObjectOrder",
+          "setScrollFactor",
+          "setTextAlignment",
+          "setTextAutoSize",
+          "setTextBorder",
+          "setTextColor",
+          "setTextFont",
+          "setTextHeight",
+          "setTextItalic",
+          "setTextSize",
+          "setTextString",
+          "setTextWidth",
+          "setTimeBarColors"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "FlxColor",
+          "addAnimation",
+          "addAnimationByIndices",
+          "addAnimationByIndicesLoop",
+          "addAnimationByPrefix",
+          "addAnimationBySymbol",
+          "addAnimationBySymbolIndices",
+          "addCameraFollowPoint",
+          "addCameraScroll",
+          "addLuaSprite",
+          "addLuaText",
+          "addOffset",
+          "cameraFade",
+          "cameraFlash",
+          "cameraSetTarget",
+          "cameraShake",
+          "getCameraFollowX",
+          "getCameraFollowY",
+          "getCameraScrollX",
+          "getCameraScrollY",
+          "getColorFromHex",
+          "getColorFromName",
+          "getColorFromString",
+          "getGraphicMidpointX",
+          "getGraphicMidpointY",
+          "getObjectOrder",
+          "getPixelColor",
+          "getScreenPositionX",
+          "getScreenPositionY",
+          "getTextFont",
+          "getTextSize",
+          "getTextString",
+          "getTextWidth",
+          "loadAnimateAtlas",
+          "loadFrames",
+          "loadGraphic",
+          "loadMultipleFrames",
+          "luaSpriteAddAnimationByIndices",
+          "luaSpriteAddAnimationByPrefix",
+          "luaSpriteExists",
+          "luaSpriteMakeGraphic",
+          "luaSpritePlayAnimation",
+          "luaTextExists",
+          "makeAnimatedLuaSprite",
+          "makeFlxAnimateSprite",
+          "makeGraphic",
+          "makeLuaSprite",
+          "makeLuaText",
+          "objectPlayAnimation",
+          "objectsOverlap",
+          "playAnim",
+          "removeLuaSprite",
+          "removeLuaText",
+          "scaleLuaSprite",
+          "scaleObject",
+          "screenCenter",
+          "setBlendMode",
+          "setCameraFollowPoint",
+          "setCameraScroll",
+          "setGraphicSize",
+          "setHealthBarColors",
+          "setLuaSpriteCamera",
+          "setLuaSpriteScrollFactor",
+          "setObjectCamera",
+          "setObjectOrder",
+          "setScrollFactor",
+          "setTextAlignment",
+          "setTextAutoSize",
+          "setTextBorder",
+          "setTextColor",
+          "setTextFont",
+          "setTextHeight",
+          "setTextItalic",
+          "setTextSize",
+          "setTextString",
+          "setTextWidth",
+          "setTimeBarColors"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 4,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-objects-rendering"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-callbacks",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/callbacks.lua",
+      "covers": {
+        "apis": [
+          "callScript",
+          "startCountdown"
+        ],
+        "callbacks": [
+          "eventEarlyTrigger",
+          "onCreatePost",
+          "onStartCountdown",
+          "onCountdownStarted",
+          "onCountdownTick",
+          "onSongStart",
+          "onEvent",
+          "onUpdate",
+          "onUpdatePost",
+          "onStepHit",
+          "onBeatHit",
+          "onSectionHit",
+          "onEndSong",
+          "onEventPushed",
+          "onGameOver",
+          "onGameOverConfirm",
+          "onGameOverStart",
+          "onMoveCamera",
+          "onPause",
+          "onRecalculateRating",
+          "onResume",
+          "onUpdateScore",
+          "preUpdateScore"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 5,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-callbacks"
+      ],
+      "expectedCallbackOrder": [
+        "onCreatePost"
+      ]
+    },
+    {
+      "id": "psych-1.0.4-notes-scheduler",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/notes-scheduler.lua",
+      "covers": {
+        "apis": [
+          "addHits",
+          "addMisses",
+          "noteTweenAlpha",
+          "noteTweenAngle",
+          "noteTweenDirection",
+          "noteTweenX",
+          "noteTweenY",
+          "setHits",
+          "setMisses",
+          "updateHitbox"
+        ],
+        "callbacks": [
+          "goodNoteHit",
+          "goodNoteHitPre",
+          "noteMiss",
+          "noteMissPress",
+          "onSpawnNote",
+          "opponentNoteHit",
+          "opponentNoteHitPre"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 5,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-notes-scheduler",
+        "DBE_PSYCH_NOTE_SPAWN:1.0.4"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-input-cancellation",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/input-cancellation.lua",
+      "covers": {
+        "apis": [
+          "getMouseX",
+          "getMouseY",
+          "mouseClicked",
+          "mousePressed",
+          "mouseReleased",
+          "anyGamepadJustPressed",
+          "anyGamepadPressed",
+          "anyGamepadReleased",
+          "gamepadAnalogX",
+          "gamepadAnalogY",
+          "gamepadJustPressed",
+          "gamepadPressed",
+          "gamepadReleased",
+          "keyboardJustPressed",
+          "keyboardPressed",
+          "keyboardReleased",
+          "keyJustPressed",
+          "keyPressed",
+          "keyReleased"
+        ],
+        "callbacks": [
+          "onGhostTap",
+          "onKeyPress",
+          "onKeyPressPre",
+          "onKeyRelease",
+          "onKeyReleasePre"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 5,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-input-cancellation"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-timers-tweens-audio",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/timers-tweens-audio.lua",
+      "covers": {
+        "apis": [
+          "addLuaSprite",
+          "cancelTimer",
+          "cancelTween",
+          "debugPrint",
+          "doTweenAlpha",
+          "doTweenAngle",
+          "doTweenColor",
+          "doTweenX",
+          "doTweenY",
+          "doTweenZoom",
+          "getShaderBool",
+          "getShaderBoolArray",
+          "getShaderFloat",
+          "getShaderFloatArray",
+          "getShaderInt",
+          "getShaderIntArray",
+          "getSoundPitch",
+          "getSoundTime",
+          "getSoundVolume",
+          "luaSoundExists",
+          "makeGraphic",
+          "makeLuaSprite",
+          "musicFadeIn",
+          "musicFadeOut",
+          "pauseSound",
+          "playMusic",
+          "playSound",
+          "precacheMusic",
+          "precacheSound",
+          "removeSpriteShader",
+          "resumeSound",
+          "runTimer",
+          "setShaderBool",
+          "setShaderBoolArray",
+          "setShaderFloat",
+          "setShaderFloatArray",
+          "setShaderInt",
+          "setShaderIntArray",
+          "setShaderSampler2D",
+          "setSoundPitch",
+          "setSoundTime",
+          "setSoundVolume",
+          "soundFadeCancel",
+          "soundFadeIn",
+          "soundFadeOut",
+          "startTween",
+          "stopSound"
+        ],
+        "callbacks": [
+          "onSoundFinished",
+          "onTimerCompleted",
+          "onTweenCompleted"
+        ],
+        "observedApis": [
+          "addLuaSprite",
+          "cancelTimer",
+          "cancelTween",
+          "debugPrint",
+          "doTweenAlpha",
+          "doTweenAngle",
+          "doTweenColor",
+          "doTweenX",
+          "doTweenY",
+          "doTweenZoom",
+          "getShaderBool",
+          "getShaderBoolArray",
+          "getShaderFloat",
+          "getShaderFloatArray",
+          "getShaderInt",
+          "getShaderIntArray",
+          "getSoundPitch",
+          "getSoundTime",
+          "getSoundVolume",
+          "luaSoundExists",
+          "makeGraphic",
+          "makeLuaSprite",
+          "musicFadeIn",
+          "musicFadeOut",
+          "pauseSound",
+          "playMusic",
+          "playSound",
+          "precacheMusic",
+          "precacheSound",
+          "removeSpriteShader",
+          "resumeSound",
+          "runTimer",
+          "setShaderBool",
+          "setShaderBoolArray",
+          "setShaderFloat",
+          "setShaderFloatArray",
+          "setShaderInt",
+          "setShaderIntArray",
+          "setShaderSampler2D",
+          "setSoundPitch",
+          "setSoundTime",
+          "setSoundVolume",
+          "soundFadeCancel",
+          "soundFadeIn",
+          "soundFadeOut",
+          "startTween",
+          "stopSound"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-timers-tweens-audio",
+        "DBE_PSYCH_FIXTURE_ASYNC_PASS:psych-1.0.4-timers-tweens-audio"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-saves-settings-achievements",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/saves-settings-achievements.lua",
+      "covers": {
+        "apis": [
+          "achievementExists",
+          "addAchievementScore",
+          "addHealth",
+          "addScore",
+          "changeDiscordClientID",
+          "changeDiscordPresence",
+          "checkFileExists",
+          "debugPrint",
+          "deleteFile",
+          "directoryFileList",
+          "eraseSaveData",
+          "flushSaveData",
+          "getAchievementScore",
+          "getDataFromSave",
+          "getFileTranslation",
+          "getHealth",
+          "getProperty",
+          "getSongPosition",
+          "getTextFromFile",
+          "getTranslationPhrase",
+          "initSaveData",
+          "isAchievementUnlocked",
+          "restartSong",
+          "saveFile",
+          "setAchievementScore",
+          "setDataFromSave",
+          "setHealth",
+          "setRatingFC",
+          "setRatingName",
+          "setRatingPercent",
+          "setScore",
+          "startVideo",
+          "triggerEvent",
+          "unlockAchievement",
+          "updateScoreText"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "achievementExists",
+          "addAchievementScore",
+          "addHealth",
+          "addScore",
+          "changeDiscordClientID",
+          "changeDiscordPresence",
+          "checkFileExists",
+          "debugPrint",
+          "deleteFile",
+          "directoryFileList",
+          "eraseSaveData",
+          "flushSaveData",
+          "getAchievementScore",
+          "getDataFromSave",
+          "getFileTranslation",
+          "getHealth",
+          "getProperty",
+          "getSongPosition",
+          "getTextFromFile",
+          "getTranslationPhrase",
+          "initSaveData",
+          "isAchievementUnlocked",
+          "restartSong",
+          "saveFile",
+          "setAchievementScore",
+          "setDataFromSave",
+          "setHealth",
+          "setRatingFC",
+          "setRatingName",
+          "setRatingPercent",
+          "setScore",
+          "startVideo",
+          "triggerEvent",
+          "unlockAchievement",
+          "updateScoreText"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-saves-settings-achievements",
+        "DBE_PRESENCE_UPDATE_CANCELLED"
+      ],
+      "expectedCallbackOrder": [],
+      "supportFiles": [
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/settings.json",
+          "modPath": "data/settings.json"
+        },
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/achievements.json",
+          "modPath": "data/achievements.json"
+        },
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/cancel-discord-presence.hx",
+          "modPath": "data/globals/cancel-discord-presence.hx"
+        }
+      ]
+    },
+    {
+      "id": "psych-1.0.4-dialogue-substates",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/dialogue-substates.lua",
+      "covers": {
+        "apis": [
+          "closeCustomSubstate",
+          "debugPrint",
+          "getProperty",
+          "insertToCustomSubstate",
+          "makeGraphic",
+          "makeLuaSprite",
+          "openCustomSubstate",
+          "startDialogue"
+        ],
+        "callbacks": [
+          "onCustomSubstateCreate",
+          "onCustomSubstateCreatePost",
+          "onCustomSubstateDestroy",
+          "onCustomSubstateUpdate",
+          "onCustomSubstateUpdatePost",
+          "onNextDialogue",
+          "onSkipDialogue"
+        ],
+        "observedApis": [
+          "closeCustomSubstate",
+          "debugPrint",
+          "getProperty",
+          "insertToCustomSubstate",
+          "makeGraphic",
+          "makeLuaSprite",
+          "openCustomSubstate",
+          "startDialogue"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-dialogue-substates"
+      ],
+      "expectedCallbackOrder": [
+        "onCustomSubstateCreate",
+        "onCustomSubstateCreatePost",
+        "onCustomSubstateUpdate",
+        "onCustomSubstateUpdatePost",
+        "onCustomSubstateDestroy",
+        "onNextDialogue",
+        "onSkipDialogue"
+      ],
+      "supportFiles": [
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/dialogue.json",
+          "modPath": "data/bopeebo/dialogue.json"
+        }
+      ]
+    },
+    {
+      "id": "psych-1.0.4-hscript-interop",
+      "profile": "1.0.4",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/hscript-interop.lua",
+      "covers": {
+        "apis": [
+          "addHScript",
+          "debugPrint",
+          "removeHScript"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "addHScript",
+          "debugPrint",
+          "removeHScript"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "expectedMarkers": [
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-hscript-interop"
+      ],
+      "expectedCallbackOrder": [],
+      "supportFiles": [
+        {
+          "sourcePath": "tests/fixtures/psych-lua/support/task6-hscript-helper.hx",
+          "modPath": "scripts/dbe_task6_helper.hx"
+        }
+      ]
+    },
+    {
+      "id": "psych-0.6.3-end-song",
+      "profile": "0.6.3",
+      "expectedProfile": "0.6.3",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/end-song.lua",
+      "covers": {
+        "apis": [
+          "debugPrint",
+          "endSong"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "debugPrint",
+          "endSong"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "isolation": true,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-end-song"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-exit-song",
+      "profile": "0.6.3",
+      "expectedProfile": "0.6.3",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/exit-song.lua",
+      "covers": {
+        "apis": [
+          "debugPrint",
+          "exitSong"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "debugPrint",
+          "exitSong"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "isolation": true,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-exit-song"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-0.6.3-load-song",
+      "profile": "0.6.3",
+      "expectedProfile": "0.6.3",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/0.6.3/load-song.lua",
+      "covers": {
+        "apis": [
+          "debugPrint",
+          "flushSaveData",
+          "getDataFromSave",
+          "initSaveData",
+          "loadSong",
+          "setDataFromSave"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "debugPrint",
+          "flushSaveData",
+          "getDataFromSave",
+          "initSaveData",
+          "loadSong",
+          "setDataFromSave"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "isolation": true,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:0.6.3",
+        "DBE_PSYCH_FIXTURE_PASS:psych-0.6.3-load-song"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-end-song",
+      "profile": "1.0.4",
+      "expectedProfile": "1.0.4",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/end-song.lua",
+      "covers": {
+        "apis": [
+          "debugPrint",
+          "endSong"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "debugPrint",
+          "endSong"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "isolation": true,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-end-song"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-exit-song",
+      "profile": "1.0.4",
+      "expectedProfile": "1.0.4",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/exit-song.lua",
+      "covers": {
+        "apis": [
+          "debugPrint",
+          "exitSong"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "debugPrint",
+          "exitSong"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "isolation": true,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-exit-song"
+      ],
+      "expectedCallbackOrder": []
+    },
+    {
+      "id": "psych-1.0.4-load-song",
+      "profile": "1.0.4",
+      "expectedProfile": "1.0.4",
+      "configScenario": "selected",
+      "scriptPath": "tests/fixtures/psych-lua/1.0.4/load-song.lua",
+      "covers": {
+        "apis": [
+          "debugPrint",
+          "flushSaveData",
+          "getDataFromSave",
+          "initSaveData",
+          "loadSong",
+          "setDataFromSave"
+        ],
+        "callbacks": [],
+        "observedApis": [
+          "debugPrint",
+          "flushSaveData",
+          "getDataFromSave",
+          "initSaveData",
+          "loadSong",
+          "setDataFromSave"
+        ]
+      },
+      "physicalStatus": "present",
+      "ownerTask": 6,
+      "isolation": true,
+      "expectedMarkers": [
+        "DBE_PSYCH_PROFILE:1.0.4",
+        "DBE_PSYCH_FIXTURE_PASS:psych-1.0.4-load-song"
+      ],
+      "expectedCallbackOrder": []
+    }
+  ]
+}

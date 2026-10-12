@@ -2,6 +2,8 @@ package funkin.game.cutscenes;
 
 import flixel.sound.FlxSound;
 import funkin.backend.scripting.Script;
+import funkin.backend.assets.ModsFolder;
+import cne.compat.PsychLuaProfile;
 import funkin.backend.scripting.events.CancellableEvent;
 import funkin.backend.scripting.events.DynamicEvent;
 import funkin.backend.scripting.events.dialogue.*;
@@ -23,6 +25,7 @@ class DialogueCutscene extends ScriptedCutscene {
 	public var charMap:Map<String, DialogueCharacter> = [];
 
 	public var dialogueLines:Array<DialogueLine> = [];
+	public var dialogueCount(default, null):Int = 0;
 	public var curLine(default, set):DialogueLine = null;
 	public var lastLine:DialogueLine = null;
 	public var dialogueBox:DialogueBox;
@@ -146,8 +149,16 @@ class DialogueCutscene extends ScriptedCutscene {
 		super.update(elapsed);
 		if(controls.ACCEPT) {
 			if(dialogueBox.dialogueEnded) next();
-			else dialogueBox.text.skip();
+			else skipCurrentDialogue();
 		}
+	}
+
+	/** Completes the current line and dispatches Psych's skip callback. */
+	public function skipCurrentDialogue():Void
+	{
+		if (dialogueBox == null || dialogueBox.dialogueEnded) return;
+		dialogueBox.text.skip();
+		callPsychDialogueCallback("onSkipDialogue", [dialogueCount]);
 	}
 
 	/**
@@ -170,6 +181,7 @@ class DialogueCutscene extends ScriptedCutscene {
 			}
 			return;
 		}
+		dialogueCount++;
 
 		if (curLine.callback != null)
 			dialogueScript.call(curLine.callback, [event.playFirst]);
@@ -197,6 +209,20 @@ class DialogueCutscene extends ScriptedCutscene {
 		} else if(curLine.musicVolume != null && curMusic != null) curMusic.volume = curLine.musicVolume;
 
 		dialogueScript.call("postNext", [event]);
+		callPsychDialogueCallback("onNextDialogue", [dialogueCount]);
+	}
+
+	private function callPsychDialogueCallback(name:String, args:Array<Dynamic>):Void
+	{
+		var game = PlayState.instance;
+		if (game == null || game.scripts == null) return;
+		var profile = ModsFolder.currentPsychLuaProfile == null ? PsychLuaProfile.UNSPECIFIED : ModsFolder.currentPsychLuaProfile.profile;
+		if (profile == PsychLuaProfile.PSYCH_063)
+		{
+			for (script in game.scripts.scripts)
+				if (script.extension != null && script.extension.toLowerCase() == "lua") script.call(name, args);
+		}
+		else game.scripts.call(name, args);
 	}
 
 	public override function close() {

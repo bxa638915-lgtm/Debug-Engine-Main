@@ -1,0 +1,239 @@
+package dbe.diagnostics;
+
+import haxe.Timer;
+import haxe.ds.StringMap;
+
+typedef ScriptTimingEntry = {
+	var category:String;
+	var label:String;
+	var calls:Int;
+	var totalMs:Float;
+	var maxMs:Float;
+	var maxSongPosition:Float;
+}
+
+/**
+	Small, state-scoped timing aggregates used by manual snapshots and armed full-song reports.
+	Script callback, runHaxeCode, PlayState.update, and PlayState.draw timings overlap;
+	they are separate views of the same work and must not be summed together.
+**/
+class ScriptTimingProfiler
+{
+	static inline var MAX_ENTRIES:Int = 512;
+	static inline var MAX_FRAME_INTERVAL_MS:Float = 10000;
+
+	public static var enabled(default, null):Bool = false;
+	static var entries:StringMap<ScriptTimingEntry> = new StringMap<ScriptTimingEntry>();
+	static var entryCount:Int = 0;
+	static var previousFrameStart:Float = 0;
+	static var currentSongPosition:Float = 0;
+
+	/** Start a fresh PlayState profile. */
+	public static function reset():Void
+	{
+		entries = new StringMap<ScriptTimingEntry>();
+		entryCount = 0;
+		previousFrameStart = 0;
+		currentSongPosition = 0;
+		enabled = true;
+	}
+
+	/** Stop collecting while preserving the current snapshot. */
+	public static function stop():Void
+	{
+		enabled = false;
+	}
+
+	/** Returns zero while disabled so callers can share a low-cost timing path. */
+	public static function startTimer():Float
+	{
+		return enabled ? Timer.stamp() : 0;
+	}
+
+	/** Records the interval between PlayState.update starts and returns its start time. */
+	public static function beginFrame(songPosition:Float = 0):Float
+	{
+		if (!enabled) return 0;
+
+		currentSongPosition = songPosition;
+		var now = Timer.stamp();
+		if (previousFrameStart > 0)
+		{
+			var intervalMs = (now - previousFrameStart) * 1000;
+			if (intervalMs <= MAX_FRAME_INTERVAL_MS)
+				recordFrameInterval(intervalMs);
+		}
+		previousFrameStart = now;
+		return now;
+	}
+
+	public static function finishPlayStateUpdate(startedAt:Float):Void
+	{
+		recordElapsed("playstate-update", "PlayState", startedAt);
+	}
+
+	public static function finishPlayStateDraw(startedAt:Float):Void
+	{
+		recordElapsed("playstate-draw", "PlayState", startedAt);
+	}
+
+	public static function finishScriptCallback(scriptPath:String, callback:String, startedAt:Float):Void
+	{
+		recordElapsed("script-callback", makeCallbackLabel(scriptPath, callback), startedAt);
+	}
+
+	public static function finishRunHaxeCode(scriptPath:String, startedAt:Float):Void
+	{
+		recordElapsed("runHaxeCode", scriptPath, startedAt);
+	}
+
+	public static function recordFrameInterval(durationMs:Float):Void
+	{
+		record("frame-interval", "PlayState", durationMs);
+	}
+
+	public static function recordPlayStateUpdate(durationMs:Float):Void
+	{
+		record("playstate-update", "PlayState", durationMs);
+	}
+
+	public static function recordPlayStateDraw(durationMs:Float):Void
+	{
+		record("playstate-draw", "PlayState", durationMs);
+	}
+
+	public static function recordScriptCallback(scriptPath:String, callback:String, durationMs:Float):Void
+	{
+		record("script-callback", makeCallbackLabel(scriptPath, callback), durationMs);
+	}
+
+	public static function recordRunHaxeCode(scriptPath:String, durationMs:Float):Void
+	{
+		record("runHaxeCode", scriptPath, durationMs);
+	}
+
+	/** A sorted copy so the diagnostic renderer cannot mutate profiler state. */
+	public static function snapshot():Array<ScriptTimingEntry>
+	{
+		var result:Array<ScriptTimingEntry> = [];
+		for (entry in entries)
+			result.push({
+				category: entry.category,
+				label: entry.label,
+				calls: entry.calls,
+				totalMs: entry.totalMs,
+				maxMs: entry.maxMs,
+				maxSongPosition: entry.maxSongPosition
+			});
+		result.sort(function(a, b) {
+			var categoryOrder = Reflect.compare(a.category, b.category);
+			return categoryOrder != 0 ? categoryOrder : Reflect.compare(a.label, b.label);
+		});
+		return result;
+	}
+
+	/** Text appended to the existing manual F8 report. */
+	public static function reportLines(?maxCallbacks:Int = 24):Array<String>
+	{
+		var lines = ["=== FRAME / SCRIPT TIMING (since PlayState start) ==="];
+		if (!enabled && entries.keys().hasNext() == false)
+		{
+			lines.push("No timing samples recorded.");
+			return lines;
+		}
+
+		appendSummary(lines, "frame-interval", "PlayState", "update interval");
+		appendSummary(lines, "playstate-update", "PlayState", "PlayState.update");
+		appendSummary(lines, "playstate-draw", "PlayState", "PlayState.draw");
+
+		var timedCallbacks = [for (entry in snapshot()) if (entry.category == "script-callback" || entry.category == "runHaxeCode") entry];
+		timedCallbacks.sort(function(a, b) {
+			if (a.totalMs == b.totalMs) return Reflect.compare(a.label, b.label);
+			return a.totalMs > b.totalMs ? -1 : 1;
+		});
+
+		lines.push("Top script callbacks / runHaxeCode by cumulative time:");
+		if (timedCallbacks.length == 0)
+			lines.push("  No script callback timing samples recorded.");
+		else
+		{
+			var count = maxCallbacks < 0 ? 0 : (maxCallbacks > timedCallbacks.length ? timedCallbacks.length : maxCallbacks);
+			for (i in 0...count)
+			{
+				var entry = timedCallbacks[i];
+				var averageMs = entry.calls == 0 ? 0 : entry.totalMs / entry.calls;
+			lines.push('  ${entry.category} ${entry.label}: calls=${entry.calls} totalMs=${formatMs(entry.totalMs)} avgMs=${formatMs(averageMs)} maxMs=${formatMs(entry.maxMs)} maxAtSongMs=${formatMs(entry.maxSongPosition)}');
+			}
+		}
+
+		var peakCallbacks = timedCallbacks.copy();
+		peakCallbacks.sort(function(a, b) {
+			if (a.maxMs == b.maxMs) return Reflect.compare(a.label, b.label);
+			return a.maxMs > b.maxMs ? -1 : 1;
+		});
+		lines.push("Top script callbacks / runHaxeCode by slowest single call:");
+		if (peakCallbacks.length == 0)
+			lines.push("  No script callback timing samples recorded.");
+		else
+		{
+			var peakCount = maxCallbacks < 0 ? 0 : (maxCallbacks > peakCallbacks.length ? peakCallbacks.length : maxCallbacks);
+			for (i in 0...peakCount)
+			{
+				var entry = peakCallbacks[i];
+				lines.push('  ${entry.category} ${entry.label}: maxMs=${formatMs(entry.maxMs)} maxAtSongMs=${formatMs(entry.maxSongPosition)} calls=${entry.calls} totalMs=${formatMs(entry.totalMs)}');
+			}
+		}
+		lines.push("NOTE: callback and runHaxeCode times are nested inside PlayState.update; do not add these values together.");
+		lines.push("NOTE: update interval includes drawing and application frame pacing; update/draw timings cover PlayState CPU work, not GPU presentation.");
+		return lines;
+	}
+
+	static function appendSummary(lines:Array<String>, category:String, label:String, displayName:String):Void
+	{
+		for (entry in entries)	{
+			if (entry.category != category || entry.label != label) continue;
+			var averageMs = entry.calls == 0 ? 0 : entry.totalMs / entry.calls;
+			lines.push('$displayName: samples=${entry.calls} avgMs=${formatMs(averageMs)} maxMs=${formatMs(entry.maxMs)} maxAtSongMs=${formatMs(entry.maxSongPosition)}');
+			return;
+		}
+		lines.push('$displayName: no samples');
+	}
+
+	static function recordElapsed(category:String, label:String, startedAt:Float):Void
+	{
+		if (!enabled || startedAt <= 0) return;
+		record(category, label, (Timer.stamp() - startedAt) * 1000);
+	}
+
+	static function record(category:String, label:String, durationMs:Float):Void
+	{
+		if (!enabled || label == null || !(durationMs >= 0) || durationMs > 1000000000000) return;
+
+		var key = category + "\x1F" + label;
+		var entry = entries.get(key);
+		if (entry == null)
+		{
+			if (entryCount >= MAX_ENTRIES) return;
+			entry = {category: category, label: label, calls: 0, totalMs: 0, maxMs: 0, maxSongPosition: currentSongPosition};
+			entries.set(key, entry);
+			entryCount++;
+		}
+
+		entry.calls++;
+		entry.totalMs += durationMs;
+		if (durationMs > entry.maxMs) {
+			entry.maxMs = durationMs;
+			entry.maxSongPosition = currentSongPosition;
+		}
+	}
+
+	static function makeCallbackLabel(scriptPath:String, callback:String):String
+	{
+		return (scriptPath == null ? "<unknown script>" : scriptPath) + "::" + (callback == null ? "<unknown callback>" : callback);
+	}
+
+	static function formatMs(value:Float):String
+	{
+		return Std.string(Math.round(value * 100) / 100);
+	}
+}

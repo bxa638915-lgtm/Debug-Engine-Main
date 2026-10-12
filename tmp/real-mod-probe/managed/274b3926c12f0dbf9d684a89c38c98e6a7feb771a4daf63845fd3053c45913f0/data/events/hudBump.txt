@@ -1,9 +1,0 @@
-local pastStep = 0
-function onEvent(name, v1)
-    if name == 'hudStep' then
-        cancelTween('zom' .. pastStep)
-        doTweenZoom('zom' .. curStep, 'hud', v1, 2, 'quadOut')
-        setProperty('defaultCamZoom', v1)
-        pastStep = curStep
-    end
-end

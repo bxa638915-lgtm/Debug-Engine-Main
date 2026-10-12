@@ -1,0 +1,81 @@
+local fixtureId = "psych-1.0.4-saves-settings-achievements"
+local expectedProfile = "1.0.4"
+local modName = "__DBE_TEMP_MOD__"
+local saveName = "dbe_task6_" .. modName
+local achievementName = "dbe_" .. modName
+
+local function fail(message)
+	debugPrint("DBE_PSYCH_LUA_ERROR:" .. fixtureId .. ":" .. message)
+	error(fixtureId .. ":" .. message)
+end
+
+local function expectEqual(name, actual, expected)
+	if actual ~= expected then fail(name .. " expected " .. tostring(expected) .. ", got " .. tostring(actual)) end
+end
+
+function onCreatePost()
+	local profile = engine and engine.compatibility and engine.compatibility.psychLuaProfile
+	if profile ~= expectedProfile then fail("expected profile " .. expectedProfile .. ", got " .. tostring(profile)) end
+	debugPrint("DBE_PSYCH_PROFILE:" .. profile)
+
+	expectEqual("initSaveData void return", initSaveData(saveName), nil)
+	local stage = getDataFromSave(saveName, "stage", 0)
+	if stage == 0 then
+		expectEqual("initial save default", getDataFromSave(saveName, "value", 0), 0)
+		setDataFromSave(saveName, "value", 73)
+		setDataFromSave(saveName, "stage", 1)
+		expectEqual("flushSaveData void return", flushSaveData(saveName), nil)
+		restartSong()
+		return
+	end
+	if stage ~= 1 then fail("unexpected persistence stage " .. tostring(stage)) end
+	expectEqual("value persisted through state restart", getDataFromSave(saveName, "value", 0), 73)
+
+	local setting = getModSetting("dbeTask6Setting")
+	expectEqual("configured mod setting", setting, "loaded-from-mod")
+	local settingsText = getTextFromFile("data/settings.json")
+	if type(settingsText) ~= "string" or not string.find(settingsText, "dbeTask6Setting", 1, true) then fail("mod settings file was not readable") end
+
+	local filePath = "data/dbe-task6.txt"
+	expectEqual("saveFile", saveFile(filePath, "psych-lua-persistence"), true)
+	expectEqual("checkFileExists after write", checkFileExists(filePath), true)
+	expectEqual("getTextFromFile after write", getTextFromFile(filePath), "psych-lua-persistence")
+	local files = directoryFileList("mods")
+	if type(files) ~= "table" then fail("directoryFileList did not return an array") end
+	expectEqual("deleteFile", deleteFile(filePath), true)
+	expectEqual("checkFileExists after delete", checkFileExists(filePath), false)
+	expectEqual("getTextFromFile after delete", getTextFromFile(filePath), nil)
+	getFileTranslation("fixture", "fallback")
+	expectEqual("translation fallback", getTranslationPhrase("missing.dbeTask6", "fallback"), "fallback")
+	changeDiscordClientID(nil)
+	expectEqual("changeDiscordPresence void return", changeDiscordPresence("In the Menus"), nil)
+
+	expectEqual("achievement definition loaded", achievementExists(achievementName), true)
+	expectEqual("initial achievement score", getAchievementScore(achievementName), 0)
+	expectEqual("setAchievementScore", setAchievementScore(achievementName, 1, false), 1)
+	expectEqual("addAchievementScore", addAchievementScore(achievementName, 1, false), 2)
+	expectEqual("achievement score roundtrip", getAchievementScore(achievementName), 2)
+	expectEqual("achievement remains locked", isAchievementUnlocked(achievementName), false)
+	expectEqual("unknown achievement unlock", unlockAchievement("dbe_task6_unknown"), nil)
+
+	setHealth(1.5)
+	expectEqual("setHealth", getHealth(), 1.5)
+	addHealth(-0.25)
+	expectEqual("addHealth", getHealth(), 1.25)
+	setScore(18)
+	addScore(4)
+	if type(getSongPosition()) ~= "number" then fail("getSongPosition did not return a number") end
+	expectEqual("triggerEvent return", triggerEvent("camera follow pos", "", ""), true)
+	expectEqual("missing startVideo", startVideo("dbe_task6_missing_video", true, false, false, true), false)
+	setRatingPercent(0.75)
+	setRatingName("Fixture")
+	setRatingFC("SFC")
+	updateScoreText()
+	expectEqual("score update", getProperty("songScore"), 22)
+
+	setDataFromSave(saveName, "stage", nil)
+	setDataFromSave(saveName, "value", nil)
+	flushSaveData(saveName)
+	expectEqual("eraseSaveData void return", eraseSaveData(saveName), nil)
+	debugPrint("DBE_PSYCH_FIXTURE_PASS:" .. fixtureId)
+end

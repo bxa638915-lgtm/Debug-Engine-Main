@@ -9,7 +9,8 @@ O objetivo é maximizar compatibilidade comprovada sem afirmar suporte universal
 | Registro modular de adaptadores | Criado para linguagem, runtime, extensões e fábricas de arquivo/fonte | `ScriptAdapterRegistryTest` passa; colisões são rejeitadas sem alterar o registro |
 | Consulta de capacidades | `engine.compatibility` acompanha o suporte configurado e diferencia fontes de contêineres | Teste passa com Lua habilitado e desabilitado |
 | Adaptador LuaJIT condicional | Lua 5.1 via dependência nativa C++ fixada em commit | Teste nativo Windows passa; engine Windows release compila |
-| Adaptador de funções Psych Lua | 246 nomes explícitos dos fontes Psych ligados, incluindo conquistas, Discord e idiomas; sprites/textos, propriedades/grupos, timers, tweens, áudio, shaders, saves, substates e gameplay | Comparação estática de nomes; build Windows e smoke. Paridade de efeitos visuais e formatos ainda é parcial |
+| Adaptador de funções Psych Lua | Binds nativos mantidos e separados por perfil 0.6.3/1.0.4; sprites/textos, propriedades/grupos, timers, tweens, áudio, shaders, saves, substates e gameplay | Build Windows e 28 fixtures passaram antes dos últimos ajustes; fixtures direcionados de animação passaram depois deles; inventário não é prova de paridade de todas as APIs |
+| Contratos Psych versionados | 201 funções + 39 callbacks em 0.6.3; 233 funções + 45 callbacks em 1.0.4 | Snapshot oficial fixado; 4 contratos estão `adapted` e 514 `not-verified`, então os perfis não estão certificados. Consulte `COMPATIBILITY-EVIDENCE.md` |
 | Dispatch Psych entre Lua e HScript | Ordem Lua/HScript e `Function_StopLua`/`Function_StopHScript`/`Function_StopAll` | Teste de regras e build Windows; smoke dentro do jogo confirmou a ordem Lua→HScript e `Function_StopLua` |
 | Hooks Psych/CNE | Lifecycle, countdown, chart event com `eventEarlyTrigger`, câmera, input com bloqueio por lane, spawn aproximado, hits/misses, pausa, game over e fim da música | Testes de hooks e smoke de gameplay no Windows |
 | Barra de tempo e direção dos strums | `setTimeBarColors`, `timeBar`, `timeTxt`, `noteTweenDirection` e propriedade `direction` usam objetos CNE | Smoke em `bopeebo` confirmou cores e tween sem erro de runtime |
@@ -17,14 +18,14 @@ O objetivo é maximizar compatibilidade comprovada sem afirmar suporte universal
 | Normalizador inicial de mods | CLI aceita pasta/ZIP, identifica marcadores conhecidos, normaliza wrappers e `assets/`, preserva origem e grava relatório por arquivo | `python -m unittest discover -s tests -p 'test_mod_converter.py' -v`; conversão de scripts permanece fora do escopo |
 | Exportadores do UI Builder mais seguros | HScript rejeita IDs/câmeras que não sejam identificadores seguros; HScript/Lua escapam strings; XML usa entidades e preserva quebras de linha | `UIBuilderDataTest` cobre strings com controles e entrada inválida |
 | Checkpoints e backup | Backup integral validado e checkpoints incrementais fora do projeto | Manifestos SHA-256 e instruções de restauração |
-| Validação automatizada | Testes Haxe, LuaJIT nativo, build Windows e gameplay smoke em um runner PowerShell | `building/compat-test.ps1 -BuildEngine -GameplaySmoke`; logs em `export/compat-tests` |
+| Validação automatizada Psych Lua | Testes de contrato, build release Windows e fixtures de gameplay para os dois perfis | `building/psych-lua-test.ps1`; logs e resultados persistidos em `export/compat-tests` |
 
 ## Próximas prioridades
 
 | Prioridade | Trabalho | Impacto | Custo | Risco | Critério de saída |
 |---|---|---:|---:|---:|---|
 | A | Validar mods Psych representativos dentro de músicas CNE | Alto | Alto | Médio | Fixtures cobrindo grupos, sprites, tweens, eventos e múltiplas strumlines, com smoke no jogo |
-| A | Comparar contratos completos das APIs Psych 0.6.3 e 1.0.4, não apenas nomes de callbacks | Alto | Alto | Alto | Catálogo de assinatura/retorno/efeito por perfil, testes de conformidade e matriz de incompatibilidades |
+| A | Fechar os 514 contratos Psych 0.6.3/1.0.4 ainda não verificados | Alto | Muito alto | Alto | Cada entrada tem assinatura/defaults/conversão/efeitos/erros ou timing reconciliados com a fonte fixada e fixture aprovado; o gate final passa sem `not-verified` |
 | A | Expandir o conversor de hierarquia com fixtures reais por engine | Alto | Alto | Médio | Perfis Psych/CNE/V-Slice validam metadados, caminhos de assets, dependências e carga da cópia convertida; scripts não traduzidos sempre aparecem no relatório |
 | A | Igualar o índice de `notes` do Psych em charts com várias strumlines | Alto | Médio | Médio | Reproduzir a ordem de spawn/removal Psych ou registrar divergência por callback |
 | A | Fechar paridade do diálogo Psych, incluindo profiles JSON de retratos e comportamento de caixa | Médio | Alto | Médio | Retratos vanilla e customizados Psych mantêm posição, escala, animações e texto em fixtures |
@@ -40,6 +41,7 @@ O objetivo é maximizar compatibilidade comprovada sem afirmar suporte universal
 
 - HScript permanece o runtime padrão e a referência de comportamento CNE.
 - LuaJIT só entra nos alvos C++ onde a dependência está disponível. Web e outros alvos não anunciam Lua.
-- Lua recebe as funções explícitas do Psych com tradução dos hooks que têm correspondência na CNE; diferenças de scheduler, UI e formatos de assets continuam parciais e são registradas na matriz.
+- O inventário completo de nomes é separado de compatibilidade de comportamento. Os dois perfis só serão declarados suportados quando os catálogos e os resultados por plataforma passarem pelo gate final.
+- Diferenças de scheduler, UI, configurações persistentes e formatos de assets continuam explícitas no relatório de evidências e na matriz.
 - JavaScript e TypeScript não são ativados até haver runtime portátil e custo de distribuição aceitável.
 - Scripts continuam no processo do jogo; remover bibliotecas Lua reduz superfícies acessíveis, mas não torna o runtime isolado.

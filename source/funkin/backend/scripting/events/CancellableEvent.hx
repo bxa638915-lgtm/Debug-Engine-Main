@@ -7,6 +7,8 @@ import flixel.util.FlxDestroyUtil.IFlxDestroyable;
 class CancellableEvent implements IFlxDestroyable {
 	@:dox(hide) public var cancelled:Bool = false;
 	@:dox(hide) private var __continueCalls:Bool = true;
+	/** Tracks the cancellable result contributed by ordered Psych Lua callbacks. */
+	@:dox(hide) @:allow(funkin.backend.scripting.LuaScript) public var psychLuaCancelled:Bool = false;
 
 	/**
 	 * Additional data if used in scripts
@@ -35,6 +37,7 @@ class CancellableEvent implements IFlxDestroyable {
 		data = {};
 		cancelled = false;
 		__continueCalls = true;
+		psychLuaCancelled = false;
 	}
 
 	/**

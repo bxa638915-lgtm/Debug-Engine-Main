@@ -1,3 +1,5 @@
+-- Choose "0.6.3" or "1.0.4" in data/config/dbe-compat.json for the target mod.
+-- These common calls are an example, not a claim of complete Psych API parity.
 function onCreate()
 	debugPrint("Adaptador Lua carregado")
 end

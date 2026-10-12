@@ -132,7 +132,12 @@ class GlobalScript {
 			script.remappedNames.set(script.fileName, '$modName:${script.fileName}');
 			// so you can get the current mod's library in GloablScript :)
 			// you should not make this a static variable then all scripts will try to reference the 1 static variable, which will be overwritten :yoikes:
-			script.set("MOD_LIBRARY", lib);
+			#if LUA_ALLOWED
+			if (Std.isOfType(script, LuaScript))
+				script.set("MOD_LIBRARY", {modName: lib.modName, libName: lib.libName, prefix: lib.prefix});
+			else
+			#end
+				script.set("MOD_LIBRARY", lib);
 			scripts.add(script);
 			script.load();
 		}

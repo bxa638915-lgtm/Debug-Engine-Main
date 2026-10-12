@@ -1,6 +1,6 @@
 # Matriz de compatibilidade
 
-Atualizada em 6 de outubro de 2026. Estados refletem evidências disponíveis neste workspace. Compilar um runtime não comprova que toda a API de outra engine funciona.
+Atualizada em 10 de outubro de 2026. Estados refletem evidências registradas neste workspace. Compilar um runtime não comprova que toda a API de outra engine funciona. O relatório detalhado está em [`COMPATIBILITY-EVIDENCE.md`](COMPATIBILITY-EVIDENCE.md).
 
 ## Linguagens e formatos
 
@@ -11,7 +11,8 @@ Atualizada em 6 de outubro de 2026. Estados refletem evidências disponíveis ne
 | `.hxc` de V-Slice | HScript Improved da DBE | Extensão reconhecida; equivalência parcial e ainda sem fixture de jogo | O loader encaminha `.hxc` ao adaptador HScript. Isso não reproduz por si só os imports, classes-base ou APIs específicas do Polymod/V-Slice. |
 | `.pack` | Contêiner com fonte HScript | Parcialmente compatível | Separador validado e conteúdo encaminhado ao adaptador correspondente. Não é uma linguagem. |
 | Lua 5.1 via LuaJIT 2.0.4 | Codename Engine C++ | Implementado, parcialmente validado | Runtime nativo, build Windows e smoke em `bopeebo` passaram; o smoke cobre lifecycle, hit/miss, barra de tempo, direção do strum, diálogo JSON e dispatch Lua→HScript, inclusive a interrupção por `Function_StopLua`. |
-| Psych Engine Lua | Codename Engine | API ampla, equivalência parcial | `LuaScript` liga os 246 nomes de callback explícitos encontrados nos fontes Psych presentes. O inventário confirma nomes, não paridade de assinatura, momento ou efeito. Diferenças documentadas abaixo. |
+| Psych Engine Lua 0.6.3 | Codename Engine C++ | Não certificado; gate bloqueado | Fonte oficial fixada no commit `eb0ade39e8d1c5437db2166a9ddb6eb3c05956e1`. Build Windows x64 e 14 fixtures passaram; 2 funções estão `adapted` e 238 contratos seguem `not-verified`. |
+| Psych Engine Lua 1.0.4 | Codename Engine C++ | Não certificado; gate bloqueado | Fonte oficial fixada no commit `5c67ced49e5a98535298a6daa3f8f4ec79ac8399`. Build Windows x64 e 14 fixtures passaram; 2 funções estão `adapted` e 276 contratos seguem `not-verified`. |
 | JavaScript | Codename Engine | Planejado | Nenhum runtime está integrado. |
 | TypeScript | Codename Engine | Planejado | Sem compilador ou runtime; requer também uma decisão sobre execução JavaScript. |
 | Haxe completo de mods | Interpretador HScript | Parcialmente compatível | Só funciona a parte aceita pelo parser e pelas APIs do HScript Improved. |
@@ -20,7 +21,7 @@ O adaptador Lua é compilado somente quando `cpp` define `LUA_ALLOWED`. A consul
 
 ### API Psych Lua
 
-O fonte local do Psych foi usado para conferir os nomes das funções da API. A comparação estática encontrou 246 funções explícitas (`Lua_helper.add_callback` e `addLocalCallback`) e 247 nomes ligados no adaptador CNE, sem função Psych ausente. Isso não prova equivalência funcional; hooks ainda dependem de eventos que a CNE realmente emite e de objetos que existem nas duas engines.
+Os catálogos usam snapshots fixados das fontes oficiais 0.6.3 e 1.0.4 e listam funções e callbacks por perfil. A validação estrutural e a reconciliação de nomes passam. Isso ainda não certifica paridade: 4 de 518 contratos foram reconciliados e marcados `adapted` (dois por perfil); 514 continuam `not-verified` porque assinaturas, defaults, conversões e efeitos ainda não foram fechados por entrada. O build Windows e os 28 fixtures (14 por perfil) passaram antes dos últimos ajustes; fixtures direcionados de animação passaram depois deles. Veja o [relatório de evidências](COMPATIBILITY-EVIDENCE.md) e os arquivos de contrato em `contracts/`.
 
 | Evento CNE | Callback Psych encaminhado |
 |---|---|
@@ -46,7 +47,7 @@ Callbacks de conquistas persistem desbloqueio/progresso por save, sem o popup vi
 
 O adaptador oferece sprites/textos Lua, animações, grupos, propriedades, timers, tweens, áudio, shaders, save data, substates e funções de utilidade. As coleções Psych `notes`, `unspawnNotes`, `strumLineNotes`, `playerStrums` e `opponentStrums` são vistas construídas a partir das strumlines CNE. `notes`/`unspawnNotes` usam o limite de spawn da CNE; índices podem divergir em charts com várias strumlines ou scripts que dependam do ciclo exato de spawn/removal do Psych.
 
-Limites conhecidos: diálogo JSON usa a apresentação CNE; retratos customizados do Psych só aparecem se também tiverem definição de personagem e assets CNE. `onSpawnNote` segue o limite de spawn da CNE, e índices de grupos de notas podem divergir do Psych em charts com várias strumlines. `runHaxeCode` executa HScript, não Haxe completo; `getModSetting` lê valores JSON, mas não reproduz a UI persistente do Psych. Desbloqueios de conquistas não exibem popup Psych. A integração foi exercitada em um smoke curto, sem validar todos os 246 contratos de API nem todas as plataformas.
+Limites observados nos fixtures incluem: diálogo JSON usa a apresentação CNE; retratos customizados do Psych precisam de definição e assets CNE; `onSpawnNote` segue o limite de spawn CNE; índices de grupos de notas podem divergir em charts multi-strumline; `runHaxeCode` executa HScript; `getModSetting` lê JSON sem a UI persistente Psych; desbloqueios de conquistas não exibem popup Psych. O smoke cobre 14 fixtures por perfil, mas isso não fecha os 514 contratos ainda `not-verified`.
 
 ## Engines e dados FNF
 
@@ -64,9 +65,9 @@ Psych Engine foi arquivado em 31 de março de 2025. [Repositório oficial](https
 
 | Plataforma | Estado da engine | Verificação desta etapa |
 |---|---|---|
-| Windows x64 | Suportada | Build `haxelib run lime build windows -release` passou com LuaJIT habilitado em 6 de outubro de 2026. |
-| Linux x64 | Declarada pela engine | Não compilada nem executada nesta etapa. |
-| macOS universal | Declarada pela engine | Não compilada nem executada nesta etapa. |
+| Windows x64 | Builds LuaJIT e HScript-only aprovados; perfil Psych não certificado | Release C++ com Lua compilado, build HScript-only sem `LUA_ALLOWED` e smoke com 14 fixtures em cada perfil passaram em 10 de outubro de 2026. O gate de paridade fica bloqueado pelos contratos `not-verified`. |
+| Linux x64 | Não validada | Nenhum build ou smoke neste host Windows. |
+| macOS universal | Não validada | Nenhum build ou smoke neste host Windows. |
 | Web / HTML5 | Sem suporte declarado | Lua não é compilado para esse alvo; build não testado. |
 | Mobile | Sem suporte declarado | Não testado; não presumir suporte a partir dos artefatos existentes no pacote LuaJIT. |
 
@@ -74,10 +75,12 @@ Psych Engine foi arquivado em 31 de março de 2025. [Repositório oficial](https
 
 | Verificação | Resultado |
 |---|---|
-| Comparação de funções API do Psych local com binds CNE | 246 encontradas no Psych; binds e efeitos ainda não equivalem automaticamente |
-| Registro, capacidades, property paths, hooks, diálogo JSON e runtime LuaJIT | PASS em `building/compat-test.ps1` |
-| Build Windows release desta extensão | PASS: `haxelib run lime build windows -release`, 6 de outubro de 2026; avisos de depreciação existentes |
-| Mod Lua real em música CNE | Smoke PASS em `bopeebo`: callbacks lifecycle, beat, miss, cores da barra, tween de direção e abertura de diálogo JSON |
+| Inventário dos contratos Psych | PASS estrutural e reconciliação de nomes; 4 `adapted`, 514 `not-verified` |
+| Testes de contrato Python | PASS, 30/30; `building/psych-lua-test.ps1 -ValidateOnly` PASS |
+| Build Windows release desta extensão | PASS: `building/psych-lua-test.ps1 -BuildEngine`, 10 de outubro de 2026; avisos de depreciação existentes |
+| Fixtures Lua Psych executados no jogo | PASS: 14 fixtures para 0.6.3 e 14 para 1.0.4, em oito grupos de processo; resultado preservado no relatório de evidências |
+| Gate final de paridade | BLOQUEADO: 238 contratos 0.6.3 e 276 contratos 1.0.4 permanecem `not-verified` |
+| Build Windows sem LuaJIT / `LUA_ALLOWED` | PASS: `building/psych-lua-test.ps1 -BuildHScriptOnly`; a referência Lua descoberta foi protegida por `#if LUA_ALLOWED` |
 | Linux/macOS, memória, tempo de callbacks e benchmark de gameplay | Não medidos |
 
 Não foi feita comparação de desempenho antes/depois. O teste de runtime mede correção de uma amostra curta, não desempenho de jogo.

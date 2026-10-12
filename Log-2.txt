@@ -1,0 +1,16 @@
+Link: ApplicationMain.exe
+   Criando biblioteca ApplicationMain.lib e objeto ApplicationMain.exp
+[  14:25:55  |   VERBOSE   ] Switched to mod: d 3 S 0 r mix
+[  14:26:04  |   WARNING   ] Blend Mode Extensions won't work in MOD_API_VERSION below than 2
+[  14:26:04  | INFORMATION ] [Language] Found languages: en/English, es/Español, it/Italiano, pl/Polski, pt/Português
+[  14:26:04  |   VERBOSE   ] [Language] Setting Language To: English (en)
+[  14:26:06  | INFORMATION ] [Discord] Connected to User Dev S.Hx (dev_scx4dc)
+[  14:28:57  |   WARNING   ] [FLIXEL] FlxG.cameras.remove(): The camera you attempted to remove is not a part of the game.
+[  14:28:57  |   WARNING   ] [FLIXEL] FlxG.cameras.remove(): The camera you attempted to remove is not a part of the game.
+[  14:28:57  |   WARNING   ] [FLIXEL] FlxG.cameras.remove(): The camera you attempted to remove is not a part of the game.
+[  14:28:58  |    ERROR    ] Restaurant New.luaLua global "normal_stage" was not set: unsupported Haxe value at normal_stage (TClass(funkin.backend.FunkinSprite)).
+[  14:28:58  |    ERROR    ] Restaurant New.luaLua global "fg" was not set: unsupported Haxe value at fg (TClass(funkin.backend.FunkinSprite)).
+[  14:28:58  |    ERROR    ] Restaurant New.luaLua global "chandelier" was not set: unsupported Haxe value at chandelier (TClass(funkin.backend.FunkinSprite)).
+[  14:29:30  |   VERBOSE   ] [Options] Saving settings...
+[  14:29:30  |   VERBOSE   ] [FunkinSave] Saving save data...
+PS C:\Users\esque\Downloads\A_1\A\Vs Impostor alternated Scripts Converts\DBE-Tests-Source\Debug Engine-Main> 

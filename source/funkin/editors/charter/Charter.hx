@@ -9,9 +9,13 @@ import flixel.sound.FlxSoundData;
 import flixel.util.FlxSort;
 import funkin.backend.chart.*;
 import funkin.backend.chart.ChartData;
+import funkin.backend.assets.SongLoadRequest;
+import funkin.backend.assets.SongLoader;
 import funkin.backend.chart.ChartData.ChartNoteParam;
+import funkin.backend.scripting.events.sprite.PlayAnimContext;
 import funkin.backend.system.Conductor;
 import funkin.backend.system.framerate.Framerate;
+import funkin.backend.utils.SortedArrayUtil;
 import funkin.editors.charter.CharterBackdropGroup.EventBackdrop;
 import funkin.editors.charter.CharterBackdropGroup.CharterGridSeperatorBase;
 import funkin.editors.charter.CharterEvent;
@@ -67,6 +71,10 @@ class Charter extends UIState {
 	public var playerPreviewWindow:CharterCharacterPreviewWindow;
 	public var opponentPreviewWindow:CharterCharacterPreviewWindow;
 	private var previewChromeCamera:FlxCamera;
+	private var previewTimelinePosition:Null<Float> = null;
+	private var previewAltSingByLine:Map<Int, Bool> = [];
+	private var previewAltIdleByLine:Map<Int, Bool> = [];
+	private var previewCharactersByLine:Map<Int, String> = [];
 	private var playerPreviewOption:UIContextMenuOption;
 	private var opponentPreviewOption:UIContextMenuOption;
 	public var gridBackdrops:CharterBackdropGroup;
@@ -644,6 +652,8 @@ class Charter extends UIState {
 	}
 
 	public function loadSong() {
+		previewTimelinePosition = null;
+		previewCharactersByLine = [];
 		if (__reload) {
 			EventsData.reloadEvents();
 			PlayState.loadSong(__song, __diff, __variant, false, false);
@@ -1542,6 +1552,7 @@ class Charter extends UIState {
 
 		var songLength = FlxG.sound.music.getDefault(vocals).length;
 		Conductor.songPosition = CoolUtil.bound(Conductor.songPosition + Conductor.songOffset, 0, songLength);
+		updateCharacterPreviewTimeline();
 
 		if (Conductor.songPosition >= songLength - Conductor.songOffset) {
 			FlxG.sound.music.pause();
@@ -2327,21 +2338,216 @@ class Charter extends UIState {
 
 	private function updateCharacterPreviewWindows():Void {
 		if (opponentPreviewWindow != null)
-			opponentPreviewWindow.setCharacter(getChartCharacter(false));
+			opponentPreviewWindow.setCharacter(getPreviewCharacter(false));
 		if (playerPreviewWindow != null)
-			playerPreviewWindow.setCharacter(getChartCharacter(true));
+			playerPreviewWindow.setCharacter(getPreviewCharacter(true));
+	}
+
+	private function getPreviewCharacter(isPlayer:Bool):String {
+		var lineID = getChartCharacterStrumLineIndex(isPlayer);
+		if (lineID >= 0 && previewCharactersByLine.exists(lineID))
+			return previewCharactersByLine.get(lineID);
+		return getChartCharacter(isPlayer);
+	}
+
+	private function updateCharacterPreviewTimeline():Void {
+		if (strumLines == null || notesGroup == null || leftEventsGroup == null || rightEventsGroup == null) return;
+
+		var currentTime = Conductor.songPosition;
+		if (Math.isNaN(currentTime)) return;
+
+		if (previewTimelinePosition == null) {
+			previewAltSingByLine = [];
+			previewAltIdleByLine = [];
+			previewCharactersByLine = [];
+			if (currentTime > 0) {
+				rebuildPreviewAnimationState(currentTime);
+				updateCharacterPreviewWindows();
+				resetPreviewAnimations();
+				previewTimelinePosition = currentTime;
+				return;
+			}
+			previewTimelinePosition = currentTime == 0 ? -0.001 : currentTime;
+		}
+
+		var previousTime:Float = cast previewTimelinePosition;
+		if (currentTime < previousTime) {
+			rebuildPreviewAnimationState(currentTime);
+			updateCharacterPreviewWindows();
+			resetPreviewAnimations();
+		} else if (currentTime > previousTime) {
+			playCrossedPreviewActions(previousTime, currentTime);
+		}
+
+		applyPreviewIdleSuffix(opponentPreviewWindow, getChartCharacterStrumLineIndex(false), false);
+		applyPreviewIdleSuffix(playerPreviewWindow, getChartCharacterStrumLineIndex(true), false);
+		previewTimelinePosition = currentTime;
+	}
+
+	private function playCrossedPreviewActions(previousTime:Float, currentTime:Float):Void {
+		var previousStep = Conductor.getStepForTime(previousTime);
+		var currentStep = Conductor.getStepForTime(currentTime);
+		var actions:Array<CharterPreviewTimelineAction> = [];
+		var sequence = 0;
+
+		for (eventGroup in [leftEventsGroup, rightEventsGroup]) {
+			var index = SortedArrayUtil.binarySearch(eventGroup.members, previousStep, function(group) return group.step);
+			while (index < eventGroup.members.length && eventGroup.members[index].step <= previousStep) index++;
+			while (index < eventGroup.members.length) {
+				var group = eventGroup.members[index++];
+				if (group.step > currentStep) break;
+				var actionTime = Conductor.getTimeForStep(group.step);
+				if (!CharterPreviewTimeline.crosses(actionTime, previousTime, currentTime) || group.events == null) continue;
+				for (event in group.events) {
+					if (event == null) continue;
+					actions.push({time: actionTime, isEvent: true, sequence: sequence++, event: event, note: null});
+				}
+			}
+		}
+
+		var noteIndex = SortedArrayUtil.binarySearch(notesGroup.members, previousStep, function(note) return note.step);
+		while (noteIndex < notesGroup.members.length && notesGroup.members[noteIndex].step <= previousStep) noteIndex++;
+		while (noteIndex < notesGroup.members.length) {
+			var note = notesGroup.members[noteIndex++];
+			if (note.step > currentStep) break;
+			var actionTime = Conductor.getTimeForStep(note.step);
+			if (!CharterPreviewTimeline.crosses(actionTime, previousTime, currentTime)) continue;
+			actions.push({time: actionTime, isEvent: false, sequence: sequence++, event: null, note: note});
+		}
+
+		actions.sort(function(a, b) return CharterPreviewTimeline.compare(a.time, a.isEvent, a.sequence, b.time, b.isEvent, b.sequence));
+		for (action in actions) {
+			if (action.isEvent) applyPreviewTimelineEvent(action.event);
+			else applyPreviewTimelineNote(action.note);
+		}
+	}
+
+	private function rebuildPreviewAnimationState(time:Float):Void {
+		previewAltSingByLine = [];
+		previewAltIdleByLine = [];
+		previewCharactersByLine = [];
+		var actions:Array<CharterPreviewTimelineAction> = [];
+		var sequence = 0;
+		for (eventGroup in [leftEventsGroup, rightEventsGroup]) {
+			for (group in eventGroup.members) {
+				var actionTime = Conductor.getTimeForStep(group.step);
+				if (actionTime > time) break;
+				if (group.events == null) continue;
+				for (event in group.events) {
+					if (event == null) continue;
+					actions.push({time: actionTime, isEvent: true, sequence: sequence++, event: event, note: null});
+				}
+			}
+		actions.sort(function(a, b) return CharterPreviewTimeline.compare(a.time, true, a.sequence, b.time, true, b.sequence));
+		for (action in actions) {
+			switch (action.event.name) {
+				case "Alt Animation Toggle": applyPreviewAltAnimationEvent(action.event);
+				case "Change Character": applyPreviewCharacterChange(action.event);
+			}
+		}
+		}
+	}
+
+	private function applyPreviewTimelineEvent(event:ChartEvent):Void {
+		if (event == null || event.params == null) return;
+		switch (event.name) {
+			case "Alt Animation Toggle":
+				applyPreviewAltAnimationEvent(event);
+			case "Change Character":
+				applyPreviewCharacterChange(event);
+			case "Play Animation":
+				if (event.params.length < 4) return;
+				var lineID:Int = cast event.params[0];
+				var window = getPreviewWindowForStrumLine(lineID);
+				if (window != null && window.canPlayTimelineAnimation()) {
+					var animationName = Std.string(event.params[1]);
+					var context:PlayAnimContext = event.params[3] == "NONE" ? null : cast event.params[3];
+					window.playPreviewAnimation(animationName, cast event.params[2], context);
+				}
+		}
+	}
+
+	private function applyPreviewCharacterChange(event:ChartEvent):Void {
+		var change = CharterPreviewTimeline.parseCharacterChange(event.name, event.params);
+		if (change == null) return;
+
+		var isPlayer:Bool = switch (change.target) {
+			case "player": true;
+			case "opponent": false;
+			default: return;
+		}
+		var lineID = getChartCharacterStrumLineIndex(isPlayer);
+		if (lineID < 0) return;
+
+		previewCharactersByLine.set(lineID, change.characterName);
+		var window = isPlayer ? playerPreviewWindow : opponentPreviewWindow;
+		if (window != null) window.setCharacter(change.characterName);
+	}
+
+	private function applyPreviewAltAnimationEvent(event:ChartEvent):Void {
+		if (event == null || event.params == null || event.params.length < 3) return;
+		var lineID:Int = cast event.params[2];
+		if (lineID < 0 || lineID >= strumLines.members.length) return;
+		previewAltSingByLine.set(lineID, event.params[0] == true);
+		previewAltIdleByLine.set(lineID, event.params[1] == true);
+	}
+
+	private function applyPreviewTimelineNote(note:CharterNote):Void {
+		if (note == null) return;
+		var lineID = note.strumLineID;
+		var suffix = previewAltSingByLine.exists(lineID) && previewAltSingByLine.get(lineID) ? Flags.DEFAULT_ALT_ANIM_SUFFIX : "";
+		var window = getPreviewWindowForStrumLine(lineID);
+		if (window == null || !window.canPlayTimelineAnimation()) return;
+		var keyCount = strumLines.members[lineID].keyCount;
+		if (keyCount <= 0) keyCount = 4;
+		var direction = note.id < 0 ? 0 : note.id % keyCount;
+		var singEndTime = Conductor.getTimeForStep(note.step + note.susLength);
+		window.playSingAnimation(direction, suffix, singEndTime);
+	}
+
+	private function getPreviewWindowForStrumLine(lineID:Int):CharterCharacterPreviewWindow {
+		if (lineID < 0 || lineID >= strumLines.members.length) return null;
+		var lineType = strumLines.members[lineID].strumLine.type;
+		if (lineType == 1 && lineID == getChartCharacterStrumLineIndex(true)) return playerPreviewWindow;
+		if (lineType == 0 && lineID == getChartCharacterStrumLineIndex(false)) return opponentPreviewWindow;
+		return null;
+	}
+
+	private function resetPreviewAnimations():Void {
+		applyPreviewIdleSuffix(opponentPreviewWindow, getChartCharacterStrumLineIndex(false), true);
+		applyPreviewIdleSuffix(playerPreviewWindow, getChartCharacterStrumLineIndex(true), true);
+	}
+
+	private function applyPreviewIdleSuffix(window:CharterCharacterPreviewWindow, lineID:Int, resetAnimation:Bool):Void {
+		if (window == null) return;
+		var suffix = lineID >= 0 && previewAltIdleByLine.exists(lineID) && previewAltIdleByLine.get(lineID) ? Flags.DEFAULT_ALT_ANIM_SUFFIX : "";
+		if (resetAnimation) window.resetTimelineAnimation(suffix);
+		else window.setPreviewIdleSuffix(suffix);
 	}
 
 	private function getChartCharacter(isPlayer:Bool):String {
-		var targetType:Int = isPlayer ? 1 : 0;
-		for (line in strumLines.members) {
-			if (line == null || line.strumLine == null || line.strumLine.type != targetType) continue;
-			var characters = line.strumLine.characters;
+		var lineID = getChartCharacterStrumLineIndex(isPlayer);
+		if (lineID >= 0) {
+			var characters = strumLines.members[lineID].strumLine.characters;
 			if (characters != null)
 				for (characterName in characters)
 					if (characterName != null && characterName.trim().length > 0) return characterName.trim();
 		}
 		return isPlayer ? Flags.DEFAULT_CHARACTER : Flags.DEFAULT_OPPONENT;
+	}
+
+	private function getChartCharacterStrumLineIndex(isPlayer:Bool):Int {
+		var targetType:Int = isPlayer ? 1 : 0;
+		var fallbackLine = -1;
+		for (index => line in strumLines.members) {
+			if (line == null || line.strumLine == null || line.strumLine.type != targetType) continue;
+			if (fallbackLine < 0) fallbackLine = index;
+			var characters = line.strumLine.characters;
+			if (characters != null)
+				for (characterName in characters)
+					if (characterName != null && characterName.trim().length > 0) return index;
+		}
+		return fallbackLine;
 	}
 
 	function _view_togglePlayerPreview(option:UIContextMenuOption):Void {
@@ -2579,7 +2785,8 @@ class Charter extends UIState {
 		startTime = Conductor.songPosition;
 		PlayState.opponentMode = opponentMode;
 		PlayState.chartingMode = true;
-		FlxG.switchState(new PlayState());
+		var request = SongLoadRequest.fromPlayState("charter");
+		SongLoader.start(request, () -> PlayState.SONG);
 	}
 
 	public inline function buildNote(note:CharterNote):ChartNote {
@@ -2867,4 +3074,12 @@ typedef CameraChange = {
 	var strumLineID:Int;
 	var step:Float;
 	var endStep:Float;
+}
+
+private typedef CharterPreviewTimelineAction = {
+	var time:Float;
+	var isEvent:Bool;
+	var sequence:Int;
+	var event:ChartEvent;
+	var note:CharterNote;
 }

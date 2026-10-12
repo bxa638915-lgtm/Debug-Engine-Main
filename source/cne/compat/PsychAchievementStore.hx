@@ -4,6 +4,10 @@ import flixel.util.FlxSave;
 import funkin.backend.assets.ModsFolder;
 import funkin.backend.assets.Paths;
 import openfl.utils.Assets;
+#if sys
+import sys.FileSystem;
+import sys.io.File;
+#end
 
 /** Minimal persistent implementation of Psych's named achievement Lua API. */
 class PsychAchievementStore
@@ -101,11 +105,25 @@ class PsychAchievementStore
 			"pessy_easter_egg" => 0
 		];
 
+		var source:String = null;
+		#if sys
+		var modRoots:Array<String> = [];
+		if (ModsFolder.currentModLoadPath != null) modRoots.push(ModsFolder.currentModLoadPath);
+		if (ModsFolder.currentModFolder != null)
+			modRoots.push(haxe.io.Path.join([ModsFolder.modsPath, ModsFolder.currentModFolder]));
+		for (root in modRoots)
+		{
+			var modFile = haxe.io.Path.join([root, "data", "achievements.json"]);
+			if (FileSystem.exists(modFile) && !FileSystem.isDirectory(modFile))
+				try { source = File.getContent(modFile); break; } catch (_:Dynamic) {}
+		}
+		#end
 		var path = Paths.json("achievements");
-		if (Assets.exists(path))
+		if (source == null && Assets.exists(path)) source = Assets.getText(path);
+		if (source != null)
 			try
 			{
-				var parsed:Dynamic = haxe.Json.parse(Assets.getText(path));
+				var parsed:Dynamic = haxe.Json.parse(source);
 				var entries:Dynamic = Std.isOfType(parsed, Array) ? parsed : Reflect.field(parsed, "achievements");
 				if (Std.isOfType(entries, Array))
 					for (entry in (cast entries:Array<Dynamic>))

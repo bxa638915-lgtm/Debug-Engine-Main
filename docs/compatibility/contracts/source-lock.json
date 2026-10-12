@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "snapshotAlgorithm": "dbe-file-tree-sha256-v1",
+  "snapshotDescription": "SHA-256 over sorted files under source/: UTF-8 repository-relative path, NUL, 8-byte big-endian content length, then exact file bytes. This is a source-tree snapshot digest, not a ZIP/TAR digest.",
+  "sources": [
+    {
+      "profile": "0.6.3",
+      "repository": "https://github.com/ShadowMario/FNF-PsychEngine.git",
+      "tag": "0.6.3",
+      "commit": "eb0ade39e8d1c5437db2166a9ddb6eb3c05956e1",
+      "snapshotPaths": ["source"],
+      "snapshotSha256": "821aa42f579e4cebcca8d63d89bb7a508c9c1efb9dfdfa40bf85c921173352d5"
+    },
+    {
+      "profile": "1.0.4",
+      "repository": "https://github.com/ShadowMario/FNF-PsychEngine.git",
+      "tag": "1.0.4",
+      "commit": "5c67ced49e5a98535298a6daa3f8f4ec79ac8399",
+      "snapshotPaths": ["source"],
+      "snapshotSha256": "fd48b3535958c2474a43532e9148f8fbe88e1241ffb5b200e949de4e20025516"
+    }
+  ]
+}

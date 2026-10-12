@@ -1,6 +1,7 @@
 package cne.compat;
 
 import haxe.io.Path;
+import funkin.backend.assets.ModsFolder;
 
 /**
  * Describes the scripting formats this build can execute.
@@ -80,10 +81,45 @@ class ScriptCapabilities
 			runtimes: SUPPORTED_RUNTIMES.copy(),
 			scriptExtensions: getSupportedScriptExtensions(),
 			containerExtensions: getContainerExtensions(),
+			psychLuaProfile: getPsychLuaProfile(),
+			psychLuaProfiles: PsychLuaProfile.supportedProfiles(),
+			psychLuaProfileConfig: PsychLuaProfile.CONFIG_PATH,
+			psychLuaProfileConfigStatus: getPsychLuaProfileConfigStatus(),
 			supportsLanguage: supportsLanguage,
 			supportsScriptFile: supportsScriptFile,
 			isContainerFile: isContainerFile
 		};
+	}
+
+	/** Returns the script-friendly compatibility fields that Lua can copy into a table. */
+	public static function getLuaCompatibilityInfo():Dynamic
+	{
+		return {
+			apiVersion: API_VERSION,
+			platform: getPlatform(),
+			globalScripts: #if GLOBAL_SCRIPT true #else false #end,
+			modSupport: #if MOD_SUPPORT true #else false #end,
+			languages: SUPPORTED_LANGUAGES.copy(),
+			runtimes: SUPPORTED_RUNTIMES.copy(),
+			scriptExtensions: getSupportedScriptExtensions(),
+			containerExtensions: getContainerExtensions(),
+			psychLuaProfile: getPsychLuaProfile(),
+			psychLuaProfiles: PsychLuaProfile.supportedProfiles(),
+			psychLuaProfileConfig: PsychLuaProfile.CONFIG_PATH,
+			psychLuaProfileConfigStatus: getPsychLuaProfileConfigStatus()
+		};
+	}
+
+	private static function getPsychLuaProfile():String
+	{
+		return ModsFolder.currentPsychLuaProfile == null ? PsychLuaProfile.UNSPECIFIED : ModsFolder.currentPsychLuaProfile.profile;
+	}
+
+	private static function getPsychLuaProfileConfigStatus():String
+	{
+		var report = ModsFolder.lastPsychLuaCompatibilityReport;
+		var status:Dynamic = report == null ? null : Reflect.field(report, "configStatus");
+		return status == null ? "missing" : Std.string(status);
 	}
 
 	private static function getPlatform():String

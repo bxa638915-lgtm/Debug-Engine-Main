@@ -4,6 +4,7 @@ import flixel.util.FlxSignal.FlxTypedSignal;
 import funkin.backend.system.MainState;
 import funkin.backend.utils.CoolUtil;
 import dbe.compatibility.mods.RuntimeModConverter;
+import cne.compat.PsychLuaProfile;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import lime.text.Font;
@@ -14,6 +15,7 @@ import openfl.utils.AssetManifest;
 using StringTools;
 #if MOD_SUPPORT
 import sys.FileSystem;
+import sys.io.File;
 #end
 
 
@@ -29,6 +31,16 @@ class ModsFolder {
 	public static var currentModFolder:String = null;
 	/** Path to the converted runtime directory if the current mod required conversion. */
 	public static var currentModLoadPath:String = null;
+	/** Asset library identifier for the active mod, including ZIP and converted mods. */
+	public static var currentModLibraryName:String = null;
+	/** Conversion report produced for the active mod rather than an addon library. */
+	public static var currentModConversionReport:Dynamic = null;
+	/** Converted output associated with the active mod's report. */
+	public static var currentModConversionLoadPath:String = null;
+	/** Explicit Psych Lua profile scoped to the active mod. */
+	public static var currentPsychLuaProfile(default, null):PsychLuaProfile = new PsychLuaProfile(null, PsychLuaProfile.UNSPECIFIED);
+	/** Latest profile/config report for the active mod, including non-converted packages. */
+	public static var lastPsychLuaCompatibilityReport:Dynamic = null;
 	/** Last runtime conversion report; consumed by MainState to present blocked packages. */
 	public static var lastRuntimeConversionReport:Dynamic = null;
 	public static var lastRuntimeConversionBlocked:Bool = false;
@@ -71,6 +83,11 @@ class ModsFolder {
 	public static function switchMod(mod:String) {
 		Options.lastLoadedMod = currentModFolder = mod;
 		if (mod == null) currentModLoadPath = null;
+		currentModLibraryName = null;
+		currentModConversionReport = null;
+		currentModConversionLoadPath = null;
+		currentPsychLuaProfile = new PsychLuaProfile(mod, PsychLuaProfile.UNSPECIFIED, profileDiagnostic);
+		lastPsychLuaCompatibilityReport = null;
 		reloadMods();
 		if(mod == null) {
 			mod = "(default)";
@@ -97,13 +114,21 @@ class ModsFolder {
 		lastRuntimeConversionReport = null;
 		lastRuntimeConversionBlocked = false;
 		var conversion = RuntimeModConverter.prepare(path, RuntimeModConverter.defaultManagedRoot());
+		var isActiveMod = currentModFolder != null && modName == currentModFolder;
 		lastRuntimeConversionReport = conversion.report;
 		lastRuntimeConversionBlocked = conversion.blocked == true;
+		if (isActiveMod)
+		{
+			currentModConversionReport = conversion.report;
+			currentModConversionLoadPath = conversion.loadPath;
+		}
 		if (lastRuntimeConversionBlocked) {
+			if (isActiveMod) currentModLibraryName = null;
 			var details:Array<String> = cast Reflect.field(conversion.report, "incompatibilities");
 			Logs.warn('Mod package was not loaded: ${details == null || details.length == 0 ? "conversion report required" : details.join("; ")}');
 			return null;
 		}
+		if (isActiveMod) currentModLibraryName = path.toLowerCase();
 		if (conversion.converted == true) {
 			currentModLoadPath = conversion.loadPath;
 			return loadLibraryFromFolder(path.toLowerCase(), conversion.loadPath, force, modName);
@@ -118,6 +143,68 @@ class ModsFolder {
 
 		#else
 		return null;
+		#end
+	}
+
+	/** Resolve the profile only after the active mod asset library has been registered. */
+	public static function resolvePsychLuaProfile():PsychLuaProfileResolution
+	{
+		var configText:Null<String> = null;
+		if (currentModLibraryName != null && Paths.assetsTree != null)
+		{
+			var configAsset = 'assets/${PsychLuaProfile.CONFIG_PATH}';
+			for (registeredLibrary in Paths.assetsTree.libraries)
+			{
+				var library = AssetsLibraryList.getCleanLibrary(registeredLibrary);
+				if (!Std.isOfType(library, IModsAssetLibrary)) continue;
+				if (Reflect.field(library, "libName") != currentModLibraryName) continue;
+				if (library.exists(configAsset, "TEXT")) configText = library.getText(configAsset);
+				break;
+			}
+		}
+
+		var resolution = PsychLuaProfile.resolveConfig(configText);
+		var modName = currentModFolder == null ? "(default)" : currentModFolder;
+		currentPsychLuaProfile = new PsychLuaProfile(modName, resolution.profile, profileDiagnostic);
+		if (resolution.diagnostic != null) Logs.warn('Mod "$modName": ${resolution.diagnostic}');
+
+		lastPsychLuaCompatibilityReport = {
+			mod: modName,
+			psychLuaProfile: resolution.profile,
+			psychLuaProfileConfig: PsychLuaProfile.CONFIG_PATH,
+			configStatus: resolution.configStatus,
+			supportedProfiles: PsychLuaProfile.supportedProfiles()
+		};
+		writePsychProfileToConversionReport(resolution);
+		return resolution;
+	}
+
+	private static function profileDiagnostic(message:String):Void
+	{
+		Logs.warn(message);
+	}
+
+	private static function writePsychProfileToConversionReport(resolution:PsychLuaProfileResolution):Void
+	{
+		var report = currentModConversionReport;
+		if (report == null) return;
+		Reflect.setField(report, "psychLuaProfile", resolution.profile);
+		Reflect.setField(report, "psychLuaProfileConfig", PsychLuaProfile.CONFIG_PATH);
+		Reflect.setField(report, "psychLuaProfileConfigStatus", resolution.configStatus);
+
+		var outputPath:Dynamic = Reflect.field(report, "output");
+		if (outputPath == null || currentModConversionLoadPath == null || Std.string(outputPath) != currentModConversionLoadPath) return;
+		var reportPath = Path.join([Std.string(outputPath), RuntimeModConverter.REPORT_NAME]);
+		#if MOD_SUPPORT
+		if (!FileSystem.exists(reportPath)) return;
+		try
+		{
+			File.saveContent(reportPath, haxe.Json.stringify(report, null, "\t") + "\n");
+		}
+		catch (error:Dynamic)
+		{
+			Logs.warn('Could not persist Psych Lua profile in the conversion report: ${Std.string(error)}');
+		}
 		#end
 	}
 
