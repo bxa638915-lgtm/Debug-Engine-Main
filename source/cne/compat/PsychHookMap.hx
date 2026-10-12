@@ -1,5 +1,7 @@
 package cne.compat;
 
+import haxe.ds.ObjectMap;
+
 /** Maps lifecycle calls emitted by CNE to the corresponding Psych Lua hooks. */
 class PsychHookMap
 {
@@ -115,17 +117,27 @@ class PsychHookMap
 	}
 
 	/** Returns each note entering Psych's spawned-note view once and records it for later frames. */
-	public static function collectNewlySpawnedNotes(seen:Array<Dynamic>, current:Array<Dynamic>):Array<Dynamic>
+	public static function collectNewlySpawnedNotes(seen:ObjectMap<Dynamic, Bool>, current:Array<Dynamic>):Array<Dynamic>
 	{
 		if (seen == null || current == null) return [];
 		var newlySpawned:Array<Dynamic> = [];
 		for (note in current)
-			if (note != null && !seen.contains(note))
+			if (note != null && !seen.exists(note))
 			{
-				seen.push(note);
+				seen.set(note, true);
 				newlySpawned.push(note);
 			}
 		return newlySpawned;
+	}
+
+	/** Loads and checks the spawned-note view only for scripts with an onSpawnNote callback. */
+	public static function collectSpawnNoteBatch(seen:ObjectMap<Dynamic, Bool>, hasCallback:Bool,
+		loadCurrent:Void->Array<Dynamic>):Null<{current:Array<Dynamic>, newlySpawned:Array<Dynamic>}>
+	{
+		if (!hasCallback || loadCurrent == null) return null;
+		var current = loadCurrent();
+		if (current == null) return null;
+		return {current: current, newlySpawned: collectNewlySpawnedNotes(seen, current)};
 	}
 
 	/** Psych inserts newly spawned notes at index zero; unspawned notes stay earliest-first. */

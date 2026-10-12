@@ -1,6 +1,7 @@
 package;
 
 import cne.compat.PsychHookMap;
+import haxe.ds.ObjectMap;
 
 class PsychHookMapContractTest
 {
@@ -56,11 +57,26 @@ class PsychHookMapContractTest
 		assertEquals(1, PsychHookMap.indexOfNote(combined, first), "note index reflects group reordering");
 		assertEquals(-1, PsychHookMap.indexOfNote(null, first), "missing group index");
 
-		var seen:Array<Dynamic> = [];
+		var seen:ObjectMap<Dynamic, Bool> = new ObjectMap();
 		assertArrayEquals([later, first], PsychHookMap.collectNewlySpawnedNotes(seen, [later, first]), "first spawn delivery");
 		assertArrayEquals([], PsychHookMap.collectNewlySpawnedNotes(seen, [later, first]), "same notes are not delivered twice");
 		assertArrayEquals([], PsychHookMap.collectNewlySpawnedNotes(seen, [first]), "removed note is not re-fired");
 		assertArrayEquals([second], PsychHookMap.collectNewlySpawnedNotes(seen, [second, first]), "new note after reorder is delivered once");
+
+		var spawnScanCalls = 0;
+		var skippedSpawnBatch = PsychHookMap.collectSpawnNoteBatch(seen, false, () -> {
+			spawnScanCalls++;
+			return [note(300, "unused")];
+		});
+		assertEquals(null, skippedSpawnBatch, "no spawn hook skips the note scan");
+		assertEquals(0, spawnScanCalls, "no spawn hook does not load the note group");
+		var spawnBatch = PsychHookMap.collectSpawnNoteBatch(seen, true, () -> {
+			spawnScanCalls++;
+			return [second, earlier];
+		});
+		assertEquals(1, spawnScanCalls, "spawn hook loads the note group once");
+		assertArrayEquals([second, earlier], spawnBatch.current, "spawn batch preserves current group");
+		assertArrayEquals([earlier], spawnBatch.newlySpawned, "spawn batch reports only unseen notes");
 
 		trace("PsychHookMapContractTest passed");
 	}

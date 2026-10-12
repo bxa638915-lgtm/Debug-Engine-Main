@@ -87,7 +87,7 @@ class LuaScript extends Script
 	private var rawLuaPath:String;
 	private var hasSourceOverride:Bool = false;
 	private var unsupportedHooks:Map<String, Bool> = [];
-	private var spawnedPsychNotes:Array<Dynamic> = [];
+	private var spawnedPsychNotes:ObjectMap<Dynamic, Bool> = new ObjectMap();
 
 	public function new(path:String, ?source:String)
 	{
@@ -488,7 +488,9 @@ class LuaScript extends Script
 	{
 		var script = findLuaScript(name);
 		if (script == null || global == null) return null;
-		var value = script.get(global);
+		var target:LuaScript = cast script;
+		target.updatePsychGlobals();
+		var value = target.get(global);
 		if (Std.isOfType(value, String) || Std.isOfType(value, Bool) || Std.isOfType(value, Int) || Std.isOfType(value, Float)) return value;
 		return null;
 	}
@@ -3036,8 +3038,7 @@ class LuaScript extends Script
 	private override function onCall(funcName:String, parameters:Array<Dynamic>):Dynamic
 	{
 		if (lua == null || scriptClosed) return null;
-		updatePsychGlobals();
-		if (funcName == "update") dispatchPsychSpawnCallbacks();
+		var psychGlobalsUpdated = funcName == "update" && dispatchPsychSpawnCallbacks();
 		var args = parameters == null ? [] : parameters;
 		if ((funcName == "onScriptCreated" || funcName == "onScriptSetup") && args.length > 0 && Std.isOfType(args[0], Script))
 		{
@@ -3051,9 +3052,12 @@ class LuaScript extends Script
 		}
 		if (funcName == "onPlayerHit" || funcName == "onDadHit")
 		{
+			var hitHook = PsychHookMap.getHooks(funcName)[0];
+			if (!hasLuaFunction(hitHook)) return null;
 			var psychArgs = getPsychHitArgs(args);
 			if (psychArgs == null) return null;
-			var hitResult = callLua(PsychHookMap.getHooks(funcName)[0], psychArgs);
+			updatePsychGlobals();
+			var hitResult = callLua(hitHook, psychArgs, true);
 			applyPsychStop(args, hitResult);
 			return hitResult;
 		}
@@ -3081,7 +3085,13 @@ class LuaScript extends Script
 		var result:Dynamic = null;
 		for (hook in PsychHookMap.getHooks(funcName))
 		{
-			var hookResult = callLua(hook, args);
+			if (!hasLuaFunction(hook)) continue;
+			if (!psychGlobalsUpdated)
+			{
+				updatePsychGlobals();
+				psychGlobalsUpdated = true;
+			}
+			var hookResult = callLua(hook, args, true);
 			if (hookResult != null) result = hookResult;
 		}
 		return result;
@@ -3166,15 +3176,33 @@ class LuaScript extends Script
 		var stopValue = PsychCallbackResult.stopValueForProfile(profile);
 		var continueValues = PsychCallbackResult.defaultExcludeValues(profile);
 		var laneCount = event.strumLine.members == null ? 0 : event.strumLine.members.length;
+		var pressHook = postUpdate ? "onKeyPress" : "onKeyPressPre";
+		var releaseHook = postUpdate ? "onKeyRelease" : "onKeyReleasePre";
+		var psychGlobalsUpdated = false;
+		if (event.justPressed != null)
+			for (lane in 0...laneCount)
+				if (lane < event.justPressed.length && event.justPressed[lane] && hasLuaFunction(pressHook))
+				{
+					psychGlobalsUpdated = true;
+					break;
+				}
+		if (!psychGlobalsUpdated && event.justReleased != null)
+			for (lane in 0...laneCount)
+				if (lane < event.justReleased.length && event.justReleased[lane] && hasLuaFunction(releaseHook))
+				{
+					psychGlobalsUpdated = true;
+					break;
+				}
+		if (psychGlobalsUpdated) updatePsychGlobals();
 		var blockedAnyLane = false;
 		for (lane in 0...laneCount)
 		{
 			if (event.justPressed != null && lane < event.justPressed.length && event.justPressed[lane])
 			{
-				if (postUpdate) callLua("onKeyPress", [lane]);
+				if (postUpdate) callLua("onKeyPress", [lane], psychGlobalsUpdated);
 				else
 				{
-					var result = callLua("onKeyPressPre", [lane]);
+					var result = callLua("onKeyPressPre", [lane], psychGlobalsUpdated);
 					if (result == stopValue)
 						blockedAnyLane = PsychHookMap.blockInputLane(event.psychBlockedPress, event.psychBlockedRelease, lane, true) || blockedAnyLane;
 					else if (PsychCallbackResult.includeResult(result, continueValues) && event.psychBlockedPress != null && lane < event.psychBlockedPress.length)
@@ -3183,10 +3211,10 @@ class LuaScript extends Script
 			}
 			if (event.justReleased != null && lane < event.justReleased.length && event.justReleased[lane])
 			{
-				if (postUpdate) callLua("onKeyRelease", [lane]);
+				if (postUpdate) callLua("onKeyRelease", [lane], psychGlobalsUpdated);
 				else
 				{
-					var result = callLua("onKeyReleasePre", [lane]);
+					var result = callLua("onKeyReleasePre", [lane], psychGlobalsUpdated);
 					if (result == stopValue)
 						blockedAnyLane = PsychHookMap.blockInputLane(event.psychBlockedPress, event.psychBlockedRelease, lane, false) || blockedAnyLane;
 					else if (PsychCallbackResult.includeResult(result, continueValues) && event.psychBlockedRelease != null && lane < event.psychBlockedRelease.length)
@@ -3197,20 +3225,33 @@ class LuaScript extends Script
 		return blockedAnyLane ? stopValue : null;
 	}
 
-	private function dispatchPsychSpawnCallbacks():Void
+	private function dispatchPsychSpawnCallbacks():Bool
 	{
-		var spawned = getPsychGroupMembers("notes");
-		for (note in PsychHookMap.collectNewlySpawnedNotes(spawnedPsychNotes, spawned))
+		if (!hasLuaFunction("onSpawnNote")) return false;
+		var batch = PsychHookMap.collectSpawnNoteBatch(spawnedPsychNotes, true, () -> getPsychGroupMembers("notes"));
+		if (batch == null || batch.newlySpawned.length == 0) return false;
+		updatePsychGlobals();
+		for (note in batch.newlySpawned)
 		{
 			var noteType:String = note.noteType == null ? "" : note.noteType;
-			callLua("onSpawnNote", PsychHookMap.makeSpawnNoteArguments(psychLuaProfileName(), PsychHookMap.indexOfNote(spawned, note), note.noteData, noteType, note.isSustainNote, note.strumTime));
+			callLua("onSpawnNote", PsychHookMap.makeSpawnNoteArguments(psychLuaProfileName(), PsychHookMap.indexOfNote(batch.current, note), note.noteData, noteType, note.isSustainNote, note.strumTime), true);
 		}
+		return true;
 	}
 
-	private function callLua(functionName:String, args:Array<Dynamic>):Dynamic
+	private function hasLuaFunction(functionName:String):Bool
+	{
+		if (lua == null || scriptClosed || functionName == null) return false;
+		var originalTop = Lua.gettop(lua);
+		Lua.getglobal(lua, functionName);
+		var found = Lua.isfunction(lua, -1) != 0;
+		Lua.settop(lua, originalTop);
+		return found;
+	}
+
+	private function callLua(functionName:String, args:Array<Dynamic>, ?psychGlobalsAlreadyUpdated:Bool = false):Dynamic
 	{
 		if (lua == null || scriptClosed) return null;
-		syncPsychStrumY();
 		var originalTop = Lua.gettop(lua);
 		Lua.getglobal(lua, functionName);
 		if (Lua.isfunction(lua, -1) == 0)
@@ -3218,6 +3259,8 @@ class LuaScript extends Script
 			Lua.settop(lua, originalTop);
 			return null;
 		}
+		if (!psychGlobalsAlreadyUpdated) updatePsychGlobals();
+		syncPsychStrumY();
 
 		for (index in 0...args.length)
 		{
@@ -3351,6 +3394,7 @@ class LuaScript extends Script
 		var event:NoteMissEvent = cast args[0];
 		if (event.ghostMiss || event.note == null)
 			return callLua("noteMissPress", [event.direction]);
+		if (!hasLuaFunction("noteMiss")) return null;
 		var noteIndex = PsychHookMap.indexOfNote(getPsychGroupMembers("notes"), event.note);
 		return callLua("noteMiss", PsychHookMap.makeNoteMissArguments(noteIndex, event.note.noteData, event.noteType, event.note.isSustainNote));
 	}
