@@ -16,6 +16,7 @@ import funkin.backend.week.*;
 import funkin.savedata.FunkinSave;
 import haxe.io.Path;
 import haxe.xml.Access;
+import openfl.Assets;
 
 class StoryMenuState extends MusicBeatState {
 	public var characters:Map<String, WeekData.WeekCharacter> = [];
@@ -40,6 +41,7 @@ class StoryMenuState extends MusicBeatState {
 
 	public var weekBG:FlxSprite;
 	public var interpColor:FlxInterpolateColor;
+	var hasCustomWeekBackground:Bool = false;
 
 	public var lerpScore:Float = 0;
 	public var intendedScore:Int = 0;
@@ -181,8 +183,11 @@ class StoryMenuState extends MusicBeatState {
 					e.animation.play('idle');
 		}
 
-		interpColor.fpsLerpTo(weeks[curWeek].bgColor, 0.0625);
-		weekBG.color = interpColor.color;
+		if (hasCustomWeekBackground) weekBG.color = FlxColor.WHITE;
+		else {
+			interpColor.fpsLerpTo(weeks[curWeek].bgColor, 0.0625);
+			weekBG.color = interpColor.color;
+		}
 	}
 
 	public override function beatHit(curBeat:Int) {
@@ -211,6 +216,7 @@ class StoryMenuState extends MusicBeatState {
 		}
 		tracklist.text = '${TU.translate("story.tracks")}\n\n${[for(e in weeks[curWeek].songs) if (!e.hide) e.displayName.getDefault(e.name).toUpperCase()].join('\n')}';
 		weekTitle.text = weeks[curWeek].name.getDefault("");
+		loadWeekBackground(weeks[curWeek]);
 
 		if (characterSprites != null) for (i in 0...3) {
 			var char = weeks[curWeek].chars[i];
@@ -224,6 +230,19 @@ class StoryMenuState extends MusicBeatState {
 		changeDifficulty(0, true);
 
 		MemoryUtil.clearMinor();
+	}
+
+	function loadWeekBackground(week:WeekData):Void {
+		var background = week.background;
+		var path = background == null || background == "" ? null : Paths.image('menus/storymenu/backgrounds/menu_$background');
+		hasCustomWeekBackground = path != null && Assets.exists(path);
+		if (hasCustomWeekBackground) {
+			weekBG.loadGraphic(path);
+			weekBG.color = FlxColor.WHITE;
+		} else {
+			weekBG.makeSolid(FlxG.width, 400, FlxColor.WHITE);
+			weekBG.updateHitbox();
+		}
 	}
 
 	var __oldDiffName = null;

@@ -128,8 +128,20 @@ class Paths
 	public static inline function fragShader(key:String, ?library:String)
 		return getPath('shaders/$key.frag', library);
 
+	public static inline function frag(key:String, ?library:String):String {
+		var direct = key.endsWith(".frag") ? key : key + ".frag";
+		var full = getPath(direct, library);
+		return Assets.exists(full) ? full : fragShader(key, library);
+	}
+
 	public static inline function vertShader(key:String, ?library:String)
 		return getPath('shaders/$key.vert', library);
+
+	public static inline function vert(key:String, ?library:String):String {
+		var direct = key.endsWith(".vert") ? key : key + ".vert";
+		var full = getPath(direct, library);
+		return Assets.exists(full) ? full : vertShader(key, library);
+	}
 
 	public static inline function xml(key:String, ?library:String)
 		return getPath('data/$key.xml', library);
@@ -159,6 +171,13 @@ class Paths
 		if (difficulty == null) difficulty = Flags.DEFAULT_DIFFICULTY;
 		var diff = getPath('songs/$song/song/Inst$suffix-${difficulty}', null, ext != null ? ext : Flags.SOUND_EXTS);
 		return Assets.exists(diff) ? diff : getPath('songs/$song/song/Inst$suffix', null, ext != null ? ext : Flags.SOUND_EXTS);
+	}
+
+	public static function formatToSongPath(path:String):String {
+		if (path == null) return "";
+		final invalidChars = ~/[~&;:<>#\s]/g;
+		final hideChars = ~/[.,'"%?!]/g;
+		return hideChars.replace(invalidChars.replace(path, '-'), '').trim().toLowerCase();
 	}
 
 	static public function image(key:String, ?library:String, checkForAtlas:Bool = true, ?ext:OneOfTwo<String, Array<String>>) {

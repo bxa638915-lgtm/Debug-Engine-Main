@@ -23,6 +23,7 @@ class Week {
 			name: week.att.name,
 			id: weekName,
 			sprite: week.getAtt('sprite').getDefault(weekName),
+			background: week.getAtt('background'),
 			chars: [null, null, null],
 			songs: [],
 			difficulties: ['easy', 'normal', 'hard'],

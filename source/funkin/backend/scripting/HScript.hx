@@ -91,6 +91,34 @@ class HScript extends Script {
 	}
 
 	private function importFailedCallback(cl:Array<String>, ?asName:String):Bool {
+		var full = cl.join(".");
+		var targetVar = asName != null ? asName : cl[cl.length - 1];
+		switch (full) {
+			case "options.OptionsState" | "OptionsState":
+				interp.variables.set(targetVar, funkin.options.OptionsMenu);
+				return true;
+			case "backend.MusicBeatState" | "MusicBeatState":
+				interp.variables.set(targetVar, funkin.backend.MusicBeatState);
+				return true;
+			case "backend.Paths" | "Paths":
+				interp.variables.set(targetVar, funkin.backend.assets.Paths);
+				return true;
+			case "backend.ClientPrefs" | "ClientPrefs":
+				interp.variables.set(targetVar, funkin.options.Options);
+				return true;
+			case "backend.Conductor" | "Conductor":
+				interp.variables.set(targetVar, funkin.backend.system.Conductor);
+				return true;
+			case "kade.hex.chart.Scene" | "Scene":
+				interp.variables.set(targetVar, kade.hex.chart.Scene);
+				return true;
+			case "funkin.play.song.Song" | "Song":
+				interp.variables.set(targetVar, funkin.play.song.Song);
+				return true;
+			case "funkin.modding.module.ModuleHandler" | "ModuleHandler":
+				interp.variables.set(targetVar, funkin.modding.module.ModuleHandler);
+				return true;
+		}
 		if(_importFailedCallback(cl, "source/") || _importFailedCallback(cl, "")) {
 			return true;
 		}

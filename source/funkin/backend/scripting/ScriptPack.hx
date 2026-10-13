@@ -1,6 +1,7 @@
 package funkin.backend.scripting;
 
 import flixel.util.FlxStringUtil;
+import cne.compat.ReentrantEventArgsStack;
 import dbe.diagnostics.ScriptTimingProfiler;
 import funkin.backend.scripting.events.CancellableEvent;
 
@@ -14,8 +15,8 @@ class ScriptPack extends Script {
 	public var publicVariables:Map<String, Dynamic> = [];
 	public var parent:Dynamic = null;
 
-	/** Reused single-slot argument array for `event` calls, avoiding a per-script allocation on every event. Safe: `call` consumes args synchronously. **/
-	private var __eventArgs:Array<Dynamic> = [null];
+	/** Reused argument arrays indexed by nested event-dispatch depth. */
+	private var __eventArgsStack:ReentrantEventArgsStack = new ReentrantEventArgsStack();
 
 	/**
 	 * Loads all scripts in the pack.
@@ -117,13 +118,19 @@ class ScriptPack extends Script {
 	 * @return (modified by scripts)
 	 */
 	public inline function event<T:CancellableEvent>(func:String, event:T):T {
-		for(e in scripts) {
-			if(!e.active) continue;
+		var eventArgs = __eventArgsStack.beginDispatch(event);
+		try {
+			for(e in scripts) {
+				if(!e.active) continue;
 
-			__eventArgs[0] = event; // set per-script so nested event dispatch on the same pack can't clobber it
-			e.call(func, __eventArgs);
-			if (event.cancelled && !event.__continueCalls) break;
+				e.call(func, eventArgs);
+				if (event.cancelled && !event.__continueCalls) break;
+			}
+		} catch (error:Dynamic) {
+			__eventArgsStack.endDispatch();
+			throw error;
 		}
+		__eventArgsStack.endDispatch();
 		return event;
 	}
 

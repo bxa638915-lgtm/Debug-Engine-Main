@@ -190,7 +190,7 @@ class RuntimeModConverter {
 		}
 
 		var hashParts:Array<String> = [];
-		hashParts.push("runtime-mod-converter-format-v10");
+		hashParts.push("runtime-mod-converter-format-v13");
 		hashParts.push("source-format:" + format);
 		var totalSize:Float = 0;
 		for (file in files) {
@@ -268,6 +268,21 @@ class RuntimeModConverter {
 					throw new haxe.Exception('Could not copy the complete source file: $name');
 				var outputContents = contents;
 				var normalizedContent = false;
+				if (format == "psych" && mapped.toLowerCase().startsWith("images/menus/mainmenu/") && Path.extension(mapped).toLowerCase() == "xml") {
+					var normalizedAtlas = _convertPsychMainMenuAtlas(name, mapped, contents.toString());
+					outputContents = Bytes.ofString(normalizedAtlas);
+					normalizedContent = outputContents.compare(contents) != 0;
+				}
+				if (format == "psych" && mapped.toLowerCase() == "images/menus/titlescreen/titleenter.xml") {
+					var normalizedAtlas = _convertPsychTitleEnterAtlas(contents.toString());
+					outputContents = Bytes.ofString(normalizedAtlas);
+					normalizedContent = outputContents.compare(contents) != 0;
+				}
+				if (format == "psych" && mapped.toLowerCase() == "images/menus/titlescreen/logo.xml") {
+					var normalizedAtlas = _convertPsychLogoAtlas(contents.toString());
+					outputContents = Bytes.ofString(normalizedAtlas);
+					normalizedContent = outputContents.compare(contents) != 0;
+				}
 				if (format == "psych" && mapped.toLowerCase().startsWith("data/characters/")) {
 					if (Path.extension(mapped).toLowerCase() == "json") {
 						var normalizedJson = _normalizePsychCharacterJson(name, contents.toString());
@@ -593,6 +608,15 @@ class RuntimeModConverter {
 		var parts = name.split("/");
 		var first = parts[0].toLowerCase();
 		if (first == "characters" || first == "custom_events" || first == "stages" || first == "weeks") return true;
+		if (first == "images" && parts.length >= 2) {
+			var imagePath = parts.slice(1).join("/").toLowerCase();
+			if (imagePath == "menubg.png" || imagePath == "menudesat.png" || imagePath == "campaign_menu_ui_assets.png"
+				|| imagePath == "logobumpin.png" || imagePath == "logobumpin.xml"
+				|| imagePath == "gfdancetitle.png" || imagePath == "gfdancetitle.xml"
+				|| imagePath == "titleenter.png" || imagePath == "titleenter.xml"
+				|| imagePath.startsWith("mainmenu/") || imagePath.startsWith("storymenu/") || imagePath.startsWith("menudifficulties/")
+				|| imagePath.startsWith("menucharacters/") || imagePath.startsWith("menubackgrounds/")) return true;
+		}
 		if (parts.length >= 3 && first == "data") {
 			if (parts[1].toLowerCase() == "custom_events") return true;
 			if ((parts[1].toLowerCase() == "stages" || parts[1].toLowerCase() == "weeks") && Path.extension(name).toLowerCase() == "json") return true;
@@ -676,6 +700,10 @@ class RuntimeModConverter {
 		if (format == "psych") {
 			var first = parts[0].toLowerCase();
 			var extension = Path.extension(parts[parts.length - 1]).toLowerCase();
+			if (first == "images") {
+				var menuImage = _mappedPsychMenuImage(parts, extension);
+				if (menuImage != null) return menuImage;
+			}
 			if (first == "characters") return "data/characters/" + parts.slice(1).join("/");
 			if (first == "custom_events" && (extension == "lua" || extension == "hx" || extension == "txt" || extension == "json"))
 				return "data/events/" + parts.slice(1).join("/");
@@ -744,6 +772,68 @@ class RuntimeModConverter {
 		return parts.join("/");
 	}
 
+	static function _mappedPsychMenuImage(parts:Array<String>, extension:String):Null<String> {
+		if (parts.length < 2 || (extension != "png" && extension != "xml")) return null;
+		var imagePath = parts.slice(1).join("/");
+		var imagePathLower = imagePath.toLowerCase();
+		if (parts.length == 2) {
+			switch (imagePathLower) {
+				case "menubg.png", "menubg.xml": return "images/menus/menuBG." + extension;
+				case "menudesat.png", "menudesat.xml": return "images/menus/menuDesat." + extension;
+				case "campaign_menu_ui_assets.png", "campaign_menu_ui_assets.xml": return "images/menus/storymenu/assets." + extension;
+				case "logobumpin.png", "logobumpin.xml": return "images/menus/titlescreen/logo." + extension;
+				case "gfdancetitle.png", "gfdancetitle.xml": return "images/menus/titlescreen/gf." + extension;
+				case "titleenter.png", "titleenter.xml": return "images/menus/titlescreen/titleEnter." + extension;
+			}
+		}
+		if (parts.length < 3) return null;
+		var folder = parts[1].toLowerCase();
+		var fileName = parts[parts.length - 1];
+		var baseName = Path.withoutExtension(fileName);
+		var directory = parts.slice(2, parts.length - 1).join("/");
+		var targetBase:String = null;
+		switch (folder) {
+			case "mainmenu":
+				targetBase = baseName.toLowerCase();
+				if (targetBase.startsWith("menu_")) targetBase = targetBase.substr("menu_".length);
+				targetBase = targetBase.replace("_", " ");
+				return "images/menus/mainmenu/" + (directory == "" ? "" : directory + "/") + targetBase + "." + extension;
+			case "storymenu":
+				return "images/menus/storymenu/weeks/" + (directory == "" ? "" : directory + "/") + baseName + "." + extension;
+			case "menudifficulties":
+				return "images/menus/storymenu/difficulties/" + (directory == "" ? "" : directory + "/") + baseName.toLowerCase() + "." + extension;
+			case "menucharacters":
+				return "images/menus/storymenu/characters/" + (directory == "" ? "" : directory + "/") + fileName;
+			case "menubackgrounds":
+				return "images/menus/storymenu/backgrounds/" + (directory == "" ? "" : directory + "/") + fileName;
+		}
+		return null;
+	}
+
+	static function _convertPsychMainMenuAtlas(source:String, destination:String, contents:String):String {
+		var sourcePrefix = Path.withoutExtension(Path.withoutDirectory(source)).toLowerCase();
+		if (sourcePrefix.startsWith("menu_")) sourcePrefix = sourcePrefix.substr("menu_".length);
+		var targetPrefix = Path.withoutExtension(Path.withoutDirectory(destination)).toLowerCase();
+		var sourceAnimations = ["basic", "white", "idle", "selected"];
+		var targetAnimations = ["basic", "white", "basic", "white"];
+		for (i in 0...sourceAnimations.length) {
+			contents = contents.replace('name="$sourcePrefix ${sourceAnimations[i]}', 'name="$targetPrefix ${targetAnimations[i]}');
+		}
+		return contents;
+	}
+
+	static function _convertPsychTitleEnterAtlas(contents:String):String {
+		return contents.replace('name="ENTER IDLE', 'name="Press Enter to Begin');
+	}
+
+	static function _convertPsychLogoAtlas(contents:String):String {
+		var subTextureRx = ~/width="5000"\s+height="5000"/i;
+		if (subTextureRx.match(contents)) {
+			contents = subTextureRx.replace(contents, 'width="2681" height="1858"');
+		}
+		return contents;
+	}
+
 	static function _replaceJsonExtension(path:String):String {
 		return _replaceExtension(path, ".xml");
 	}
@@ -760,6 +850,13 @@ class RuntimeModConverter {
 		for (file in files) {
 			var name = normalizeRelativePath(file.name);
 			if (!_isIgnored(name)) existingTargets.set(_mappedDestination(name, packageRoot, format).toLowerCase(), true);
+		}
+
+		var gfXmlTarget = "images/menus/titlescreen/gf.xml";
+		if (existingTargets.exists("images/menus/titlescreen/gf.png") && !existingTargets.exists(gfXmlTarget)) {
+			var dummyXml = '<?xml version="1.0" encoding="utf-8"?>\n<TextureAtlas imagePath="gf.png">\n\t<SubTexture name="gfDance0000" x="0" y="0" width="1" height="1"/>\n</TextureAtlas>\n';
+			generated.push({source: "(generated for title GF transparency)", target: gfXmlTarget, contents: Bytes.ofString(dummyXml), reason: "transparent title GF atlas"});
+			existingTargets.set(gfXmlTarget, true);
 		}
 
 		// 1. Generate event metadata for Psych custom event scripts and editor descriptions.
@@ -1305,7 +1402,8 @@ class RuntimeModConverter {
 			root.set("chars", (cast weekCharacters:Array<Dynamic>).map(function(value) return Std.string(value)).join(","));
 		}
 		var weekBackground = Reflect.field(data, "weekBackground");
-		if (weekBackground != null) root.set("sprite", Std.string(weekBackground));
+		root.set("sprite", Path.withoutDirectory(Path.withoutExtension(source)));
+		if (weekBackground != null) root.set("background", Std.string(weekBackground));
 		var bgColor = Reflect.field(data, "bgColor");
 		if (bgColor != null) root.set("bgColor", _psychColor(bgColor));
 		var songs = Reflect.field(data, "songs");

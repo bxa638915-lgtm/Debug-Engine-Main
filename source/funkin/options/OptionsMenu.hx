@@ -49,6 +49,16 @@ class OptionsMenu extends TreeMenu {
 	var bg:FlxSprite;
 	var debugOption:TextOption;
 
+	public function new(?exitCallback:TreeMenu->Void, scriptsAllowed:Bool = true, ?scriptName:String) {
+		if (exitCallback == null && funkin.game.PlayState.instance != null && funkin.game.PlayState.SONG != null) {
+			var request = funkin.backend.assets.SongLoadRequest.fromPlayState("optionsReturn");
+			exitCallback = (_) -> {
+				funkin.backend.assets.SongLoader.start(request, () -> funkin.game.PlayState.SONG);
+			};
+		}
+		super(exitCallback, scriptsAllowed, scriptName);
+	}
+
 	override function create() {
 		super.create();
 

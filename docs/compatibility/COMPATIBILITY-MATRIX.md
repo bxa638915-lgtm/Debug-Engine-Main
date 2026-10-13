@@ -41,6 +41,8 @@ Os catálogos usam snapshots fixados das fontes oficiais 0.6.3 e 1.0.4 e listam 
 
 `Function_Stop` cancela eventos CNE canceláveis para countdown, fim da música, pausa, game over e hits/misses. Os outros valores de retorno não cancelam gameplay. `measureHit` não garante as mesmas fronteiras de seção para charts com durações variáveis.
 
+Para menus, o conversor liga `images/logoBumpin`, `images/gfDanceTitle` e `images/titleEnter` aos caminhos usados pelo `TitleState` da DBE, ajustando o prefixo `ENTER IDLE`. O `ScriptPack` mantém os argumentos de eventos aninhados separados por nível, para um `onPause()` que abre um custom substate ainda cancelar o evento de pausa externo. Os caminhos e a reentrância têm testes focados; a renderização ao vivo dos menus ainda precisa de confirmação visual.
+
 `callOnScripts` chama primeiro os Lua e só chama HScript se o retorno Lua estiver em `excludeValues` ou não houver retorno. O smoke de gameplay confirmou a ordem Lua→HScript e que `Function_StopLua` impede o callback HScript seguinte. `Function_StopHScript` e `Function_StopAll` seguem as interrupções específicas do Psych, sujeitas a `ignoreStops` e `excludeValues`; estes dois caminhos permanecem cobertos pelos testes de regras, não pelo smoke de gameplay.
 
 Callbacks de conquistas persistem desbloqueio/progresso por save, sem o popup visual Psych. Frases `.lang` do mod ativo são lidas pelo adaptador; quando não existem, o CNE consulta seu sistema XML de traduções.

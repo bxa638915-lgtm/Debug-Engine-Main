@@ -716,6 +716,11 @@ class LuaScript extends Script
 		embedded.set("game", game);
 		embedded.set("PlayState", PlayState);
 		embedded.set("FlxG", FlxG);
+		embedded.set("OptionsState", funkin.options.OptionsMenu);
+		embedded.set("MusicBeatState", funkin.backend.MusicBeatState);
+		embedded.set("Paths", funkin.backend.assets.Paths);
+		embedded.set("ClientPrefs", funkin.options.Options);
+		embedded.set("Conductor", funkin.backend.system.Conductor);
 		embedded.load();
 		return cast embedded;
 	}
@@ -845,9 +850,25 @@ class LuaScript extends Script
 		var game = PlayState.instance;
 		if (game == null || name == null) return false;
 		var key = StringTools.trim(name).toUpperCase();
-		if (key == "LEFT" || key == "DOWN" || key == "UP" || key == "RIGHT") key = "NOTE_" + key;
-		var suffix = state == 0 ? "_P" : (state == 2 ? "_R" : "");
-		return Reflect.getProperty(game.controls, key + suffix) == true;
+		switch (key)
+		{
+			case "ACCEPT":
+				return state == 0 ? game.controls.ACCEPT : (state == 2 ? game.controls.ACCEPT_R : game.controls.ACCEPT_HOLD);
+			case "BACK":
+				return state == 0 ? game.controls.BACK : (state == 2 ? game.controls.BACK_R : game.controls.BACK_HOLD);
+			case "PAUSE":
+				return state == 0 ? game.controls.PAUSE : (state == 2 ? game.controls.PAUSE_R : game.controls.PAUSE_HOLD);
+			case "RESET":
+				return state == 0 ? game.controls.RESET : (state == 2 ? game.controls.RESET_R : game.controls.RESET_HOLD);
+			case "UP" | "DOWN" | "LEFT" | "RIGHT":
+				var suffix = state == 0 ? "_P" : (state == 2 ? "_R" : "");
+				var noteVal = Reflect.getProperty(game.controls, "NOTE_" + key + suffix) == true;
+				var uiVal = Reflect.getProperty(game.controls, key + suffix) == true;
+				return noteVal || uiVal;
+			default:
+				var suffix = state == 0 ? "_P" : (state == 2 ? "_R" : "");
+				return Reflect.getProperty(game.controls, key + suffix) == true;
+		}
 	}
 
 	private function getGamepadButtonState(id:Int, button:String, state:Int):Bool

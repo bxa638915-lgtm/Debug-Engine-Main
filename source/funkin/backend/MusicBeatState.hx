@@ -1,5 +1,6 @@
 package funkin.backend;
 
+import flixel.FlxG;
 import flixel.FlxState;
 import flixel.FlxSubState;
 import funkin.backend.scripting.DummyScript;
@@ -20,6 +21,18 @@ import funkin.options.PlayerSettings;
 **/
 class MusicBeatState extends FlxState implements IBeatCancellableReceiver
 {
+	public static function switchState(nextState:FlxState):Void {
+		FlxG.switchState(nextState);
+	}
+
+	public static function resetState():Void {
+		FlxG.resetState();
+	}
+
+	public static function getState():FlxState {
+		return FlxG.state;
+	}
+
 	private var lastBeat:Float = 0;
 	private var lastStep:Float = 0;
 
