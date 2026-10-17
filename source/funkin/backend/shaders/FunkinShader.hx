@@ -29,6 +29,16 @@ import flixel.util.FlxStringUtil;
 class FunkinShader extends FlxRuntimeShader implements IHScriptCustomBehaviour {
 	public var onGLUpdate:FlxTypedSignal<Void->Void> = new FlxTypedSignal<Void->Void>();
 
+	@:noCompletion override function __enableGL():Void {
+		super.__enableGL();
+		if (__context != null) {
+			if (data.colorOffset != null && data.colorOffset.value == null && data.colorOffset.index >= 0)
+				__context.gl.vertexAttrib4f(data.colorOffset.index, 0.0, 0.0, 0.0, 0.0);
+			if (data.openfl_ColorOffset != null && data.openfl_ColorOffset.value == null && data.openfl_ColorOffset.index >= 0)
+				__context.gl.vertexAttrib4f(data.openfl_ColorOffset.index, 0.0, 0.0, 0.0, 0.0);
+		}
+	}
+
 	public function new(?fragmentSource:String, ?vertexSource:String, ?version:String) {
 		super(fragmentSource, vertexSource, version ?? (fragmentSource != null || vertexSource != null ? Flags.DEFAULT_GLSL_VERSION : null));
 	}
@@ -135,6 +145,10 @@ class FunkinShader extends FlxRuntimeShader implements IHScriptCustomBehaviour {
 	#end
 
 	override function __updateGL():Void {
+		var texSize:Dynamic = Reflect.field(data, "openfl_TextureSize");
+		if (texSize != null && (texSize.value == null || texSize.value.length < 2 || (texSize.value[0] == 0 && texSize.value[1] == 0))) {
+			texSize.value = [flixel.FlxG.width, flixel.FlxG.height];
+		}
 		onGLUpdate.dispatch();
 		super.__updateGL();
 	}
@@ -252,8 +266,13 @@ class FunkinShaderSourceAssembler extends FlxRuntimeShader.FlxShaderSourceAssemb
 		result += funkinParent.shaderPrefix + "\n" + (isVertex ? funkinParent.vertexPrefix : funkinParent.fragmentPrefix) + "\n";
 
 		if (source != null) {
-			if (!isVertex && versionNumber >= 300 && versionProfile != "compatibility" && !StringTools.contains(source, "out vec4")) {
-				result += "out vec4 openfl_FragColor;\n";
+			if (isVertex) {
+				source = StringTools.replace(source, "openfl_ColorOffsetv = colorOffset / 255.0;", "openfl_ColorOffsetv = vec4(0.0);");
+			} else {
+				source = StringTools.replace(source, "if (!hasTransform) return color;", "if (!hasTransform && !hasColorTransform && !openfl_HasColorTransform) { if (openfl_ColorMultiplierv == vec4(1.0) && openfl_ColorOffsetv == vec4(0.0)) return color; }");
+				if (versionNumber >= 300 && versionProfile != "compatibility" && !StringTools.contains(source, "out vec4")) {
+					result += "out vec4 openfl_FragColor;\n";
+				}
 			}
 			result += source;
 		}
@@ -300,7 +319,7 @@ if (hasColorTransform)
 	}
 	else
 	{
-		openfl_ColorOffsetv = colorOffset / 255.0;
+		openfl_ColorOffsetv = vec4(0.0);
 		openfl_ColorMultiplierv = vec4(colorMultiplier.rgb, 1.0);
 	}
 }
@@ -314,7 +333,7 @@ else
 	}
 	else
 	{
-		openfl_ColorOffsetv = colorOffset / 255.0;
+		openfl_ColorOffsetv = vec4(0.0);
 		openfl_ColorMultiplierv = vec4(1.0);
 	}
 }";
@@ -333,7 +352,7 @@ uniform bool premultiplyAlpha;
 
 vec4 apply_flixel_transform(vec4 color)
 {
-	if (!hasTransform) return color;
+	if (!hasTransform && !hasColorTransform && !openfl_HasColorTransform) { if (openfl_ColorMultiplierv == vec4(1.0) && openfl_ColorOffsetv == vec4(0.0)) return color; }
 	else if (color.a <= 0.0 || openfl_Alphav == 0.0) return vec4(0.0);
 
 	// this is just solely for ASTC compressed textures.

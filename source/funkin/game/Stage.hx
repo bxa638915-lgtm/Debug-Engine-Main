@@ -76,7 +76,7 @@ class Stage extends FlxBasic implements IBeatReceiver {
 
 		stageFile = stage;
 		stagePath = Paths.xml('stages/$stageFile');
-		stageXML = getStageXML(stageFile);
+		stageXML = getStageXML(stageFile, this.state);
 
 		if (autoLoad) loadXml(stageXML);
 	}
@@ -85,7 +85,7 @@ class Stage extends FlxBasic implements IBeatReceiver {
 	 * Reads the stage XML, falling back to a Psych JSON stage when needed.
 	 * This only resolves stage data; it does not instantiate the stage or load scripts.
 	 */
-	public static function getStageXML(stageName:String):Access {
+	public static function getStageXML(stageName:String, ?targetState:FlxState):Access {
 		var stagePath = Paths.xml('stages/$stageName');
 		var stageXML:Access = null;
 		try if (Assets.exists(stagePath)) stageXML = new Access(Xml.parse(Assets.getText(stagePath)).firstElement())
@@ -98,7 +98,14 @@ class Stage extends FlxBasic implements IBeatReceiver {
 				var contents = Assets.getText(jsonPath);
 				var luaPath = Paths.file('stages/$stageName.lua');
 				var luaContents:String = null;
+				var isEditor = targetState != null ? !Std.isOfType(targetState, PlayState) : (FlxG.state != null && !Std.isOfType(FlxG.state, PlayState));
+				#if !LUA_ALLOWED
 				try if (Assets.exists(luaPath)) luaContents = Assets.getText(luaPath) catch(_) {}
+				#else
+				if (isEditor) {
+					try if (Assets.exists(luaPath)) luaContents = Assets.getText(luaPath) catch(_) {}
+				}
+				#end
 				var converted = dbe.compatibility.mods.RuntimeModConverter.convertPsychStageJson(jsonPath, contents, luaContents);
 				if (converted != null)
 					stageXML = new Access(Xml.parse(converted).firstElement());
@@ -112,7 +119,13 @@ class Stage extends FlxBasic implements IBeatReceiver {
 
 	public function loadXml(xml:Access, forceLoadAll:Bool = false) {
 		if (PlayState.instance == state) {
-			stageScript = Script.create(Paths.script('data/stages/$stageFile'));
+			var scriptPath = Paths.script('data/stages/$stageFile');
+			if (!Assets.exists(scriptPath)) {
+				var altPath = Paths.script('stages/$stageFile');
+				if (Assets.exists(altPath))
+					scriptPath = altPath;
+			}
+			stageScript = Script.create(scriptPath);
 			PlayState.instance.scripts.add(stageScript);
 			stageScript.load();
 		}
@@ -394,7 +407,11 @@ class Stage extends FlxBasic implements IBeatReceiver {
 		var charPos = characterPoses[char.curCharacter] != null ? characterPoses[char.curCharacter] : characterPoses[posName];
 		if (charPos != null) {
 			charPos.prepareCharacter(char, id);
-			state.insert(state.members.indexOf(charPos), char);
+			var idx = state.members.indexOf(charPos);
+			if (idx >= 0)
+				state.insert(idx, char);
+			else
+				state.add(char);
 		} else {
 			state.add(char);
 		}
@@ -502,12 +519,17 @@ class StageCharPos extends FlxObject {
 	public function prepareCharacter(char:Character, id:Float = 0) {
 		_id = id;
 		oldInfo = getOldInfo(char);
-		char.setPosition(x + (id * charSpacingX), y + (id * charSpacingY));
+		var posOffX = char.positionOffset != null ? char.positionOffset.x : 0;
+		var posOffY = char.positionOffset != null ? char.positionOffset.y : 0;
+		char.setPosition(x + (id * charSpacingX) + posOffX, y + (id * charSpacingY) + posOffY);
 		char.scrollFactor.set(scrollFactor.x, scrollFactor.y);
 		if (!Std.isOfType(FlxG.state, CharacterEditor)) {
 			char.scale.x *= scale.x; char.scale.y *= scale.y;
 		}
-		char.cameraOffset += FlxPoint.weak(camxoffset, camyoffset);
+		if (char.isPsychCamera && char.isPlayer)
+			char.cameraOffset += FlxPoint.weak(-camxoffset, camyoffset);
+		else
+			char.cameraOffset += FlxPoint.weak(camxoffset, camyoffset);
 		char.skew.x += skewX; char.skew.y += skewY;
 		char.alpha *= alpha;
 		char.angle += angle;

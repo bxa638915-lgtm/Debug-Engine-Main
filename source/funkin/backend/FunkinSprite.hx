@@ -236,6 +236,7 @@ class FunkinSprite extends FlxAnimate implements IBeatReceiver implements IOffse
 		if (Force == null) {
 			var anim = animDatas.get(AnimName);
 			Force = anim != null && anim.forced;
+			if (Context == SING || Context == MISS) Force = true;
 		}
 
 		animation.play(AnimName, Force, Reversed, Frame);
@@ -337,8 +338,12 @@ class FunkinSprite extends FlxAnimate implements IBeatReceiver implements IOffse
 		super.prepareDrawMatrix(matrix, camera);
 
 		final ox = camera.width * 0.5, oy = camera.height * 0.5;
-		final sx = (camera.scaleX > 0.0 ? Math.max : Math.min)(0.0, (1.0 - zoomFactor) / camera.scaleX + zoomFactor);
-		final sy = (camera.scaleY > 0.0 ? Math.max : Math.min)(0.0, (1.0 - zoomFactor) / camera.scaleY + zoomFactor);
+		final safeScaleX = Math.abs(camera.scaleX) < 0.05 ? (camera.scaleX >= 0 ? 0.05 : -0.05) : camera.scaleX;
+		final safeScaleY = Math.abs(camera.scaleY) < 0.05 ? (camera.scaleY >= 0 ? 0.05 : -0.05) : camera.scaleY;
+		var sx = (safeScaleX > 0.0 ? Math.max : Math.min)(0.0, (1.0 - zoomFactor) / safeScaleX + zoomFactor);
+		var sy = (safeScaleY > 0.0 ? Math.max : Math.min)(0.0, (1.0 - zoomFactor) / safeScaleY + zoomFactor);
+		if (Math.isNaN(sx) || !Math.isFinite(sx)) sx = 1.0;
+		if (Math.isNaN(sy) || !Math.isFinite(sy)) sy = 1.0;
 
 		if (zoomFactorEnabled && zoomFactor != 1) {
 			matrix.setTo(

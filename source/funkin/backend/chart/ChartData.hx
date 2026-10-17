@@ -14,12 +14,15 @@ typedef ChartData = {
 
 	public var ?chartVersion:String;
 	public var ?fromMods:Bool;
+	public var ?arrowSkin:String;
+	public var ?splashSkin:String;
 }
 
 typedef ChartMetaData = {
 	public var name:String;
 	public var ?variant:String;
 	public var ?displayName:String;
+	public var ?rawSongName:String;
 
 	public var ?bpm:Float;
 	public var ?beatsPerMeasure:Float;
@@ -39,6 +42,8 @@ typedef ChartMetaData = {
 	public var ?instSuffix:String;
 	public var ?vocalsSuffix:String;
 	public var ?needsVoices:Bool;
+	public var ?arrowSkin:String;
+	public var ?splashSkin:String;
 }
 
 typedef ChartStrumLine = {

@@ -51,6 +51,24 @@ class Options
 	public static var splashesEnabled:Bool = true;
 	public static var legacyMemoryCounter:Bool = false;
 
+	@:dox(hide) @:doNotSave public static var data(get, never):Dynamic;
+	private static inline function get_data():Dynamic return Options;
+	@:dox(hide) @:doNotSave public static var downScroll(get, set):Bool;
+	private static inline function get_downScroll():Bool return downscroll;
+	private static inline function set_downScroll(v:Bool):Bool return downscroll = v;
+	@:dox(hide) @:doNotSave public static var middleScroll(get, set):Bool;
+	private static inline function get_middleScroll():Bool return centeredFields;
+	private static inline function set_middleScroll(v:Bool):Bool return centeredFields = v;
+	@:dox(hide) @:doNotSave public static var shaders(get, set):Bool;
+	private static inline function get_shaders():Bool return gameplayShaders;
+	private static inline function set_shaders(v:Bool):Bool return gameplayShaders = v;
+	@:dox(hide) @:doNotSave public static var lowQuality(get, set):Bool;
+	private static inline function get_lowQuality():Bool return lowMemoryMode;
+	private static inline function set_lowQuality(v:Bool):Bool return lowMemoryMode = v;
+	@:dox(hide) @:doNotSave public static var flashing(get, set):Bool;
+	private static inline function get_flashing():Bool return flashingMenu;
+	private static inline function set_flashing(v:Bool):Bool return flashingMenu = v;
+
 	 // DEPRECATED
 	@:dox(hide) @:doNotSave public static var hitWindow:Float = 250;
 

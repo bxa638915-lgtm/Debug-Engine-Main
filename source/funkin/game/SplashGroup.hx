@@ -22,12 +22,20 @@ class SplashGroup extends FlxTypedGroup<Splash> {
 	/**
 	 * Creates a new Splash group
 	 * @param path Path to the splash data (xml)
+	 * @param rawXml Optional raw XML string to use directly
 	 */
-	public function new(path:String) {
+	public function new(path:String, ?rawXml:String = null) {
 		super();
 
 		try {
-			xml = new Access(Xml.parse(Assets.getText(path)).firstElement());
+			var xmlContent:String = rawXml;
+			if (xmlContent == null) {
+				if (path != null && Assets.exists(path))
+					xmlContent = Assets.getText(path);
+				else
+					throw 'Splash asset "$path" does not exist.';
+			}
+			xml = new Access(Xml.parse(xmlContent).firstElement());
 
 			if (!xml.has.sprite) throw "The <splash> element requires a sprite attribute.";
 			var splash = createSplash(xml.att.sprite);

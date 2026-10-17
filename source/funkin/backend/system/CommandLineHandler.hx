@@ -66,12 +66,12 @@ final class CommandLineHandler {
 						Sys.exit(1);
 					} else {
 						Main.goToSong = arg;
-						if ((arg = cmd[i + 1]).charAt(0) != "-") {
+						if (i + 1 < cmd.length && cmd[i + 1] != null && !cmd[i + 1].startsWith("-")) {
 							i++;
-							Main.goToDifficulty = arg;
-							if ((arg = cmd[i + 1]).charAt(0) != "-") {
+							Main.goToDifficulty = cmd[i];
+							if (i + 1 < cmd.length && cmd[i + 1] != null && !cmd[i + 1].startsWith("-")) {
 								i++;
-								Main.goToVariation = arg;
+								Main.goToVariation = cmd[i];
 							}
 						}
 					}
@@ -84,12 +84,12 @@ final class CommandLineHandler {
 					} else {
 						Main.goToSong = arg;
 						Main.goToCharter = true;
-						if ((arg = cmd[i + 1]).charAt(0) != "-") {
+						if (i + 1 < cmd.length && cmd[i + 1] != null && !cmd[i + 1].startsWith("-")) {
 							i++;
-							Main.goToDifficulty = arg;
-							if ((arg = cmd[i + 1]).charAt(0) != "-") {
+							Main.goToDifficulty = cmd[i];
+							if (i + 1 < cmd.length && cmd[i + 1] != null && !cmd[i + 1].startsWith("-")) {
 								i++;
-								Main.goToVariation = arg;
+								Main.goToVariation = cmd[i];
 							}
 						}
 					}

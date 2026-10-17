@@ -24,10 +24,10 @@ class SongLoadingState extends MusicBeatState {
 	var errorText:FunkinText;
 	var hintText:FunkinText;
 
-	public function new(generation:Int, request:SongLoadRequest) {
+	public function new(?generation:Int = 0, ?request:SongLoadRequest = null) {
 		super(false);
-		this.generation = generation;
-		this.request = request;
+		this.generation = generation == null ? 0 : generation;
+		this.request = request != null ? request : SongLoadRequest.fromPlayState("fallback");
 	}
 
 	public override function create():Void {
@@ -42,8 +42,10 @@ class SongLoadingState extends MusicBeatState {
 		title.alignment = CENTER;
 		add(title);
 
+		var sName = (request != null && request.songName != null && request.songName.length > 0) ? request.songName : "Música";
+		var sDiff = (request != null && request.difficulty != null && request.difficulty.length > 0) ? request.difficulty : "";
 		var songText = new FunkinText(40, title.y + title.height + 16, FlxG.width - 80,
-			'${request.songName}  •  ${request.difficulty}', 22);
+			sDiff.length > 0 ? '$sName  •  $sDiff' : sName, 22);
 		songText.alignment = CENTER;
 		add(songText);
 
@@ -93,7 +95,12 @@ class SongLoadingState extends MusicBeatState {
 
 	public override function update(elapsed:Float):Void {
 		super.update(elapsed);
-		if (transitioning || !SongLoader.isActive(generation)) return;
+		if (transitioning) return;
+		if (generation <= 0 || !SongLoader.isActive(generation)) {
+			transitioning = true;
+			FlxG.switchState(new PlayState());
+			return;
+		}
 
 		if (failed) {
 			if (controls.ACCEPT || controls.BACK || FlxG.keys.justPressed.ESCAPE) returnToMenu();

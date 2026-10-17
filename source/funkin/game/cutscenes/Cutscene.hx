@@ -76,6 +76,7 @@ class Cutscene extends MusicBeatSubstate {
 
 	public override function close() {
 		canOpenCustomTransition = false;
+		if (game != null) game.inCutscene = false;
 		__callback();
 		super.close();
 	}

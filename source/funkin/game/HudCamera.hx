@@ -1,6 +1,7 @@
 package funkin.game;
 
 import flixel.math.FlxPoint;
+import haxe.ds.ObjectMap;
 
 /**
  * Camera meant for PlayState hud, allows for flipping the camera.
@@ -11,25 +12,35 @@ class HudCamera extends FlxCamera {
 	 * Keeps the sprites not flipped, but the positions are flipped.
 	 */
 	public var downscroll:Bool = false;
-	//public override function update(elapsed:Float) {
-	//	super.update(elapsed);
-	//	// flipY = downscroll;
-	//}
 
+	public static var bypassedObjects:ObjectMap<FlxObject, Bool> = new ObjectMap<FlxObject, Bool>();
+	public static var bypassedXObjects:ObjectMap<FlxObject, Bool> = new ObjectMap<FlxObject, Bool>();
 
-	// public override function drawPixels(?frame:FlxFrame, ?pixels:BitmapData, matrix:FlxMatrix, ?transform:ColorTransform, ?blend:BlendMode, ?smoothing:Bool = false,
-	// 	?shader:FlxShader):Void
-	// {
-	// 	if (downscroll) {
-	// 		matrix.scale(1, -1);
-	// 		matrix.translate(0, height);
-	// 	}
-	// 	super.drawPixels(frame, pixels, matrix, transform, blend, smoothing, shader);
-	// }
+	public static inline function bypassDownscroll(obj:FlxObject):Void {
+		if (obj != null) bypassedObjects.set(obj, true);
+	}
 
+	public static inline function shouldBypassDownscroll(spr:FlxObject):Bool {
+		if (spr == null) return false;
+		return bypassedObjects.exists(spr);
+	}
+
+	public static inline function bypassX(obj:FlxObject):Void {
+		if (obj != null) bypassedXObjects.set(obj, true);
+	}
+
+	public static inline function shouldBypassX(spr:FlxObject):Bool {
+		if (spr == null) return false;
+		return bypassedXObjects.exists(spr);
+	}
+
+	public static function resetBypasses():Void {
+		bypassedObjects = new ObjectMap<FlxObject, Bool>();
+		bypassedXObjects = new ObjectMap<FlxObject, Bool>();
+	}
 
 	public override function alterScreenPosition(spr:FlxObject, pos:FlxPoint) {
-		if (downscroll) {
+		if (downscroll && !shouldBypassDownscroll(spr)) {
 			pos.set(pos.x, height - pos.y - spr.height);
 		}
 		return pos;

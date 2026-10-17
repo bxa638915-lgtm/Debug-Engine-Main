@@ -134,17 +134,34 @@ class HealthIcon extends FunkinSprite
 		if (curCharacter == char) return;
 
 		var oldIconPath = 'icons/$char';
+		var psychIconPath = 'icons/icon-$char';
 		var newIconPath = 'icons/$char/icon';
 
-		if (!Assets.exists(Paths.image(oldIconPath)) && !Assets.exists(Paths.image(newIconPath))) {
+		var foundPath:String = null;
+		if (Assets.exists(Paths.image(oldIconPath)))
+			foundPath = oldIconPath;
+		else if (Assets.exists(Paths.image(psychIconPath)))
+			foundPath = psychIconPath;
+		else if (Assets.exists(Paths.image(newIconPath)))
+			foundPath = newIconPath;
+		else {
 			char = 'face';
 			oldIconPath = 'icons/$char';
+			psychIconPath = 'icons/icon-$char';
 			newIconPath = 'icons/$char/icon';
+			if (Assets.exists(Paths.image(oldIconPath)))
+				foundPath = oldIconPath;
+			else if (Assets.exists(Paths.image(psychIconPath)))
+				foundPath = psychIconPath;
+			else
+				foundPath = newIconPath;
 		}
 		curCharacter = char;
 
-		var iconPath = Assets.exists(Paths.image(oldIconPath)) ? oldIconPath : newIconPath;
+		var iconPath = foundPath != null ? foundPath : oldIconPath;
 		var iconXmlPath = Paths.getPath('images/icons/$char/data.xml');
+		if (!Assets.exists(iconXmlPath))
+			iconXmlPath = Paths.getPath('images/$iconPath.xml');
 		var iconFoundData = Assets.exists(iconXmlPath);
 
 		try {
@@ -155,27 +172,33 @@ class HealthIcon extends FunkinSprite
 		}
 		var xmlValid = xmlData != null && (xmlData = xmlData.firstElement()) != null;
 
-		this.animated = allowAnimated && iconFoundData && xmlValid && Paths.framesExists(Paths.image(newIconPath), true, true, true);
+		var framesPath = (iconPath == newIconPath || !Paths.framesExists(Paths.image(iconPath), true, true, true)) ? newIconPath : iconPath;
+		this.animated = allowAnimated && iconFoundData && xmlValid && Paths.framesExists(Paths.image(framesPath), true, true, true);
 
 		var iconAmt:Int = 0;
 		var iconSize:Int = 0;
 		var iconIsPlayer = xmlValid ? xmlData.get("facing").getDefault("right").toLowerCase() == "left" : false;
 
 		if (this.animated)
-			loadSprite(Paths.image(newIconPath));
+			loadSprite(Paths.image(framesPath));
 		else {
-			var iconAsset:FlxGraphic = FlxG.bitmap.add(Paths.image(iconPath));
-			var assetW:Float = iconAsset.width;
-			var assetH:Float = iconAsset.height;
+			var imageAsset = Paths.image(iconPath);
+			if (!Assets.exists(imageAsset)) imageAsset = Paths.image('icons/face/icon');
+			var iconAsset:FlxGraphic = FlxG.bitmap.add(imageAsset);
+			if (iconAsset == null) iconAsset = FlxG.bitmap.add(Paths.image('icons/face/icon'));
+			var assetW:Float = iconAsset != null ? iconAsset.width : 300;
+			var assetH:Float = iconAsset != null ? iconAsset.height : 150;
 
 			iconAmt = Math.round(assetW / assetH); // Just in case the icon is in a weird aspect ratio
+			if (iconAmt <= 0) iconAmt = 1;
 			iconSize = Math.floor(assetW / iconAmt);
 			if (iconSize * iconAmt > assetW) {
 				iconSize = Math.floor(assetW / iconAmt);
 				iconAmt = Math.floor(assetW / iconSize);
 			}
 
-			loadGraphic(iconAsset, true, Std.int(Math.min(iconSize, assetW)), Std.int(Math.min(iconSize, assetH)));
+			if (iconAsset != null)
+				loadGraphic(iconAsset, true, Std.int(Math.min(iconSize, assetW)), Std.int(Math.min(iconSize, assetH)));
 
 			animation.add(char, [for(i in 0...iconAmt) i], 0, false, isPlayer != iconIsPlayer);
 			animation.play(char);

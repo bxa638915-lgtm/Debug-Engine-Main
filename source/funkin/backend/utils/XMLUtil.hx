@@ -148,7 +148,10 @@ final class XMLUtil {
 		if (node == null) return [];
 		if (parentFolder == null) parentFolder = '';
 
-		var defaultPath = '$parentFolder${node.getAtt("sprite").getDefault(spriteName)}';
+		var rawPath = node.getAtt("sprite").getDefault(spriteName);
+		if (parentFolder != '' && rawPath != null && StringTools.startsWith(rawPath, parentFolder))
+			parentFolder = '';
+		var defaultPath = '$parentFolder$rawPath';
 		var sheets:Array<String> = [defaultPath];
 		if (!node.hasNode.spritesheet && !node.hasNode.sheet) return sheets;
 
@@ -374,7 +377,7 @@ final class XMLUtil {
 
 			var checkForSparrow = true;
 
-			if ((sprite.frames is FlxAnimateFrames) == (animData.isAnimate ?? true)) {
+			if ((sprite.frames is FlxAnimateFrames) && (animData.isAnimate ?? true)) {
 				if(animData.anim == null)
 					return MISSING_PROPERTY;
 

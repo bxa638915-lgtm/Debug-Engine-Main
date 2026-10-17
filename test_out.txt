@@ -1,0 +1,4 @@
+[0m[37m[  [0m[35m01:56:32[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[37mSwitched to mod: [0m[92mMINDLESS[0m
+[0m[37m[  [0m[35m01:56:35[0m[37m  |[0m[33m   WARNING   [0m[37m] [0m[93mBlend Mode Extensions won't work in MOD_API_VERSION below than 2[0m
+[0m[37m[  [0m[35m01:56:35[0m[37m  |[0m[96m INFORMATION [0m[37m] [0m[94m[Language] [0m[37m[0m
+[0m[37m[  [0m[35m01:56:35[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[94m[Language] [0m[37mSetting Language To: [0m[92mEnglish (en)[0m

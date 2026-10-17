@@ -190,7 +190,7 @@ class RuntimeModConverter {
 		}
 
 		var hashParts:Array<String> = [];
-		hashParts.push("runtime-mod-converter-format-v13");
+		hashParts.push("runtime-mod-converter-format-v14");
 		hashParts.push("source-format:" + format);
 		var totalSize:Float = 0;
 		for (file in files) {
@@ -705,6 +705,11 @@ class RuntimeModConverter {
 				if (menuImage != null) return menuImage;
 			}
 			if (first == "characters") return "data/characters/" + parts.slice(1).join("/");
+			if (first == "custom_notetypes") {
+				if (extension == "png" || extension == "xml")
+					return "images/game/notes/" + parts.slice(1).join("/");
+				return "data/notes/" + parts.slice(1).join("/");
+			}
 			if (first == "custom_events" && (extension == "lua" || extension == "hx" || extension == "txt" || extension == "json"))
 				return "data/events/" + parts.slice(1).join("/");
 			if (first == "stages") {
@@ -1087,7 +1092,12 @@ class RuntimeModConverter {
 
 		// Background sprites (before character nodes)
 		for (spr in luaSprites) {
-			if ((spr.isForeground:Bool) == true) continue;
+			var tagLower:String = spr.tag != null ? Std.string(spr.tag).toLowerCase() : "";
+			var imgLower:String = spr.image != null ? Std.string(spr.image).toLowerCase() : "";
+			var isForeName = tagLower.indexOf("fore") >= 0 || tagLower.indexOf("fg") >= 0 || tagLower.indexOf("over") >= 0 || tagLower.indexOf("front") >= 0
+				|| imgLower.indexOf("fore") >= 0 || imgLower.indexOf("fg") >= 0 || imgLower.indexOf("over") >= 0 || imgLower.indexOf("front") >= 0;
+			var isBgName = !isForeName && (tagLower.indexOf("alley") >= 0 || tagLower.indexOf("bg") >= 0 || tagLower.indexOf("back") >= 0 || tagLower.indexOf("stage") >= 0 || tagLower.indexOf("wall") >= 0 || tagLower.indexOf("sky") >= 0 || imgLower.indexOf("alley") >= 0 || imgLower.indexOf("back") >= 0 || imgLower.indexOf("bg") >= 0);
+			if ((spr.isForeground:Bool) == true && !isBgName) continue;
 			root.addChild(_buildLuaSpriteNode(spr));
 		}
 
@@ -1134,7 +1144,12 @@ class RuntimeModConverter {
 
 		// Foreground sprites (after character nodes)
 		for (spr in luaSprites) {
-			if ((spr.isForeground:Bool) == false) continue;
+			var tagLower:String = spr.tag != null ? Std.string(spr.tag).toLowerCase() : "";
+			var imgLower:String = spr.image != null ? Std.string(spr.image).toLowerCase() : "";
+			var isForeName = tagLower.indexOf("fore") >= 0 || tagLower.indexOf("fg") >= 0 || tagLower.indexOf("over") >= 0 || tagLower.indexOf("front") >= 0
+				|| imgLower.indexOf("fore") >= 0 || imgLower.indexOf("fg") >= 0 || imgLower.indexOf("over") >= 0 || imgLower.indexOf("front") >= 0;
+			var isBgName = !isForeName && (tagLower.indexOf("alley") >= 0 || tagLower.indexOf("bg") >= 0 || tagLower.indexOf("back") >= 0 || tagLower.indexOf("stage") >= 0 || tagLower.indexOf("wall") >= 0 || tagLower.indexOf("sky") >= 0 || imgLower.indexOf("alley") >= 0 || imgLower.indexOf("back") >= 0 || imgLower.indexOf("bg") >= 0);
+			if ((spr.isForeground:Bool) == false || isBgName) continue;
 			root.addChild(_buildLuaSpriteNode(spr));
 		}
 
@@ -1325,13 +1340,42 @@ class RuntimeModConverter {
 			pos = scaleRx.matchedPos().pos + scaleRx.matchedPos().len;
 		}
 
+		// 5b. setObjectOrder('tag', order)
+		var orderRx = ~/setObjectOrder\s*\(\s*['"]([^'"]+)['"]\s*,\s*([-\d]+)\s*\)/gi;
+		pos = 0;
+		while (orderRx.matchSub(cleanCode, pos)) {
+			var spr = getOrCreate(orderRx.matched(1));
+			var orderVal = Std.parseInt(orderRx.matched(2));
+			spr.order = orderVal;
+			if (orderVal != null) {
+				if (orderVal == 0 || orderVal < 4) {
+					spr.isForeground = false;
+				} else {
+					spr.isForeground = true;
+				}
+			}
+			pos = orderRx.matchedPos().pos + orderRx.matchedPos().len;
+		}
+
 		// 6. addLuaSprite('tag', isForeground)
 		var addRx = ~/addLuaSprite\s*\(\s*['"]([^'"]+)['"]\s*(?:,\s*(true|false)\s*)?\)/gi;
 		pos = 0;
 		while (addRx.matchSub(cleanCode, pos)) {
 			var spr = getOrCreate(addRx.matched(1));
 			var fgStr = addRx.matched(2);
-			spr.isForeground = fgStr != null && fgStr.toLowerCase() == "true";
+			var isExplicitFg = fgStr != null && fgStr.toLowerCase() == "true";
+			var tagLower:String = spr.tag != null ? Std.string(spr.tag).toLowerCase() : "";
+			var imgLower:String = spr.image != null ? Std.string(spr.image).toLowerCase() : "";
+			var isForeName = tagLower.indexOf("fore") >= 0 || tagLower.indexOf("fg") >= 0 || tagLower.indexOf("over") >= 0 || tagLower.indexOf("front") >= 0
+				|| imgLower.indexOf("fore") >= 0 || imgLower.indexOf("fg") >= 0 || imgLower.indexOf("over") >= 0 || imgLower.indexOf("front") >= 0;
+			var isBgName = !isForeName && (tagLower.indexOf("alley") >= 0 || tagLower.indexOf("bg") >= 0 || tagLower.indexOf("back") >= 0 || tagLower.indexOf("stage") >= 0 || tagLower.indexOf("wall") >= 0 || tagLower.indexOf("sky") >= 0 || imgLower.indexOf("alley") >= 0 || imgLower.indexOf("back") >= 0 || imgLower.indexOf("bg") >= 0);
+			if (isBgName || (spr.order != null && spr.order < 4 && !isForeName)) {
+				spr.isForeground = false;
+			} else if (isForeName || (spr.order != null && spr.order >= 4)) {
+				spr.isForeground = true;
+			} else {
+				spr.isForeground = isExplicitFg;
+			}
 			pos = addRx.matchedPos().pos + addRx.matchedPos().len;
 		}
 
@@ -1447,7 +1491,10 @@ class RuntimeModConverter {
 				root.addChild(difficulty);
 			}
 		}
-		_recordUnsupportedPsychFields(data, ["storyName", "weekName", "songs", "difficulties", "weekCharacters", "weekBackground", "bgColor"], source,
+		// Psych: hideStoryMode removes the week from Story Mode (Freeplay-only weeks), hideFreeplay the opposite.
+		if (Reflect.field(data, "hideStoryMode") == true) root.set("hideStory", "true");
+		if (Reflect.field(data, "hideFreeplay") == true) root.set("hideFreeplay", "true");
+		_recordUnsupportedPsychFields(data, ["storyName", "weekName", "songs", "difficulties", "weekCharacters", "weekBackground", "bgColor", "hideStoryMode", "hideFreeplay"], source,
 			"Psych week fields without a DBE Week XML equivalent were omitted from normalized XML; the original JSON was retained under _dbe_preserved.", unsupported, warnings);
 		return root.toString();
 	}

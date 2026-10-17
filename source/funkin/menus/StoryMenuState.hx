@@ -16,6 +16,7 @@ import funkin.backend.week.*;
 import funkin.savedata.FunkinSave;
 import haxe.io.Path;
 import haxe.xml.Access;
+import funkin.backend.assets.ModsFolder;
 import openfl.Assets;
 
 class StoryMenuState extends MusicBeatState {
@@ -43,6 +44,65 @@ class StoryMenuState extends MusicBeatState {
 	public var interpColor:FlxInterpolateColor;
 	var hasCustomWeekBackground:Bool = false;
 
+	public static function assetImageExists(key:String):Bool {
+		if (key == null || key == "") return false;
+		if (Assets.exists(key)) return true;
+		var path = Paths.image(key, null, false);
+		if (path != null && Assets.exists(path)) return true;
+		var pathWithAtlas = Paths.image(key, null, true);
+		if (pathWithAtlas != null && Assets.exists(pathWithAtlas)) return true;
+		#if sys
+		if (ModsFolder.currentModLoadPath != null) {
+			for (ext in Flags.IMAGE_EXTS) {
+				var p1 = Path.join([ModsFolder.currentModLoadPath, "images", '$key.$ext']);
+				if (sys.FileSystem.exists(p1)) return true;
+				var p2 = Path.join([ModsFolder.currentModLoadPath, '$key.$ext']);
+				if (sys.FileSystem.exists(p2)) return true;
+			}
+		}
+		if (sys.FileSystem.exists(key)) return true;
+		#end
+		return false;
+	}
+
+	/**
+	 * Loads a static (non-atlas) image into `spr`. Tries the asset system first and,
+	 * on sys targets, falls back to reading the file straight from the active mod folder.
+	 * @return true if something was loaded.
+	 */
+	public static function loadStaticImage(spr:FlxSprite, key:String):Bool {
+		if (spr == null || key == null || key == "") return false;
+		var path = Paths.image(key, null, false);
+		if (path != null && Assets.exists(path)) {
+			spr.loadGraphic(path);
+			return spr.graphic != null;
+		}
+		#if sys
+		var roots:Array<String> = [];
+		if (ModsFolder.currentModLoadPath != null) roots.push(ModsFolder.currentModLoadPath);
+		for (root in roots) for (ext in Flags.IMAGE_EXTS) for (p in [Path.join([root, "images", '$key.$ext']), Path.join([root, '$key.$ext'])]) {
+			if (!sys.FileSystem.exists(p)) continue;
+			var bmp = openfl.display.BitmapData.fromFile(p);
+			if (bmp == null) continue;
+			spr.loadGraphic(flixel.graphics.FlxGraphic.fromBitmapData(bmp, false, p));
+			return true;
+		}
+		#end
+		return false;
+	}
+
+	/** Draws `label` into `spr` so it can stand in for a missing banner/difficulty image. */
+	public static function makeTextGraphic(spr:FlxSprite, label:String, size:Int = 48, color:FlxColor = 0xFFFFFFFF):Void {
+		var txt = new FlxText(0, 0, 0, label == null || label == "" ? "???" : label, size);
+		txt.setFormat(Paths.font("vcr.ttf"), size, color, CENTER, OUTLINE, FlxColor.BLACK);
+		txt.borderSize = 3;
+		txt.drawFrame(true);
+		spr.makeGraphic(Std.int(Math.max(1, txt.width)), Std.int(Math.max(1, txt.height)), FlxColor.TRANSPARENT, true);
+		spr.stamp(txt, 0, 0);
+		txt.destroy();
+		spr.updateHitbox();
+	}
+
 	public var lerpScore:Float = 0;
 	public var intendedScore:Int = 0;
 
@@ -56,6 +116,12 @@ class StoryMenuState extends MusicBeatState {
 	public override function create() {
 		super.create();
 		loadXMLs();
+		if (weeks == null || weeks.length == 0) {
+			Logs.warn("Story Mode has no visible weeks (all hidden or none found). Returning to main menu.");
+			canSelect = false;
+			FlxG.switchState(new MainMenuState());
+			return;
+		}
 		persistentUpdate = persistentDraw = true;
 
 		// WEEK INFO
@@ -88,9 +154,12 @@ class StoryMenuState extends MusicBeatState {
 			arrow.frames = assets;
 			arrow.animation.addByPrefix('idle', 'arrow $dir');
 			arrow.animation.addByPrefix('press', 'arrow push $dir', 24, false);
+			var pressAnim = arrow.animation.getByName('press');
+			if (pressAnim == null || pressAnim.frames == null || pressAnim.frames.length == 0)
+				arrow.animation.addByPrefix('press', 'arrow $dir', 24, false);
 			arrow.animation.play('idle');
 			arrow.antialiasing = true;
-			add(arrow);
+			arrow.scrollFactor.set();
 		}
 		rightArrow.x -= rightArrow.width;
 
@@ -99,22 +168,71 @@ class StoryMenuState extends MusicBeatState {
 		tracklist.color = 0xFFE55777;
 
 		add(weekSprites);
-		for (e in [blackBar, scoreText, weekTitle, weekBG, tracklist]) {
-			e.scrollFactor.set();
-			add(e);
-		}
-
+		add(weekBG);
 		add(characterSprites = new FlxTypedGroup<FunkinSprite>());
 
+		blackBar.scrollFactor.set();
+		add(blackBar);
+
+		scoreText.scrollFactor.set();
+		add(scoreText);
+
+		weekTitle.scrollFactor.set();
+		add(weekTitle);
+
+		tracklist.scrollFactor.set();
+		add(tracklist);
+
+		add(leftArrow);
+		add(rightArrow);
+
 		for (i=>week in weeks) {
-			var spr:MenuItem = new MenuItem(0, (i * 120) + 480, 'menus/storymenu/weeks/${week.sprite}');
+			var weekSpriteName = week.sprite;
+			var bannerPath:String = null;
+			for (cand in [
+				'menus/storymenu/weeks/${weekSpriteName}',
+				'storymenu/${weekSpriteName}',
+				'storymenu/week${weekSpriteName}',
+				'menus/storymenu/weeks/week${weekSpriteName}',
+				weekSpriteName
+			]) {
+				if (assetImageExists(cand)) {
+					bannerPath = cand;
+					break;
+				}
+			}
+			var bannerLabel = week.name.getDefault(week.id);
+			var spr:MenuItem = new MenuItem(0, (i * 120) + 480, bannerPath, bannerLabel);
 			weekSprites.add(spr);
 
 			for (e in week.difficulties) {
 				var le = e.toLowerCase();
 				if (difficultySprites[le] == null) {
 					var diffSprite = new FlxSprite(leftArrow.x + leftArrow.width, leftArrow.y);
-					diffSprite.loadAnimatedGraphic(Paths.image('menus/storymenu/difficulties/${le}'));
+					var diffPath:String = null;
+					for (cand in [
+						'menus/storymenu/difficulties/${le}',
+						'menus/storymenu/difficulties/${e}',
+						'menudifficulties/${e}',
+						'menudifficulties/${le}'
+					]) {
+						if (assetImageExists(cand)) {
+							diffPath = cand;
+							break;
+						}
+					}
+					var diffLoaded = false;
+					if (diffPath != null) {
+						if (Paths.framesExists(diffPath)) {
+							diffSprite.loadAnimatedGraphic(Paths.image(diffPath, null, false));
+							diffLoaded = diffSprite.graphic != null;
+						} else
+							diffLoaded = loadStaticImage(diffSprite, diffPath);
+					}
+					if (!diffLoaded) {
+						// No image for this difficulty: draw its name instead
+						makeTextGraphic(diffSprite, e.toUpperCase(), 64, 0xFFFFFFFF);
+					}
 					diffSprite.setUnstretchedGraphicSize(Std.int(rightArrow.x - leftArrow.x - leftArrow.width), Std.int(leftArrow.height), false, 1);
 					diffSprite.antialiasing = true;
 					diffSprite.scrollFactor.set();
@@ -234,14 +352,31 @@ class StoryMenuState extends MusicBeatState {
 
 	function loadWeekBackground(week:WeekData):Void {
 		var background = week.background;
-		var path = background == null || background == "" ? null : Paths.image('menus/storymenu/backgrounds/menu_$background');
-		hasCustomWeekBackground = path != null && Assets.exists(path);
-		if (hasCustomWeekBackground) {
-			weekBG.loadGraphic(path);
+		var path:String = null;
+		hasCustomWeekBackground = false;
+		if (background != null && background != "") {
+			for (cand in [
+				'menus/storymenu/backgrounds/menu_$background',
+				'menus/storymenu/backgrounds/$background',
+				'menubackgrounds/menu_$background',
+				'menubackgrounds/$background'
+			]) {
+				if (assetImageExists(cand) && loadStaticImage(weekBG, cand)) {
+					path = cand;
+					hasCustomWeekBackground = true;
+					break;
+				}
+			}
+		}
+		if (hasCustomWeekBackground && path != null) {
+			weekBG.setGraphicSize(FlxG.width, 400);
+			weekBG.updateHitbox();
+			weekBG.setPosition(0, 56);
 			weekBG.color = FlxColor.WHITE;
 		} else {
 			weekBG.makeSolid(FlxG.width, 400, FlxColor.WHITE);
 			weekBG.updateHitbox();
+			weekBG.setPosition(0, 56);
 		}
 	}
 
@@ -274,7 +409,7 @@ class StoryMenuState extends MusicBeatState {
 
 	public function loadXMLs() {
 		weekList = StoryWeeklist.get(true, false);  // will only load week files AND NOT characters too (we will load them later only if needed)!!  - Nex
-		weeks = weekList.weeks;
+		weeks = [for (w in weekList.weeks) if (w.hideStory != true) w];  // Psych `hideStoryMode` weeks are Freeplay-only
 		for (week in weeks) for (char in week.chars) if (char != null)
 			addCharacter(char.name);
 	}
@@ -341,12 +476,24 @@ class MenuItem extends FlxSprite
 {
 	public var targetY:Float = 0;
 
-	public function new(x:Float, y:Float, path:String)
+	public function new(x:Float, y:Float, path:String, ?fallbackLabel:String)
 	{
 		super(x, y);
-		CoolUtil.loadAnimatedGraphic(this, Paths.image(path, null, true));
+		var loaded = false;
+		if (path != null && path != "") {
+			if (Paths.framesExists(path)) {
+				CoolUtil.loadAnimatedGraphic(this, Paths.image(path, null, false));
+				loaded = graphic != null;
+			} else
+				loaded = StoryMenuState.loadStaticImage(this, path);
+		}
+		// Missing banner image: draw the week name instead of Flixel's default logo
+		if (!loaded)
+			StoryMenuState.makeTextGraphic(this, fallbackLabel, 64, 0xFFFFFFFF);
+		updateHitbox();
 		screenCenter(X);
 		antialiasing = true;
+		scrollFactor.set();
 	}
 
 	private var isFlashing:Bool = false;
@@ -373,6 +520,7 @@ class MenuItem extends FlxSprite
 		super.update(elapsed);
 		time += elapsed;
 		y = CoolUtil.fpsLerp(y, (targetY * 120) + 480, 0.17);
+		screenCenter(X);
 
 		if (isFlashing)
 			color = (time % 0.1 > 0.05) ? FlxColor.WHITE : 0xFF33ffff;

@@ -793,6 +793,7 @@ class CharacterEditor extends UIState {
 	
 			if (stage.characterPoses.exists(stagePosition))
 				stage.applyCharStuff(character, stagePosition, 0);
+			ensureCharacterStageLayering();
 			_animation_play(null);
 		} else
 			stagePosition = position.toLowerCase();
@@ -824,6 +825,43 @@ class CharacterEditor extends UIState {
 		remove(character);
 		if (stage.characterPoses.exists(stagePosition))
 			stage.applyCharStuff(character, stagePosition, 0);
+		ensureCharacterStageLayering();
+	}
+
+	public function ensureCharacterStageLayering():Void
+	{
+		if (character == null) return;
+		var charIdx = members.indexOf(character);
+		if (charIdx < 0) return;
+
+		var toMove:Array<flixel.FlxBasic> = [];
+		for (i in (charIdx + 1)...members.length)
+		{
+			var m = members[i];
+			if (m == null || m == character || Std.isOfType(m, Character)) continue;
+
+			var sprName = "";
+			if (Std.isOfType(m, funkin.backend.FunkinSprite))
+				sprName = (cast m:funkin.backend.FunkinSprite).name != null ? (cast m:funkin.backend.FunkinSprite).name.toLowerCase() : "";
+			if (sprName == "" && Std.isOfType(m, flixel.FlxSprite))
+			{
+				var spr:flixel.FlxSprite = cast m;
+				if (spr.graphic != null && spr.graphic.key != null)
+					sprName = spr.graphic.key.toLowerCase();
+			}
+
+			var isFore = sprName.indexOf("fore") >= 0 || sprName.indexOf("fg") >= 0 || sprName.indexOf("over") >= 0 || sprName.indexOf("front") >= 0;
+			var isBg = (sprName.indexOf("alley") >= 0 || sprName.indexOf("bg") >= 0 || sprName.indexOf("back") >= 0 || sprName.indexOf("stage") >= 0 || sprName.indexOf("wall") >= 0 || sprName.indexOf("sky") >= 0);
+			if (isBg && !isFore)
+				toMove.push(m);
+		}
+
+		var insertIdx = 0;
+		for (m in toMove)
+		{
+			remove(m, true);
+			insert(insertIdx++, m);
+		}
 	}
 
 	public function changeCharacterIsPlayer(player:Bool) @:privateAccess {

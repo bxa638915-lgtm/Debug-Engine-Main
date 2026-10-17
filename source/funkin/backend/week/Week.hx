@@ -27,7 +27,9 @@ class Week {
 			chars: [null, null, null],
 			songs: [],
 			difficulties: ['easy', 'normal', 'hard'],
-			bgColor: week.has.bgColor ? FlxColor.fromString(week.getAtt("bgColor")) : Flags.DEFAULT_WEEK_COLOR
+			bgColor: week.has.bgColor ? FlxColor.fromString(week.getAtt("bgColor")) : Flags.DEFAULT_WEEK_COLOR,
+			hideStory: week.getAtt('hideStory') == "true",
+			hideFreeplay: week.getAtt('hideFreeplay') == "true"
 		};
 
 		var weekName = weekObj.name;

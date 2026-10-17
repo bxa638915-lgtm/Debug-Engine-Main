@@ -18,6 +18,7 @@ class PsychLuaSubState extends FlxSubState
 	var previousFollowLerp:Float;
 	var musicWasPlaying:Bool;
 	var vocalsWerePlaying:Bool;
+	var justOpened:Bool = true;
 
 	public function new(name:String, pauseGame:Bool = false)
 	{
@@ -43,12 +44,17 @@ class PsychLuaSubState extends FlxSubState
 			if (game.camGame != null) game.camGame.followLerp = 0;
 			if (game.inst != null) game.inst.pause();
 			if (game.vocals != null) game.vocals.pause();
+			if (game.strumLines != null && game.strumLines.members != null)
+				for (strumLine in game.strumLines.members)
+					if (strumLine != null && strumLine.vocals != null)
+						strumLine.vocals.pause();
 		}
 	}
 
 	public override function create():Void
 	{
 		instance = this;
+		justOpened = true;
 		if (game != null && game.scripts != null)
 			game.scripts.call("onCustomSubstateCreate", [substateName]);
 		super.create();
@@ -58,6 +64,11 @@ class PsychLuaSubState extends FlxSubState
 
 	public override function update(elapsed:Float):Void
 	{
+		if (justOpened)
+		{
+			justOpened = false;
+			return;
+		}
 		if (game != null && game.scripts != null)
 			game.scripts.call("onCustomSubstateUpdate", [substateName, elapsed]);
 		super.update(elapsed);

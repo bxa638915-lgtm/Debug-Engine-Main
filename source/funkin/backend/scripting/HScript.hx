@@ -68,6 +68,41 @@ class HScript extends Script {
 			this.trace(v);
 		}));
 
+		interp.variables.set("setVar", function(name:String, value:Dynamic):Dynamic {
+			if (funkin.game.PlayState.instance != null && funkin.game.PlayState.instance.variables != null)
+				funkin.game.PlayState.instance.variables.set(name, value);
+			funkin.backend.scripting.LuaScript.setPsychVariable(name, value);
+			return value;
+		});
+		interp.variables.set("getVar", function(name:String):Dynamic {
+			if (funkin.game.PlayState.instance != null && funkin.game.PlayState.instance.variables != null && funkin.game.PlayState.instance.variables.exists(name))
+				return funkin.game.PlayState.instance.variables.get(name);
+			return funkin.backend.scripting.LuaScript.getPsychVariable(name);
+		});
+		interp.variables.set("removeVar", function(name:String):Bool {
+			var r1 = (funkin.game.PlayState.instance != null && funkin.game.PlayState.instance.variables != null) ? funkin.game.PlayState.instance.variables.remove(name) : false;
+			var r2 = funkin.backend.scripting.LuaScript.removePsychVariable(name);
+			return r1 || r2;
+		});
+		interp.variables.set("debugPrint", Reflect.makeVarArgs((args) -> {
+			var parts:Array<String> = [];
+			for (a in args) if (a != null) parts.push(Std.string(a));
+			this.trace(parts.join(' '));
+		}));
+		interp.variables.set("getLuaObject", function(tag:String):Dynamic {
+			#if LUA_ALLOWED
+			return funkin.backend.scripting.LuaScript.resolveSharedLuaObject(tag);
+			#else
+			return (funkin.game.PlayState.instance != null && funkin.game.PlayState.instance.variables != null) ? funkin.game.PlayState.instance.variables.get(tag) : null;
+			#end
+		});
+		interp.variables.set("createGlobalCallback", function(name:String, func:Dynamic):Void {
+			#if LUA_ALLOWED
+			funkin.backend.scripting.LuaScript.registerGlobalCallback(name, func);
+			#end
+		});
+		interp.variables.set("ClientPrefs", funkin.options.Options);
+
 		#if GLOBAL_SCRIPT
 		funkin.backend.scripting.GlobalScript.call("onScriptCreated", [this, "hscript"]);
 		#end
@@ -109,6 +144,9 @@ class HScript extends Script {
 			case "backend.Conductor" | "Conductor":
 				interp.variables.set(targetVar, funkin.backend.system.Conductor);
 				return true;
+			case "backend.CoolUtil" | "CoolUtil":
+				interp.variables.set(targetVar, funkin.backend.utils.CoolUtil);
+				return true;
 			case "kade.hex.chart.Scene" | "Scene":
 				interp.variables.set(targetVar, kade.hex.chart.Scene);
 				return true;
@@ -117,6 +155,21 @@ class HScript extends Script {
 				return true;
 			case "funkin.modding.module.ModuleHandler" | "ModuleHandler":
 				interp.variables.set(targetVar, funkin.modding.module.ModuleHandler);
+				return true;
+			case "psychlua.LuaUtils" | "LuaUtils":
+				interp.variables.set(targetVar, cne.compat.PsychLuaUtils);
+				return true;
+			case "psychlua.ModchartSprite" | "ModchartSprite":
+				interp.variables.set(targetVar, flixel.FlxSprite);
+				return true;
+			case "openfl.filters.ShaderFilter" | "ShaderFilter":
+				interp.variables.set(targetVar, openfl.filters.ShaderFilter);
+				return true;
+			case "openfl.filters.BitmapFilter" | "BitmapFilter":
+				interp.variables.set(targetVar, openfl.filters.BitmapFilter);
+				return true;
+			case "objects.VideoSprite" | "VideoSprite" | "hxvlc.flixel.FlxVideoSprite" | "FlxVideoSprite":
+				interp.variables.set(targetVar, cne.compat.PsychVideoSprite);
 				return true;
 		}
 		if(_importFailedCallback(cl, "source/") || _importFailedCallback(cl, "")) {
@@ -192,6 +245,9 @@ class HScript extends Script {
 
 	public override function setParent(parent:Dynamic) {
 		interp.scriptObject = parent;
+		if (parent != null) {
+			interp.variables.set("game", parent);
+		}
 	}
 
 	public override function onLoad() {
@@ -282,18 +338,146 @@ class HScript extends Script {
 		interp.allowStaticVariables = interp.allowPublicVariables = true;
 	}
 
+	private var __dispatchedSpawnNotes:Map<funkin.game.Note, Bool> = new Map();
+
 	private override function onCall(funcName:String, parameters:Array<Dynamic>):Dynamic {
 		if (interp == null) return null;
 
-		var func = interp.variables.get(funcName);
-		if (func != null && Reflect.isFunction(func))
-			return Reflect.callMethod(null, func, parameters == null ? Script._EMPTY_ARGS : parameters);
+		if (funcName == "update") {
+			var onSpawn = interp.variables.get("onSpawnNote");
+			var onSpawnPost = interp.variables.get("onSpawnNotePost");
+			if ((onSpawn != null && Reflect.isFunction(onSpawn)) || (onSpawnPost != null && Reflect.isFunction(onSpawnPost))) {
+				var game = funkin.game.PlayState.instance;
+				if (game != null && game.strumLines != null && game.strumLines.members != null && game.startedCountdown) {
+					var songSpeed:Float = game.scrollSpeed <= 0 ? 1 : game.scrollSpeed;
+					for (line in game.strumLines.members) {
+						if (line == null || line.notes == null || line.notes.members == null) continue;
+						for (note in line.notes.members) {
+							if (note == null || !note.exists || !note.alive) continue;
+							if (!__dispatchedSpawnNotes.exists(note)) {
+								if (cne.compat.PsychHookMap.isPsychNoteSpawned(note.strumTime, funkin.backend.system.Conductor.songPosition, songSpeed, note.multSpeed)) {
+									__dispatchedSpawnNotes.set(note, true);
+									if (onSpawn != null && Reflect.isFunction(onSpawn)) {
+										try { Reflect.callMethod(null, onSpawn, [note]); } catch (_) {}
+									}
+									if (onSpawnPost != null && Reflect.isFunction(onSpawnPost)) {
+										try { Reflect.callMethod(null, onSpawnPost, [note]); } catch (_) {}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 
-		return null;
+		var candidateNames:Array<String> = [funcName];
+		for (mapped in cne.compat.PsychHookMap.getHooks(funcName)) {
+			if (!candidateNames.contains(mapped))
+				candidateNames.push(mapped);
+		}
+		if (funcName == "onDadHit" && !candidateNames.contains("opponentNoteHit"))
+			candidateNames.push("opponentNoteHit");
+		if (funcName == "onPlayerHit" && !candidateNames.contains("goodNoteHit"))
+			candidateNames.push("goodNoteHit");
+		if (funcName == "onPlayerMiss" && !candidateNames.contains("noteMiss"))
+			candidateNames.push("noteMiss");
+
+		var lastResult:Dynamic = null;
+		for (targetFuncName in candidateNames) {
+			var func = interp.variables.get(targetFuncName);
+			if (func == null || !Reflect.isFunction(func)) continue;
+
+			var args = parameters == null ? Script._EMPTY_ARGS : parameters;
+			if ((targetFuncName == "goodNoteHit" || targetFuncName == "opponentNoteHit") && args.length == 1 && Std.isOfType(args[0], funkin.backend.scripting.events.note.NoteHitEvent)) {
+				var hitEvt:funkin.backend.scripting.events.note.NoteHitEvent = cast args[0];
+				if (targetFuncName == "opponentNoteHit" && !hitEvt.character.isPlayer)
+					args = [hitEvt.note];
+				else if (targetFuncName == "goodNoteHit" && hitEvt.character.isPlayer)
+					args = [hitEvt.note];
+				else if (funcName == "onNoteHit")
+					continue;
+				else
+					args = [hitEvt.note];
+			} else if (targetFuncName == "noteMiss" && args.length == 1 && Std.isOfType(args[0], funkin.backend.scripting.events.note.NoteMissEvent)) {
+				var missEvt:funkin.backend.scripting.events.note.NoteMissEvent = cast args[0];
+				args = [missEvt.note];
+			}
+
+			try {
+				lastResult = Reflect.callMethod(null, func, args);
+			} catch(e:Dynamic) {
+				var errStr:String = Std.string(e);
+				if ((targetFuncName == "onEvent" || targetFuncName == "onPostEvent") && args.length == 1 && Std.isOfType(args[0], funkin.backend.scripting.events.gameplay.EventGameEvent)) {
+					var gameEvent:funkin.backend.scripting.events.gameplay.EventGameEvent = args[0];
+					var ev = gameEvent.event;
+					var evName = ev != null ? ev.name : "";
+					var val1:Dynamic = (ev != null && ev.params != null && ev.params.length > 0) ? ev.params[0] : "";
+					var val2:Dynamic = (ev != null && ev.params != null && ev.params.length > 1) ? ev.params[1] : "";
+					var time:Float = ev != null ? ev.time : 0;
+
+					var psychArgs3:Array<Dynamic> = [evName, Std.string(val1 ?? ""), Std.string(val2 ?? "")];
+					var psychArgs4:Array<Dynamic> = [evName, Std.string(val1 ?? ""), Std.string(val2 ?? ""), time];
+					var psychArgs2:Array<Dynamic> = [evName, Std.string(val1 ?? "")];
+					var psychArgs1:Array<Dynamic> = [evName];
+
+					var reg = ~/required (\d+)/i;
+					if (reg.match(errStr)) {
+						var req = Std.parseInt(reg.matched(1));
+						var targetArgs = switch(req) {
+							case 0: [];
+							case 1: psychArgs1;
+							case 2: psychArgs2;
+							case 3: psychArgs3;
+							case 4: psychArgs4;
+							default:
+								var a = psychArgs4.copy();
+								while (a.length < req) a.push(null);
+								a.slice(0, req);
+						};
+						try {
+							lastResult = Reflect.callMethod(null, func, targetArgs);
+							continue;
+						} catch(_) {}
+					}
+					var succeeded = false;
+					for (trial in [psychArgs3, psychArgs4, psychArgs2, psychArgs1]) {
+						try {
+							lastResult = Reflect.callMethod(null, func, trial);
+							succeeded = true;
+							break;
+						} catch(_) {}
+					}
+					if (succeeded) continue;
+				}
+
+				var reg = ~/required (\d+)/i;
+				if (reg.match(errStr)) {
+					var req = Std.parseInt(reg.matched(1));
+					if (req != null) {
+						var adapted = args.copy();
+						while (adapted.length < req) adapted.push(null);
+						if (adapted.length > req) adapted = adapted.slice(0, req);
+						try {
+							lastResult = Reflect.callMethod(null, func, adapted);
+							continue;
+						} catch(_) {}
+					}
+				}
+
+				_errorHandler(new hscript.Expr.Error(ECustom('Call failed for function $targetFuncName: ' + errStr), 0, 0, fileName, 0));
+			}
+		}
+
+		return lastResult;
 	}
 
 	public override function get(val:String):Dynamic {
-		return interp.variables.get(val);
+		var v = interp.variables.get(val);
+		if (v == null && val == "game") {
+			return interp.scriptObject != null ? interp.scriptObject : funkin.game.PlayState.instance;
+		}
+		return v;
 	}
 
 	public override function set(val:String, value:Dynamic) {

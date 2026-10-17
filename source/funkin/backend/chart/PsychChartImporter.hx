@@ -34,7 +34,16 @@ class PsychChartImporter
 
     // Import Meta
     base.meta.name = song.song;
+    base.meta.rawSongName = song.song;
     base.scrollSpeed = song.scrollSpeed != null ? song.scrollSpeed : 1.0;
+    if (song.arrowSkin != null && song.arrowSkin != "") {
+      base.arrowSkin = song.arrowSkin;
+      base.meta.arrowSkin = song.arrowSkin;
+    }
+    if (song.splashSkin != null && song.splashSkin != "") {
+      base.splashSkin = song.splashSkin;
+      base.meta.splashSkin = song.splashSkin;
+    }
 
     // Create 2 default strumlines (Opponent 0, Player 1)
     base.strumLines.push({
@@ -69,11 +78,25 @@ class PsychChartImporter
             var strumIdx:Int = isPlayer ? 1 : 0;
             var noteId:Int = noteData % 4;
 
+            var noteTypeIdx:Int = 0;
+            if (noteArr.length > 3 && noteArr[3] != null) {
+              var noteTypeStr:String = Std.string(noteArr[3]);
+              if (noteTypeStr != "" && noteTypeStr != "0") {
+                var existing = base.noteTypes.indexOf(noteTypeStr);
+                if (existing >= 0) {
+                  noteTypeIdx = existing + 1;
+                } else {
+                  base.noteTypes.push(noteTypeStr);
+                  noteTypeIdx = base.noteTypes.length;
+                }
+              }
+            }
+
             base.strumLines[strumIdx].notes.push({
               time: cast noteArr[0],
               id: noteId,
               sLen: noteArr[2] != null ? cast noteArr[2] : 0.0,
-              type: 0
+              type: noteTypeIdx
             });
           }
         }

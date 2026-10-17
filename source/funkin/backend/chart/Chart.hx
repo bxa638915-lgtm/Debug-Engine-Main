@@ -76,6 +76,8 @@ class Chart {
 	public static function loadEventsJson(songName:String, ?variant:String) {
 		var variantSuffix = variant != null && variant != "" ? '-$variant' : "";
 		var path = Paths.file('songs/${songName}/events$variantSuffix.json');
+		if (!Assets.exists(path))
+			path = Paths.file('data/${songName}/events$variantSuffix.json');
 		var data:Array<ChartEvent> = null;
 		if (Assets.exists(path)) {
 			try {
@@ -247,6 +249,8 @@ class Chart {
 				if (f != null) Reflect.setField(loadedMeta, field, f);
 			}
 			base.meta = loadedMeta;
+			if (base.arrowSkin != null && base.meta.arrowSkin == null) base.meta.arrowSkin = base.arrowSkin;
+			if (base.splashSkin != null && base.meta.splashSkin == null) base.meta.splashSkin = base.splashSkin;
 		}
 
 		/**

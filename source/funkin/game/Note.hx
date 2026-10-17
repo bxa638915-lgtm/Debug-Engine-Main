@@ -16,7 +16,7 @@ class Note extends FlxSprite
 
 	public var strumTime:Float = 0;
 
-	public var mustPress(get, never):Bool;
+	public var mustPress(get, set):Bool;
 	public var strumLine(default, set):StrumLine;
 	private function set_strumLine(strLine:StrumLine) {
 		if (this.strumLine != null) {
@@ -25,11 +25,26 @@ class Note extends FlxSprite
 			strLine.notes.add(this);
 			strLine.notes.sortNotes();
 		}
+		if (PlayState.instance != null) {
+			PlayState.instance.__psychNotesCacheVersion++;
+			PlayState.instance.__psychNotesCachePos = Math.NaN;
+		}
 		return strumLine = strLine;
 	}
 
 	private inline function get_mustPress():Bool {
 		return strumLine != null && !strumLine.cpu;
+	}
+	private function set_mustPress(val:Bool):Bool {
+		if (PlayState.instance != null && strumLine != null && (!strumLine.cpu) != val) {
+			var targetStrumLine = val ? PlayState.instance.playerStrums : PlayState.instance.cpuStrums;
+			if (targetStrumLine != null && targetStrumLine != strumLine) {
+				var savedCachePos = PlayState.instance.__psychNotesCachePos;
+				strumLine = targetStrumLine;
+				PlayState.instance.__psychNotesCachePos = savedCachePos;
+			}
+		}
+		return val;
 	}
 	public var noteData:Int = 0;
 	public var canBeHit:Bool = false;
@@ -40,6 +55,31 @@ class Note extends FlxSprite
 	 * Whenever that note should be avoided by Botplay.
 	 */
 	public var avoid:Bool = false;
+
+	public var noAnimation:Bool = false;
+	public var noMissAnimation:Bool = false;
+	public var gfNote:Bool = false;
+	public var ignoreNote(get, set):Bool;
+	private inline function get_ignoreNote():Bool return avoid;
+	private inline function set_ignoreNote(v:Bool):Bool return avoid = v;
+	public var hitCausesMiss:Bool = false;
+	public var lowPriority:Bool = false;
+	public var hitHealth:Null<Float> = null;
+	public var missHealth:Null<Float> = null;
+	public var offsetX:Float = 0;
+	public var offsetY:Float = 0;
+	public var multSpeed:Float = 1;
+	public var noteSplashTexture(get, set):String;
+	private inline function get_noteSplashTexture():String return splash;
+	private inline function set_noteSplashTexture(v:String):String return splash = v;
+	@:isVar public var texture(get, set):String = null;
+	private inline function get_texture():String return texture;
+	private function set_texture(val:String):String {
+		if (val != null && val != "" && val != texture) {
+			reloadNoteTexture(val);
+		}
+		return texture = val;
+	}
 
 	/**
 	 * The note that comes before this one (sustain and not)
@@ -60,6 +100,7 @@ class Note extends FlxSprite
 	 * If this note is not sustain, this will be null.
 	 */
 	public var sustainParent:Null<Note>;
+	public var __parentWasHit:Bool = false;
 
 	/**
 	 * Number of active sustain pieces attached to this note
@@ -96,6 +137,22 @@ class Note extends FlxSprite
 	public var updateNotesPosY:Bool = true;
 	public var updateFlipY:Bool = true;
 
+	public var copyX(get, set):Bool;
+	private inline function get_copyX():Bool return updateNotesPosX;
+	private inline function set_copyX(v:Bool):Bool return updateNotesPosX = v;
+
+	public var copyY(get, set):Bool;
+	private inline function get_copyY():Bool return updateNotesPosY;
+	private inline function set_copyY(v:Bool):Bool return updateNotesPosY = v;
+
+	public var copyAngle(get, set):Bool;
+	private inline function get_copyAngle():Bool return copyStrumAngle;
+	private inline function set_copyAngle(v:Bool):Bool return copyStrumAngle = v;
+
+	public var copyAlpha:Bool = true;
+	public var multAlpha:Float = 1.0;
+	public var distance:Float = 2000;
+
 	public var noteType(get, never):String;
 
 	@:dox(hide) public var __strumCameras:Array<FlxCamera> = null;
@@ -110,6 +167,7 @@ class Note extends FlxSprite
 	public static var swagWidth:Float = 160 * 0.7; // TODO: remove this
 
 	private static var __customNoteTypeExists:Map<String, Bool> = [];
+	private static var __customNoteTypeConfigs:Map<String, Map<String, String>> = [];
 
 	public var animSuffix:String = null;
 
@@ -120,6 +178,85 @@ class Note extends FlxSprite
 		if (__customNoteTypeExists.exists(path))
 			return __customNoteTypeExists[path];
 		return __customNoteTypeExists[path] = Assets.exists(path);
+	}
+
+	private static function getCustomTypeConfig(typeName:String):Map<String, String> {
+		if (typeName == null || typeName == "" || typeName == "default") return null;
+		if (__customNoteTypeConfigs.exists(typeName))
+			return __customNoteTypeConfigs.get(typeName);
+		var cfg:Map<String, String> = null;
+		var txtPath = Paths.file('custom_notetypes/$typeName.txt');
+		if (!Assets.exists(txtPath))
+			txtPath = Paths.file('data/notes/$typeName.txt');
+		if (Assets.exists(txtPath)) {
+			cfg = [];
+			var raw = Assets.getText(txtPath);
+			if (raw != null) {
+				for (line in raw.split("\n")) {
+					var trimmed = line.trim();
+					if (trimmed == "" || trimmed.startsWith("#") || trimmed.startsWith("//")) continue;
+					var eqIdx = trimmed.indexOf("=");
+					if (eqIdx > 0) {
+						var k = trimmed.substr(0, eqIdx).trim();
+						var v = trimmed.substr(eqIdx + 1).trim();
+						if (v.length >= 2 && ((v.startsWith("'") && v.endsWith("'")) || (v.startsWith('"') && v.endsWith('"'))))
+							v = v.substr(1, v.length - 2);
+						cfg.set(k, v);
+					}
+				}
+			}
+		}
+		__customNoteTypeConfigs.set(typeName, cfg);
+		return cfg;
+	}
+
+	public function reloadNoteTexture(tex:String) {
+		if (tex == null || tex == "") return;
+		var skinPath = PlayState.getNoteSkinPath(tex);
+		var newFrames = Paths.getFrames(skinPath);
+		if (newFrames == null || newFrames.frames == null || newFrames.frames.length == 0) return;
+		frames = newFrames;
+		switch(strumID % 4) {
+			case 0:
+				animation.addByPrefix('scroll', 'purple0');
+				animation.addByPrefix('hold', 'purple hold piece');
+				animation.addByPrefix("holdend", "pruple end hold");
+				if (animation.exists("holdend") != true)
+					animation.addByPrefix('holdend', 'purple hold end');
+			case 1:
+				animation.addByPrefix('scroll', 'blue0');
+				animation.addByPrefix('hold', 'blue hold piece');
+				animation.addByPrefix('holdend', 'blue hold end');
+			case 2:
+				animation.addByPrefix('scroll', 'green0');
+				animation.addByPrefix('hold', 'green hold piece');
+				animation.addByPrefix('holdend', 'green hold end');
+			case 3:
+				animation.addByPrefix('scroll', 'red0');
+				animation.addByPrefix('hold', 'red hold piece');
+				animation.addByPrefix('holdend', 'red hold end');
+		}
+		var scaleVal = (strumLine != null ? @:privateAccess strumLine.strumScale : 1.0) * Flags.DEFAULT_NOTE_SCALE;
+		scale.set(scaleVal, scaleVal);
+		lastScrollSpeed = null;
+		if (isSustainNote) {
+			var targetAnim = nextSustain != null ? 'hold' : 'holdend';
+			if (animation.exists(targetAnim))
+				animation.play(targetAnim);
+			else
+				animation.play('scroll');
+			if (nextSustain != null) {
+				var sp = __strum != null ? __strum.getScrollSpeed(this) : (PlayState.instance != null ? PlayState.instance.scrollSpeed : 1.0);
+				scale.y = (sustainLength * 0.45 * Math.abs(sp)) / frameHeight;
+				updateHitbox();
+				scale.y += gapFix / frameHeight;
+			} else {
+				updateHitbox();
+			}
+		} else {
+			animation.play('scroll');
+			updateHitbox();
+		}
 	}
 
 	static var DEFAULT_FIELDS:Array<String> = ["time", "id", "type", "sLen"];
@@ -153,9 +290,64 @@ class Note extends FlxSprite
 		this.strumTime = noteData.time.getDefault(0) + sustainOffset;
 		this.noteData = noteData.id.getDefault(0);
 
-		var customType = Paths.image('game/notes/${this.noteType}');
+		if (PlayState.instance != null && PlayState.instance.splashSkin != null && PlayState.instance.splashSkin != "")
+			this.splash = PlayState.instance.splashSkin;
+
+		var defaultSkin = (PlayState.instance != null && PlayState.instance.arrowSkin != null)
+			? PlayState.getNoteSkinPath(PlayState.instance.arrowSkin)
+			: 'game/notes/default';
+
+		var noteSprite = defaultSkin;
+		if (this.noteType != null && this.noteType != "" && this.noteType != "default") {
+			var customType = Paths.image('game/notes/${this.noteType}');
+			if (customTypePathExists(customType))
+				noteSprite = 'game/notes/${this.noteType}';
+			else if (customTypePathExists(Paths.image(this.noteType)))
+				noteSprite = this.noteType;
+			else if (customTypePathExists(Paths.image('noteSkins/${this.noteType}')))
+				noteSprite = 'noteSkins/${this.noteType}';
+
+			switch (this.noteType.toLowerCase()) {
+				case "alt animation":
+					if (animSuffix == null || animSuffix == "") animSuffix = Flags.DEFAULT_ALT_ANIM_SUFFIX;
+				case "no animation":
+					noAnimation = true;
+					noMissAnimation = true;
+				case "gf sing":
+					gfNote = true;
+				case "hurt note":
+					avoid = true;
+					hitCausesMiss = true;
+					lowPriority = true;
+			}
+
+			var cfg = getCustomTypeConfig(this.noteType);
+			if (cfg != null) {
+				if (cfg.exists("texture") && cfg.get("texture") != "") {
+					@:bypassAccessor this.texture = cfg.get("texture");
+					noteSprite = PlayState.getNoteSkinPath(this.texture);
+				}
+				if (cfg.exists("noteSplashTexture") && cfg.get("noteSplashTexture") != "")
+					this.splash = cfg.get("noteSplashTexture");
+				if (cfg.exists("animSuffix"))
+					this.animSuffix = cfg.get("animSuffix");
+				if (cfg.exists("noAnimation"))
+					this.noAnimation = cfg.get("noAnimation").toLowerCase() == "true";
+				if (cfg.exists("noMissAnimation"))
+					this.noMissAnimation = cfg.get("noMissAnimation").toLowerCase() == "true";
+				if (cfg.exists("gfNote"))
+					this.gfNote = cfg.get("gfNote").toLowerCase() == "true";
+				if (cfg.exists("ignoreNote"))
+					this.avoid = cfg.get("ignoreNote").toLowerCase() == "true";
+				if (cfg.exists("hitCausesMiss"))
+					this.hitCausesMiss = cfg.get("hitCausesMiss").toLowerCase() == "true";
+				if (cfg.exists("lowPriority"))
+					this.lowPriority = cfg.get("lowPriority").toLowerCase() == "true";
+			}
+		}
+
 		var event = EventManager.get(NoteCreationEvent).recycle(this, strumID, this.noteType, noteTypeID, PlayState.instance.strumLines.members.indexOf(strumLine), mustPress,
-			(this.noteType != null && customTypePathExists(customType)) ? 'game/notes/${this.noteType}' : 'game/notes/default', @:privateAccess strumLine.strumScale * Flags.DEFAULT_NOTE_SCALE, animSuffix);
+			noteSprite, @:privateAccess strumLine.strumScale * Flags.DEFAULT_NOTE_SCALE, animSuffix);
 
 		if (PlayState.instance != null)
 			event = PlayState.instance.gameAndCharsEvent("onNoteCreation", event);
@@ -194,23 +386,22 @@ class Note extends FlxSprite
 			}
 		}
 
-		updateHitbox();
-
 		if (isSustainNote && prevNote != null)
 		{
 			alpha = 0.6;
+			multAlpha = 0.6;
 			animation.play('holdend');
-
-			updateHitbox();
 
 			if (prevNote.isSustainNote)
 			{
 				prevNote.nextSustain = this;
 				prevNote.animation.play('hold');
+				prevNote.updateHitbox();
 			}
 		} else {
 			animation.play("scroll");
 		}
+		updateHitbox();
 
 		if (PlayState.instance != null) {
 			PlayState.instance.splashHandler.getSplashGroup(splash);
@@ -270,8 +461,13 @@ class Note extends FlxSprite
 				__lastStrumHalfH = __strum.height * 0.5;
 			}
 
-			x = -origin.x + offset.x + (originalY * __lastAngleCos) + __strum.x + __lastStrumHalfW;
-			y = -origin.y + offset.y + (originalY * __lastAngleSin) + __strum.y + __lastStrumHalfH;
+			var offX:Float = offsetX;
+			var offY:Float = offsetY;
+			if (offX != 0) offX += (width - __lastStrumW) * 0.5;
+			if (offY != 0) offY += (height - __lastStrumH) * 0.5;
+
+			x = -origin.x + offset.x + offX + (originalY * __lastAngleCos) + __strum.x + __lastStrumHalfW;
+			y = -origin.y + offset.y + offY + (originalY * __lastAngleSin) + __strum.y + __lastStrumHalfH;
 			super.draw();
 			x = originalX;
 			y = originalY;
@@ -293,8 +489,10 @@ class Note extends FlxSprite
 		}
 		if (downscrollCam == __lastDownscrollCam)
 			return super.isOnScreen(camera);
-		else
+		else {
+			__lastDownscrollCam = downscrollCam;
 			__lastX = x;
+		}
 
 		if (downscrollCam && __strum != null && __strum.updateNotesPosX && updateNotesPosX) {
 			x = -x + 2 * (__strum.x - origin.x + offset.x) + __strum.width;

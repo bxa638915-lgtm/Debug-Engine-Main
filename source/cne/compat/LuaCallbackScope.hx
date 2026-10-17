@@ -70,11 +70,27 @@ class LuaCallbackScope
 		var safeCallback = Reflect.makeVarArgs((args:Array<Dynamic>) ->
 		{
 			var result:Dynamic = null;
+			var called:Bool = false;
 			try
-				result = Reflect.callMethod(null, callback, args)
+			{
+				result = Reflect.callMethod(null, callback, args);
+				called = true;
+			}
 			catch (error:Dynamic)
 			{
-				if (callbackErrorHandler != null)
+				var paddedArgs = args.copy();
+				for (_ in 0...8)
+				{
+					paddedArgs.push(null);
+					try
+					{
+						result = Reflect.callMethod(null, callback, paddedArgs);
+						called = true;
+						break;
+					}
+					catch (_:Dynamic) {}
+				}
+				if (!called && callbackErrorHandler != null)
 					try callbackErrorHandler(error) catch (_:Dynamic) {}
 			}
 			// linc_luajit returns one result even for void callbacks. Push nil

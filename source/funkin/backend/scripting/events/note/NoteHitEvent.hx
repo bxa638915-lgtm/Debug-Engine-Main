@@ -208,4 +208,15 @@ final class NoteHitEvent extends CancellableEvent {
 		characters = [char];
 		return char;
 	}
+
+	public override function recycleBase() {
+		super.recycleBase();
+		animCancelled = false;
+		strumGlowCancelled = false;
+		deleteNote = true;
+		unmuteVocals = true;
+		enableCamZooming = true;
+		autoHitLastSustain = true;
+		clipSustain = true;
+	}
 }

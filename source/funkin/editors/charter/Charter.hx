@@ -70,7 +70,6 @@ class Charter extends UIState {
 	public var topMenuSpr:UITopMenu;
 	public var playerPreviewWindow:CharterCharacterPreviewWindow;
 	public var opponentPreviewWindow:CharterCharacterPreviewWindow;
-	private var previewChromeCamera:FlxCamera;
 	private var previewTimelinePosition:Null<Float> = null;
 	private var previewAltSingByLine:Map<Int, Bool> = [];
 	private var previewAltIdleByLine:Map<Int, Bool> = [];
@@ -645,10 +644,6 @@ class Charter extends UIState {
 			Framerate.codenameBuildField.alpha = 1;
 		}
 		super.destroy();
-		if (previewChromeCamera != null) {
-			FlxG.cameras.remove(previewChromeCamera);
-			previewChromeCamera = null;
-		}
 	}
 
 	public function loadSong() {
@@ -1535,7 +1530,9 @@ class Charter extends UIState {
 				UIUtil.processShortcuts(topMenu);
 
 			if (!topMenuSpr.anyMenuOpened) {
-				if (FlxG.mouse.wheel != 0 && shouldScroll) {
+				var previewHovered = (playerPreviewWindow != null && playerPreviewWindow.isMouseOver())
+					|| (opponentPreviewWindow != null && opponentPreviewWindow.isMouseOver());
+				if (FlxG.mouse.wheel != 0 && shouldScroll && !previewHovered) {
 					if (FlxG.keys.pressed.CONTROL) {
 						zoom += 0.25 * FlxG.mouse.wheel;
 						__camZoom = Math.pow(2, zoom);
@@ -2315,13 +2312,6 @@ class Charter extends UIState {
 		uiGroup.add(opponentPreviewWindow);
 		uiGroup.add(playerPreviewWindow);
 
-		// Render the preview contents on their own cameras, then draw both window
-		// frames and controls on top so overlapping previews remain usable.
-		previewChromeCamera = new FlxCamera();
-		previewChromeCamera.bgColor = 0;
-		FlxG.cameras.add(previewChromeCamera, false);
-		opponentPreviewWindow.setChromeCamera(previewChromeCamera);
-		playerPreviewWindow.setChromeCamera(previewChromeCamera);
 		updateCharacterPreviewWindows();
 	}
 
@@ -2330,9 +2320,9 @@ class Charter extends UIState {
 		uiGroup.members.push(window);
 		FlxG.cameras.remove(window.previewCamera, false);
 		FlxG.cameras.add(window.previewCamera, false);
-		if (previewChromeCamera != null) {
-			FlxG.cameras.remove(previewChromeCamera, false);
-			FlxG.cameras.add(previewChromeCamera, false);
+		if (window.chromeCamera != null) {
+			FlxG.cameras.remove(window.chromeCamera, false);
+			FlxG.cameras.add(window.chromeCamera, false);
 		}
 	}
 

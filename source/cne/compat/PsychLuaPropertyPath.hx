@@ -38,20 +38,96 @@ class PsychLuaPropertyPath
 		{
 			if (part == "cameraPosition" || part == "opponentCameraOffset" || part == "boyfriendCameraOffset" || part == "girlfriendCameraOffset")
 				return [0.0, 0.0];
+			if (part == "playbackRate")
+				return (funkin.game.PlayState.instance != null) ? funkin.game.PlayState.instance.playbackRate : 1.0;
 			return null;
+		}
+		if (value == funkin.options.Options)
+		{
+			switch (part)
+			{
+				case "data": return funkin.options.Options;
+				case "downScroll" | "downscroll": return funkin.options.Options.downscroll;
+				case "middleScroll" | "middlescroll": return funkin.options.Options.centeredFields;
+				case "ghostTapping": return funkin.options.Options.ghostTapping;
+				case "flashing": return funkin.options.Options.flashingMenu;
+				case "lowQuality": return funkin.options.Options.lowMemoryMode;
+				case "framerate": return funkin.options.Options.framerate;
+				case "camZooms": return funkin.options.Options.camZoomOnBeat;
+				case "noteSplashes": return funkin.options.Options.splashesEnabled;
+				default:
+			}
+		}
+		if (value == funkin.backend.system.Conductor)
+		{
+			switch (part)
+			{
+				case "bpm": return funkin.backend.system.Conductor.bpm;
+				case "crochet": return funkin.backend.system.Conductor.crochet;
+				case "stepCrochet": return funkin.backend.system.Conductor.stepCrochet;
+				case "songPosition": return funkin.backend.system.Conductor.songPosition;
+				case "curBeat": return funkin.backend.system.Conductor.curBeat;
+				case "curStep": return funkin.backend.system.Conductor.curStep;
+				case "curBeatFloat": return funkin.backend.system.Conductor.curBeatFloat;
+				case "curStepFloat": return funkin.backend.system.Conductor.curStepFloat;
+				default:
+			}
+		}
+		if (value == flixel.FlxG)
+		{
+			switch (part)
+			{
+				case "camera": return flixel.FlxG.camera;
+				case "cameras": return flixel.FlxG.cameras;
+				case "scaleMode": return flixel.FlxG.scaleMode;
+				case "width": return flixel.FlxG.width;
+				case "height": return flixel.FlxG.height;
+				default:
+			}
 		}
 		if (Std.isOfType(value, Array))
 		{
 			var items:Array<Dynamic> = cast value;
 			if (part == "length") return items.length;
+			if (part == "members") return items;
 			var index = Std.parseInt(part);
 			return index != null && index >= 0 && index < items.length ? items[index] : null;
+		}
+		if (Std.isOfType(value, funkin.game.PlayState))
+		{
+			var game:funkin.game.PlayState = cast value;
+			switch (part)
+			{
+				case "score" | "songScore": return game.songScore;
+				case "misses" | "songMisses": return game.misses;
+				case "hits" | "songHits": return game.ratingNum;
+				case "ratingName": return game.curRating != null ? game.curRating.rating : "?";
+				case "ratingFC": return game.misses == 0 ? (game.combo > 0 ? "FC" : "Clear") : (game.misses < 10 ? "SDCB" : "Clear");
+				case "ratingPercent": return game.accuracy;
+				case "playbackRate": return game.playbackRate;
+				case "opponentStrums" | "cpuStrums":
+					game.ensureStrumsAndNotesGenerated();
+					return game.cpuStrums != null ? game.cpuStrums : (game.strumLines.members != null && game.strumLines.members.length > 0 ? game.strumLines.members[0] : null);
+				case "playerStrums":
+					game.ensureStrumsAndNotesGenerated();
+					return game.playerStrums != null ? game.playerStrums : (game.strumLines.members != null && game.strumLines.members.length > 1 ? game.strumLines.members[1] : null);
+				case "strumLineNotes":
+					game.ensureStrumsAndNotesGenerated();
+					var strums:Array<Dynamic> = [];
+					var opp = game.cpuStrums != null ? game.cpuStrums : (game.strumLines.members != null && game.strumLines.members.length > 0 ? game.strumLines.members[0] : null);
+					var pl = game.playerStrums != null ? game.playerStrums : (game.strumLines.members != null && game.strumLines.members.length > 1 ? game.strumLines.members[1] : null);
+					if (opp != null && opp.members != null) for (s in opp.members) if (s != null) strums.push(s);
+					if (pl != null && pl.members != null) for (s in pl.members) if (s != null) strums.push(s);
+					return strums;
+				default:
+			}
 		}
 		if (isFlxPoint(value))
 		{
 			return switch (part)
 			{
-				case "x" | "y": Reflect.getProperty(value, part);
+				case "x" | "0": Reflect.getProperty(value, "x");
+				case "y" | "1": Reflect.getProperty(value, "y");
 				default: null;
 			};
 		}
@@ -88,29 +164,203 @@ class PsychLuaPropertyPath
 			if (off != null) return off;
 			return [0.0, 0.0];
 		}
+		if (part == "offset")
+		{
+			if (Std.isOfType(value, funkin.backend.FunkinSprite))
+			{
+				var spr:funkin.backend.FunkinSprite = cast value;
+				var ox:Float = spr.offset != null ? spr.offset.x : 0.0;
+				var oy:Float = spr.offset != null ? spr.offset.y : 0.0;
+				if (spr.frameOffset != null)
+				{
+					ox += spr.frameOffset.x;
+					oy += spr.frameOffset.y;
+				}
+				return new flixel.math.FlxPoint(ox, oy);
+			}
+		}
+		if (part == "imageFile" || part == "image")
+		{
+			if (Std.isOfType(value, funkin.game.Character))
+			{
+				var char:funkin.game.Character = cast value;
+				var spr:String = char.sprite;
+				if (spr == null || spr == "") spr = char.curCharacter;
+				if (spr != null && spr != "")
+				{
+					if (!StringTools.startsWith(spr, "characters/"))
+						return 'characters/$spr';
+					return spr;
+				}
+				return "characters/bf";
+			}
+			var prop:Dynamic = Reflect.getProperty(value, part);
+			if (prop != null) return prop;
+			prop = Reflect.getProperty(value, "imageFile");
+			if (prop != null) return prop;
+			return Reflect.getProperty(value, "sprite");
+		}
+		if (part == "healthColorArray")
+		{
+			if (Std.isOfType(value, funkin.game.Character))
+				return (cast value:funkin.game.Character).healthColorArray;
+		}
+		if (part == "frameName")
+		{
+			if (Std.isOfType(value, flixel.animation.FlxAnimationController))
+			{
+				var controller:flixel.animation.FlxAnimationController = cast value;
+				@:privateAccess {
+					if (controller._sprite != null)
+					{
+						if (controller._sprite.frame != null && controller._sprite.frame.name != null)
+							return controller._sprite.frame.name;
+						if (controller._curAnim != null && controller._sprite.frames != null)
+						{
+							var curIdx = controller._curAnim.curFrame;
+							var frames = controller._curAnim.frames;
+							if (frames != null && curIdx >= 0 && curIdx < frames.length)
+							{
+								var frameIdx = frames[curIdx];
+								if (frameIdx >= 0 && frameIdx < controller._sprite.frames.frames.length)
+									return controller._sprite.frames.frames[frameIdx].name;
+							}
+						}
+					}
+				}
+				return null;
+			}
+			else if (Std.isOfType(value, flixel.FlxSprite))
+			{
+				var spr:flixel.FlxSprite = cast value;
+				if (spr.frame != null && spr.frame.name != null) return spr.frame.name;
+				if (spr.animation != null)
+				{
+					var ctrl = spr.animation;
+					@:privateAccess {
+						if (ctrl._curAnim != null && spr.frames != null)
+						{
+							var curIdx = ctrl._curAnim.curFrame;
+							var frames = ctrl._curAnim.frames;
+							if (frames != null && curIdx >= 0 && curIdx < frames.length)
+							{
+								var frameIdx = frames[curIdx];
+								if (frameIdx >= 0 && frameIdx < spr.frames.frames.length)
+									return spr.frames.frames[frameIdx].name;
+							}
+						}
+					}
+				}
+			}
+		}
+		if (part == "curAnim")
+		{
+			var anim:Dynamic = null;
+			if (Std.isOfType(value, flixel.animation.FlxAnimationController))
+				anim = (cast value:flixel.animation.FlxAnimationController).curAnim;
+			else if (Std.isOfType(value, flixel.FlxSprite))
+				anim = (cast value:flixel.FlxSprite).animation?.curAnim;
+			else
+				anim = Reflect.getProperty(value, "curAnim");
+
+			if (anim != null)
+			{
+				return {
+					name: Reflect.getProperty(anim, "name"),
+					curFrame: Reflect.getProperty(anim, "curFrame"),
+					finished: Reflect.getProperty(anim, "finished"),
+					frameRate: Reflect.getProperty(anim, "frameRate"),
+					looped: Reflect.getProperty(anim, "looped"),
+					reversed: Reflect.getProperty(anim, "reversed"),
+					numFrames: Reflect.getProperty(anim, "numFrames"),
+					paused: Reflect.getProperty(anim, "paused")
+				};
+			}
+			return null;
+		}
+		if (part == "holdTimer")
+		{
+			if (Std.isOfType(value, funkin.game.Character))
+			{
+				var char:funkin.game.Character = cast value;
+				return Math.max(0, (funkin.backend.system.Conductor.songPosition - char.lastHit) / 1000.0);
+			}
+			return 0.0;
+		}
 		// Psych sprite _frame.frame fallback for FlxSprite / clipping.
 		// In FlxSprite: _frame is FlxFrame, and .frame (property) also returns the current FlxFrame.
 		// So sprite._frame.frame.width === sprite.frame.frame.width.
 		if (part == "_frame")
 		{
 			var frameObj = Reflect.getProperty(value, "_frame");
+			if (frameObj == null) frameObj = Reflect.field(value, "_frame");
+			if (frameObj == null && Std.isOfType(value, flixel.FlxSprite))
+				frameObj = (cast value:flixel.FlxSprite).frame;
 			if (frameObj != null) return frameObj;
-			// Fallback: sprite.frame property IS the current FlxFrame (same as _frame).
 			return Reflect.getProperty(value, "frame");
+		}
+		if (funkin.game.PlayState.instance != null && value == funkin.game.PlayState.instance)
+		{
+			var game = funkin.game.PlayState.instance;
+			if (game.variables != null && game.variables.exists(part))
+				return game.variables.get(part);
 		}
 		if (isCamera(value))
 		{
+			var cam:flixel.FlxCamera = cast value;
 			switch (part)
 			{
-				case "scroll": return Reflect.getProperty(value, "scroll");
-				case "scroll.x" | "scroll.y":
-					var scroll:Dynamic = Reflect.getProperty(value, "scroll");
-					return scroll == null ? null : Reflect.getProperty(scroll, part.substr("scroll.".length));
-				case "x" | "y" | "width" | "height" | "zoom" | "alpha" | "angle" | "visible" | "bgColor":
-					var res:Dynamic = Reflect.getProperty(value, part);
-					if (res == null) res = Reflect.field(value, part);
-					return res;
+				case "scroll": return cam.scroll;
+				case "scroll.x": return cam.scroll.x;
+				case "scroll.y": return cam.scroll.y;
+				case "targetOffset": return cam.targetOffset;
+				case "targetOffset.x": return cam.targetOffset.x;
+				case "targetOffset.y": return cam.targetOffset.y;
+				case "flashSprite": return cam.flashSprite;
+				case "canvas": return cam.canvas;
+				case "initialZoom":
+					var iz = cam.initialZoom;
+					return (Math.isNaN(iz) || iz == 0) ? 1.0 : iz;
+				case "scaleX": return cam.scaleX;
+				case "scaleY": return cam.scaleY;
+				case "totalScaleX": return cam.totalScaleX;
+				case "totalScaleY": return cam.totalScaleY;
+				case "_flashOffset": return @:privateAccess cam._flashOffset;
+				case "_fxShakeIntensity": return @:privateAccess cam._fxShakeIntensity;
+				case "_fxShakeDuration": return @:privateAccess cam._fxShakeDuration;
+				case "followLerp": return cam.followLerp;
+				case "x": return cam.x;
+				case "y": return cam.y;
+				case "width": return cam.width;
+				case "height": return cam.height;
+				case "zoom": return cam.zoom;
+				case "alpha": return cam.alpha;
+				case "angle": return cam.angle;
+				case "visible": return cam.visible;
+				case "bgColor": return cam.bgColor;
 			}
+		}
+		if (Std.isOfType(value, openfl.geom.Matrix))
+		{
+			var mat:openfl.geom.Matrix = cast value;
+			switch (part)
+			{
+				case "a": return mat.a;
+				case "b": return mat.b;
+				case "c": return mat.c;
+				case "d": return mat.d;
+				case "tx": return mat.tx;
+				case "ty": return mat.ty;
+				default:
+			}
+		}
+		if (Std.isOfType(value, openfl.display.DisplayObject))
+		{
+			var dobj:openfl.display.DisplayObject = cast value;
+			if (part == "__transform")
+				return @:privateAccess dobj.__transform;
+			if (part == "transform")
+				return dobj.transform;
 		}
 		var res:Dynamic = Reflect.getProperty(value, part);
 		if (res == null) res = Reflect.field(value, part);
@@ -120,9 +370,7 @@ class PsychLuaPropertyPath
 	private static function isCamera(value:Dynamic):Bool
 	{
 		if (value == null) return false;
-		var cls = Type.getClass(value);
-		if (cls == null) return false;
-		return Type.getClassName(cls) == "flixel.FlxCamera";
+		return Std.isOfType(value, flixel.FlxCamera);
 	}
 
 	private static function isFlxPoint(value:Dynamic):Bool
@@ -197,14 +445,24 @@ class PsychLuaPropertyPath
 			}
 		}
 
-		var target = root;
+		var target:Dynamic = root;
+		var parent:Dynamic = null;
 		for (i in 0...(parts.length - 1))
 		{
+			parent = target;
 			target = readPart(target, parts[i]);
 			if (target == null) return null;
 		}
 
 		var property = parts[parts.length - 1];
+		if (property == "holdTimer" && Std.isOfType(target, funkin.game.Character))
+		{
+			var char:funkin.game.Character = cast target;
+			var valFloat = Std.parseFloat(Std.string(newValue));
+			if (Math.isNaN(valFloat)) valFloat = 0.0;
+			char.lastHit = funkin.backend.system.Conductor.songPosition - (valFloat * 1000.0);
+			return newValue;
+		}
 		if (property == "direction" && hasNoteAngle(target))
 		{
 			var psychDirection = Std.parseFloat(Std.string(newValue));
@@ -214,28 +472,99 @@ class PsychLuaPropertyPath
 			return newValue;
 		}
 		var field = property;
-		if (isFlxPoint(target) && (field == "x" || field == "y"))
+		if (isFlxPoint(target) && (field == "x" || field == "y" || field == "0" || field == "1"))
 		{
+			var axis = (field == "0" ? "x" : (field == "1" ? "y" : field));
 			var valueFloat = Std.parseFloat(Std.string(newValue));
 			if (Math.isNaN(valueFloat)) return null;
-			Reflect.setProperty(target, field, valueFloat);
+			Reflect.setProperty(target, axis, valueFloat);
+			if (parent != null && Std.isOfType(parent, funkin.backend.FunkinSprite) && parts.length >= 2 && parts[parts.length - 2] == "offset")
+			{
+				var fspr:funkin.backend.FunkinSprite = cast parent;
+				if (fspr.frameOffset != null)
+				{
+					var sprOff = (fspr.offset != null) ? (axis == "x" ? fspr.offset.x : fspr.offset.y) : 0.0;
+					Reflect.setProperty(fspr.frameOffset, axis, valueFloat - sprOff);
+				}
+				else if (fspr.offset != null)
+				{
+					Reflect.setProperty(fspr.offset, axis, valueFloat);
+				}
+			}
 			return newValue;
 		}
 		if (isCamera(target))
 		{
-				switch (field)
+			var cam:flixel.FlxCamera = cast target;
+			switch (field)
 			{
 				case "scroll":
 					if (isFlxPoint(newValue))
-						Reflect.setProperty(target, "scroll", newValue);
+						cam.scroll = newValue;
 					return newValue;
-				case "x" | "y" | "width" | "height" | "zoom" | "alpha" | "angle" | "visible":
+				case "scroll.x":
+					cam.scroll.x = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "scroll.y":
+					cam.scroll.y = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "targetOffset":
+					if (isFlxPoint(newValue))
+					{
+						if (cam.targetOffset != null)
+							cam.targetOffset.set(Reflect.getProperty(newValue, "x"), Reflect.getProperty(newValue, "y"));
+						else
+							@:privateAccess cam.targetOffset = newValue;
+					}
+					return newValue;
+				case "targetOffset.x":
+					cam.targetOffset.x = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "targetOffset.y":
+					cam.targetOffset.y = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "scaleX":
+					@:privateAccess cam.scaleX = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "scaleY":
+					@:privateAccess cam.scaleY = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "initialZoom":
+					@:privateAccess cam.initialZoom = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "_fxShakeIntensity":
+					@:privateAccess cam._fxShakeIntensity = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "_fxShakeDuration":
+					@:privateAccess cam._fxShakeDuration = Std.parseFloat(Std.string(newValue));
+					return newValue;
+				case "followLerp":
+					var lerp = Std.parseFloat(Std.string(newValue));
+					if (!Math.isNaN(lerp)) {
+						cam.followLerp = lerp;
+						if (funkin.game.PlayState.instance != null && (cam == funkin.game.PlayState.instance.camGame || cam == flixel.FlxG.camera)) {
+							funkin.game.PlayState.instance.customFollowLerp = lerp;
+						}
+					}
+					return newValue;
+				case "zoom":
+					var z = Std.parseFloat(Std.string(newValue));
+					if (Math.isNaN(z) || z < 0.05) z = 0.05;
+					cam.zoom = z;
+					if (funkin.game.PlayState.instance != null) {
+						if (cam == funkin.game.PlayState.instance.camGame || cam == flixel.FlxG.camera)
+							funkin.game.PlayState.instance.defaultCamZoom = z;
+						else if (cam == funkin.game.PlayState.instance.camHUD)
+							funkin.game.PlayState.instance.defaultHudZoom = z;
+					}
+					return newValue;
+				case "x" | "y" | "width" | "height" | "alpha" | "angle" | "visible":
 					try {
-						Reflect.setProperty(target, field, newValue);
+						Reflect.setProperty(cam, field, newValue);
 						return newValue;
 					} catch (_:Dynamic) {
 						try {
-							Reflect.setField(target, field, newValue);
+							Reflect.setField(cam, field, newValue);
 							return newValue;
 						} catch (_:Dynamic) {}
 					}
@@ -249,8 +578,57 @@ class PsychLuaPropertyPath
 						var parsed = Std.parseInt("0x" + colStr);
 						if (parsed != null) colVal = parsed;
 					}
-					try { Reflect.setProperty(target, "bgColor", colVal); } catch (_:Dynamic) {}
+					try { Reflect.setProperty(cam, "bgColor", colVal); } catch (_:Dynamic) {}
 					return newValue;
+			}
+		}
+		if (parts.contains("flashSprite") || parts.contains("_flashOffset") || (parts.contains("canvas") && (parts.contains("__transform") || field == "x" || field == "y" || field == "rotation" || field == "visible" || field == "alpha")))
+		{
+			// Ignore camera display-tree corruption from legacy Psych 0.6.3 modchart scripts (e.g. zCameraFix.lua).
+			// Modern Flixel/Codename camera rendering manages flashSprite and canvas transform natively.
+			return newValue;
+		}
+		if (Std.isOfType(target, openfl.geom.Matrix))
+		{
+			var mat:openfl.geom.Matrix = cast target;
+			var vFloat = Std.parseFloat(Std.string(newValue));
+			if (!Math.isNaN(vFloat))
+			{
+				switch (field)
+				{
+					case "a": mat.a = vFloat;
+					case "b": mat.b = vFloat;
+					case "c": mat.c = vFloat;
+					case "d": mat.d = vFloat;
+					case "tx": mat.tx = vFloat;
+					case "ty": mat.ty = vFloat;
+					default: Reflect.setField(target, field, vFloat);
+				}
+			}
+			if (parent != null && Std.isOfType(parent, openfl.display.DisplayObject))
+			{
+				@:privateAccess {
+					var dobj:openfl.display.DisplayObject = cast parent;
+					dobj.__setTransformDirty();
+					dobj.__setRenderDirty();
+				}
+			}
+			return newValue;
+		}
+		if (funkin.game.PlayState.instance != null && target == funkin.game.PlayState.instance)
+		{
+			var game = funkin.game.PlayState.instance;
+			if (field == "playbackRate")
+			{
+				var pr = Std.parseFloat(Std.string(newValue));
+				if (Math.isNaN(pr) || pr <= 0) pr = 1.0;
+				game.playbackRate = pr;
+				return pr;
+			}
+			if (game.variables != null && game.variables.exists(field))
+			{
+				game.variables.set(field, newValue);
+				return newValue;
 			}
 		}
 		if (Std.isOfType(target, Array))
@@ -262,6 +640,78 @@ class PsychLuaPropertyPath
 		}
 		else
 		{
+			if (Std.isOfType(target, funkin.game.HealthIcon))
+			{
+				if (field == "x")
+					funkin.game.HudCamera.bypassX(cast target);
+				else if (field == "y")
+					funkin.game.HudCamera.bypassDownscroll(cast target);
+			}
+			else if (Std.isOfType(target, funkin.game.Strum))
+			{
+				var strum:funkin.game.Strum = cast target;
+				if (field == "x" || field == "y" || field == "alpha" || field == "angle" || field == "direction" || field == "visible")
+					strum.__pendingIntroAnim = false;
+				if (field == "angle" && strum.noteAngle == null)
+					strum.noteAngle = 0;
+			}
+			else if (Std.isOfType(target, funkin.game.Note))
+			{
+				var note:funkin.game.Note = cast target;
+				if (field == "x" || field == "y")
+					note.strumRelativePos = false;
+				else if (field == "alpha")
+				{
+					var parsedAlpha = Std.parseFloat(Std.string(newValue));
+					if (!Math.isNaN(parsedAlpha))
+						note.multAlpha = parsedAlpha;
+				}
+			}
+
+			if (field == "color" && Std.isOfType(target, flixel.FlxSprite))
+			{
+				var col:flixel.util.FlxColor = flixel.util.FlxColor.WHITE;
+				if (Std.isOfType(newValue, Int)) {
+					var iv:Int = cast newValue;
+					if (iv == 0) col = flixel.util.FlxColor.BLACK;
+					else {
+						if ((iv & 0xFF000000) == 0 && iv <= 0x00FFFFFF) iv |= 0xFF000000;
+						col = cast iv;
+					}
+				}
+				else if (Std.isOfType(newValue, Float)) {
+					var iv:Int = Std.int(newValue);
+					if (iv == 0) col = flixel.util.FlxColor.BLACK;
+					else {
+						if ((iv & 0xFF000000) == 0 && iv <= 0x00FFFFFF) iv |= 0xFF000000;
+						col = cast iv;
+					}
+				}
+				else if (newValue != null)
+				{
+					var colStr = StringTools.trim(Std.string(newValue));
+					if (StringTools.startsWith(colStr, "#")) colStr = colStr.substr(1);
+					if (StringTools.startsWith(colStr.toLowerCase(), "0x")) colStr = colStr.substr(2);
+					if (colStr == "000000" || colStr == "0") col = flixel.util.FlxColor.BLACK;
+					else {
+						if (colStr.length == 6) colStr = "FF" + colStr;
+						var parsed = Std.parseInt("0x" + colStr);
+						if (parsed != null) col = cast parsed;
+					}
+				}
+				var spr:flixel.FlxSprite = cast target;
+				spr.color = col;
+				spr.dirty = true;
+				if (spr.colorTransform != null)
+				{
+					spr.colorTransform.redMultiplier = col.redFloat;
+					spr.colorTransform.greenMultiplier = col.greenFloat;
+					spr.colorTransform.blueMultiplier = col.blueFloat;
+				}
+				@:privateAccess spr.useColorTransform = (col != flixel.util.FlxColor.WHITE || spr.alpha != 1);
+				return newValue;
+			}
+
 			try
 			{
 				Reflect.setProperty(target, field, newValue);
@@ -273,6 +723,64 @@ class PsychLuaPropertyPath
 					Reflect.setField(target, field, newValue);
 				}
 				catch (_:Dynamic) {}
+			}
+
+			if (parts.length >= 2 && parts[parts.length - 2] == "colorTransform" && parent != null && Std.isOfType(parent, flixel.FlxSprite))
+			{
+				var spr:flixel.FlxSprite = cast parent;
+				@:privateAccess spr.useColorTransform = true;
+				spr.dirty = true;
+			}
+
+			if (parent != null && Std.isOfType(parent, flixel.graphics.frames.FlxFrame))
+			{
+				try {
+					var frame:flixel.graphics.frames.FlxFrame = cast parent;
+					@:privateAccess frame.updateUV();
+					@:privateAccess frame.cacheFrameMatrix();
+				} catch (_:Dynamic) {}
+			}
+			else if (Std.isOfType(target, flixel.graphics.frames.FlxFrame))
+			{
+				try {
+					var frame:flixel.graphics.frames.FlxFrame = cast target;
+					@:privateAccess frame.updateUV();
+					@:privateAccess frame.cacheFrameMatrix();
+				} catch (_:Dynamic) {}
+			}
+
+			if (funkin.game.PlayState.instance != null && (target:Dynamic) == funkin.game.PlayState.instance.scoreTxt)
+			{
+				var game = funkin.game.PlayState.instance;
+				switch (field)
+				{
+					case "alpha":
+						if (game.missesTxt != null) game.missesTxt.alpha = game.scoreTxt.alpha;
+						if (game.accuracyTxt != null) game.accuracyTxt.alpha = game.scoreTxt.alpha;
+					case "visible":
+						if (game.missesTxt != null) game.missesTxt.visible = game.scoreTxt.visible;
+						if (game.accuracyTxt != null) game.accuracyTxt.visible = game.scoreTxt.visible;
+					case "y":
+						game.customScoreTxtY = true;
+						if (game.missesTxt != null) {
+							game.missesTxt.y = game.scoreTxt.y;
+							funkin.game.HudCamera.bypassDownscroll(game.missesTxt);
+						}
+						if (game.accuracyTxt != null) {
+							game.accuracyTxt.y = game.scoreTxt.y;
+							funkin.game.HudCamera.bypassDownscroll(game.accuracyTxt);
+						}
+						funkin.game.HudCamera.bypassDownscroll(game.scoreTxt);
+					case "color":
+						if (game.missesTxt != null) game.missesTxt.color = game.scoreTxt.color;
+						if (game.accuracyTxt != null) game.accuracyTxt.color = game.scoreTxt.color;
+					case "cameras":
+						if (game.missesTxt != null) game.missesTxt.cameras = game.scoreTxt.cameras;
+						if (game.accuracyTxt != null) game.accuracyTxt.cameras = game.scoreTxt.cameras;
+					case "text":
+						if (game.missesTxt != null) game.missesTxt.visible = false;
+						if (game.accuracyTxt != null) game.accuracyTxt.visible = false;
+				}
 			}
 		}
 		return newValue;

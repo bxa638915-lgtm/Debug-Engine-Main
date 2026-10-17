@@ -15,6 +15,12 @@ class LuaGraphicSprite extends FlxSprite
 	var compactWidth:Int = 0;
 	var compactHeight:Int = 0;
 
+	public function new(?X:Float = 0, ?Y:Float = 0)
+	{
+		super(X, Y);
+		makeGraphic(1, 1, FlxColor.TRANSPARENT);
+	}
+
 	public function makeLuaGraphic(width:Int, height:Int, color:FlxColor):FlxSprite
 	{
 		compactWidth = 0;

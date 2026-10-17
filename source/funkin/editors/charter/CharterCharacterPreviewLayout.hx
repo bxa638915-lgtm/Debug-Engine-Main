@@ -7,11 +7,22 @@ class CharterCharacterPreviewLayout {
 	public static inline var VIEWPORT_PADDING_X:Int = 12;
 	public static inline var VIEWPORT_PADDING_Y:Int = 16;
 
+	public static inline var DEFAULT_MAX_WINDOW_WIDTH:Int = 500;
+	public static inline var DEFAULT_MAX_WINDOW_HEIGHT:Int = 580;
+	public static inline var MIN_WINDOW_WIDTH:Int = 240;
+	public static inline var MIN_WINDOW_HEIGHT:Int = 200;
+
 	public static inline function getWindowWidth(boundsWidth:Float):Int
 		return Std.int(Math.ceil(Math.max(boundsWidth, 0))) + WINDOW_WIDTH_PADDING;
 
 	public static inline function getWindowHeight(boundsHeight:Float):Int
 		return Std.int(Math.ceil(Math.max(boundsHeight, 0))) + WINDOW_HEIGHT_PADDING;
+
+	public static inline function clampWindowWidth(width:Int, ?maxWidth:Int = DEFAULT_MAX_WINDOW_WIDTH):Int
+		return Std.int(Math.max(MIN_WINDOW_WIDTH, Math.min(width, maxWidth)));
+
+	public static inline function clampWindowHeight(height:Int, ?maxHeight:Int = DEFAULT_MAX_WINDOW_HEIGHT):Int
+		return Std.int(Math.max(MIN_WINDOW_HEIGHT, Math.min(height, maxHeight)));
 
 	/** Expand a [left, top, right, bottom] envelope with one rendered pose. */
 	public static function includeBounds(envelope:Array<Float>, left:Float, top:Float, width:Float, height:Float):Array<Float> {

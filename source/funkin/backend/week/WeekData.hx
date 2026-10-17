@@ -14,6 +14,8 @@ typedef WeekData = {
 	var songs:Array<WeekSong>;
 	var difficulties:Array<String>;
 	var bgColor:FlxColor;
+	var ?hideStory:Bool;  // week is Freeplay-only (Psych `hideStoryMode`)
+	var ?hideFreeplay:Bool;
 }
 
 typedef WeekCharacter = {

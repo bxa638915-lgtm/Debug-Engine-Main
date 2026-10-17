@@ -135,4 +135,13 @@ final class NoteMissEvent extends CancellableEvent {
 		characters = [char];
 		return char;
 	}
+
+	public override function recycleBase() {
+		super.recycleBase();
+		animCancelled = false;
+		deleteNote = true;
+		stunned = true;
+		resetCombo = true;
+		playMissSound = true;
+	}
 }

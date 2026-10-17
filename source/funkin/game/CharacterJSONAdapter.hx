@@ -19,18 +19,32 @@ class CharacterJSONAdapter {
 			if (StringTools.startsWith(path, "characters/")) path = path.substr("characters/".length);
 			return path;
 		}
-		if (data != null && data.image != null) return Std.string(data.image);
-		if (data != null && data.sprite != null) return Std.string(data.sprite);
-		return 'characters/$characterName';
+		if (data != null && data.image != null) {
+			var path = Std.string(data.image);
+			if (StringTools.startsWith(path, "characters/")) path = path.substr("characters/".length);
+			return path;
+		}
+		if (data != null && data.sprite != null) {
+			var path = Std.string(data.sprite);
+			if (StringTools.startsWith(path, "characters/")) path = path.substr("characters/".length);
+			return path;
+		}
+		return characterName;
 	}
 
-	/** Funkin's `offsets` is the character origin; `position` and x/y are legacy aliases. */
+	/** Funkin's `offsets` is the character origin; `position` is Psych world position offset. */
 	public static function getGlobalOffset(data:Dynamic, axis:Int):Float {
 		if (data == null || axis < 0 || axis > 1) return 0;
 
 		var value = getArrayValue(data.offsets, axis);
-		if (value == null) value = getArrayValue(data.position, axis);
-		if (value == null) value = axis == 0 ? data.x : data.y;
+		if (value == null && data.position == null) value = axis == 0 ? data.x : data.y;
+		return value == null ? 0 : cast value;
+	}
+
+	public static function getPositionOffset(data:Dynamic, axis:Int):Float {
+		if (data == null || axis < 0 || axis > 1) return 0;
+
+		var value = getArrayValue(data.position, axis);
 		return value == null ? 0 : cast value;
 	}
 

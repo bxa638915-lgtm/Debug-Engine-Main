@@ -22,6 +22,39 @@ class Strum extends FlxSprite {
 	**/
 	@:dox(hide) public var cpu:Bool = false; // Unused
 	/**
+	 * The initial X/Y position of this strum when created.
+	**/
+	public var initialX:Float = 0;
+	public var initialY:Float = 0;
+	@:dox(hide) public var __pendingIntroAnim:Bool = false;
+
+	public var defaultX(get, set):Float;
+	private inline function get_defaultX():Float return initialX;
+	private inline function set_defaultX(v:Float):Float return initialX = v;
+
+	public var defaultY(get, set):Float;
+	private inline function get_defaultY():Float return initialY;
+	private inline function set_defaultY(v:Float):Float return initialY = v;
+
+	public var direction(get, set):Float;
+	private inline function get_direction():Float return (noteAngle == null ? 0 : noteAngle) + 90;
+	private inline function set_direction(v:Float):Float {
+		noteAngle = v - 90;
+		return v;
+	}
+
+	public var downScroll(get, set):Bool;
+	private inline function get_downScroll():Bool return PlayState.instance != null ? PlayState.instance.downscroll : funkin.options.Options.downscroll;
+	private inline function set_downScroll(v:Bool):Bool return v;
+
+	public var sustainReduce:Bool = true;
+
+	public function new(x:Float = 0, y:Float = 0) {
+		super(x, y);
+		this.initialX = x;
+		this.initialY = y;
+	}
+	/**
 	 * The last time the note/confirm animation was hit.
 	**/
 	public var lastHit:Float = -5000;
@@ -49,6 +82,7 @@ class Strum extends FlxSprite {
 	public var copyStrumScrollX:Bool = true;
 	public var copyStrumScrollY:Bool = true;
 	public var copyStrumAngle:Bool = true;
+	public var copyStrumAlpha:Bool = true;
 	public var updateNotesPosX:Bool = true;
 	public var updateNotesPosY:Bool = true;
 	public var extraCopyFields(default, set):Array<String> = [];
@@ -121,10 +155,12 @@ class Strum extends FlxSprite {
 	 * @param note (Optional) The note
 	**/
 	public inline function getScrollSpeed(?note:Note):Float {
-		if (note != null && note.scrollSpeed != null) return note.scrollSpeed;
-		if (scrollSpeed != null) return scrollSpeed;
-		if (PlayState.instance != null) return PlayState.instance.scrollSpeed;
-		return 1;
+		var speed:Float = 1;
+		if (note != null && note.scrollSpeed != null) speed = note.scrollSpeed;
+		else if (scrollSpeed != null) speed = scrollSpeed;
+		else if (PlayState.instance != null) speed = PlayState.instance.scrollSpeed;
+		if (note != null && note.multSpeed != 1) speed *= note.multSpeed;
+		return speed;
 	}
 
 	/**
@@ -186,6 +222,9 @@ class Strum extends FlxSprite {
 			daNote.__noteAngle = getNotesAngle(daNote);
 			daNote.angle = daNote.isSustainNote ? daNote.__noteAngle : angle;
 		}
+		if (copyStrumAlpha && daNote.copyAlpha) {
+			daNote.alpha = alpha * daNote.multAlpha;
+		}
 
 		updateNotePos(daNote);
 		if (extraCopyFields.length > 0) {
@@ -223,8 +262,12 @@ class Strum extends FlxSprite {
 				final speed = getScrollSpeed(daNote);
 				final distance = (daNote.strumTime - Conductor.songPosition) * 0.45 * speed;
 				__noteOffset.set(__lastAngleCos * distance, __lastAngleSin * distance);
-				__noteOffset.x += -daNote.origin.x + daNote.offset.x;
-				__noteOffset.y += -daNote.origin.y + daNote.offset.y;
+				var offX:Float = daNote.offsetX;
+				var offY:Float = daNote.offsetY;
+				if (offX != 0) offX += (daNote.width - __lastStrumW) * 0.5;
+				if (offY != 0) offY += (daNote.height - __lastStrumH) * 0.5;
+				__noteOffset.x += -daNote.origin.x + daNote.offset.x + offX;
+				__noteOffset.y += -daNote.origin.y + daNote.offset.y + offY;
 				if (daNote.isSustainNote) {
 					final m = (daNote.height * 0.5 * (speed < 0 ? -1 : 1));
 					__noteOffset.x += __lastAngleCos * m;

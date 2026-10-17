@@ -21,6 +21,19 @@ class FNFLegacyParser {
 
 		result.scrollSpeed = data.speed;
 		result.stage = data.stage;
+		if (data.song != null) {
+			result.meta.rawSongName = data.song;
+			if (result.meta.displayName == null || result.meta.displayName == "")
+				result.meta.displayName = data.song;
+		}
+		if (data.arrowSkin != null && data.arrowSkin != "") {
+			result.arrowSkin = data.arrowSkin;
+			result.meta.arrowSkin = data.arrowSkin;
+		}
+		if (data.splashSkin != null && data.splashSkin != "") {
+			result.splashSkin = data.splashSkin;
+			result.meta.splashSkin = data.splashSkin;
+		}
 
 		var p2isGF:Bool = false;
 		result.strumLines.push({
@@ -100,14 +113,20 @@ class FNFLegacyParser {
 				var gottaHitNote:Bool = daNoteData >= 4 ? !section.mustHitSection : section.mustHitSection;
 
 				if (note.length > 2) {
-					if (note[3] is Int && data.noteTypes != null)
-						daNoteType = Chart.addNoteType(result, data.noteTypes[Std.int(note[3])-1]);
-					else if (note[3] is String)
+					if (note[3] is Int) {
+						if (data.noteTypes != null)
+							daNoteType = Chart.addNoteType(result, data.noteTypes[Std.int(note[3])-1]);
+						else
+							daNoteType = Std.int(note[3]);
+					} else if (note[3] is String)
 						daNoteType = Chart.addNoteType(result, note[3]);
 				} else {
 					if(data.noteTypes != null)
 						daNoteType = Chart.addNoteType(result, data.noteTypes[daNoteType-1]);
 				}
+
+				if (section.gfSection == true && gottaHitNote == section.mustHitSection && daNoteType == 0)
+					daNoteType = Chart.addNoteType(result, "GF Sing");
 
 				result.strumLines[gottaHitNote ? 1 : 0].notes.push({
 					time: daStrumTime,
@@ -241,6 +260,8 @@ typedef SwagSong =
 	var validScore:Bool;
 
 	// ADDITIONAL STUFF THAT MAY NOT BE PRESENT IN CHART
+	var ?arrowSkin:String;
+	var ?splashSkin:String;
 	var ?maxHealth:Float;
 	var ?beatsPerMeasure:Float;
 	var ?stepsPerBeat:Int;

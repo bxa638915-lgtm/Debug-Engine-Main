@@ -230,8 +230,8 @@ class PlayStateDiagnostics
 						lines.push('  character[$j]=null');
 						continue;
 					}
-					var animation = character.animation == null ? null : Reflect.field(character.animation, "curAnim");
-					lines.push('  character[$j] id=${safe(character.curCharacter)} animation=${safe(Reflect.field(animation, "name"))}');
+					var animName = character.getAnimName();
+					lines.push('  character[$j] id=${safe(character.curCharacter)} animation=${safe(animName)}');
 					walkObject(lines, counts, seen, character, 'character[$i][$j]', camera, 2);
 				}
 			}

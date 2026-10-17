@@ -180,6 +180,10 @@ class StrumLine extends FlxTypedGroup<Strum> {
 			}
 		}
 		notes.sortNotes();
+		if (PlayState.instance != null) {
+			PlayState.instance.__psychNotesCacheVersion++;
+			PlayState.instance.__psychNotesCachePos = Math.NaN;
+		}
 
 		var scrollSpeed = strumLine.scrollSpeed;
 		if(scrollSpeed == null) if (PlayState.instance != null) scrollSpeed = PlayState.instance.scrollSpeed;
@@ -245,7 +249,7 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		}
 
 		if (daNote.tooLate) {
-			if (!cpu && !botplay) PlayState.instance.noteMiss(this, daNote);
+			if (!cpu && !botplay && !daNote.avoid) PlayState.instance.noteMiss(this, daNote);
 			else deleteNote(daNote);
 			return;
 		}
@@ -265,7 +269,8 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	var __notePerStrum:Array<Note> = [];
 
 	function __inputProcessPressed(note:Note) {
-		if (__pressed[note.strumID] && note.isSustainNote && note.strumTime < __updateNote_songPos && !note.wasGoodHit && note.sustainParent.wasGoodHit) {
+		var parentHit = note.__parentWasHit || (note.sustainParent != null && note.sustainParent.wasGoodHit);
+		if (__pressed[note.strumID] && note.isSustainNote && note.strumTime < __updateNote_songPos && !note.wasGoodHit && parentHit) {
 			PlayState.instance.goodNoteHit(this, note);
 		}
 	}
@@ -282,8 +287,8 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		var songPos = __updateNote_songPos;
 		var noteDist = Math.abs(note.strumTime - songPos);
 
-		var noteShouldAvoid = note.avoid;
-		var curShouldAvoid = cur.avoid;
+		var noteShouldAvoid = note.avoid || note.lowPriority;
+		var curShouldAvoid = cur.avoid || cur.lowPriority;
 		if (!noteShouldAvoid && curShouldAvoid) {
 			__notePerStrum[strumID] = note;
 			return;
@@ -292,6 +297,10 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		var curDist = Math.abs(cur.strumTime - songPos);
 		if (noteShouldAvoid == curShouldAvoid && noteDist < curDist)
 			__notePerStrum[strumID] = note;
+	}
+
+	public inline function isAnyPressed():Bool {
+		return __pressed != null && __pressed.contains(true);
 	}
 
 	/**
@@ -349,11 +358,18 @@ class StrumLine extends FlxTypedGroup<Strum> {
 				}
 			}
 
-			for (c in characters)
-				if (c.lastAnimContext != DANCE)
-					c.__lockAnimThisFrame = true;
-
 			notes.forEachAlive(__inputProcessPressed);
+
+			for (c in characters) {
+				if (c != null && c.lastAnimContext != DANCE) {
+					c.__lockAnimThisFrame = true;
+					c.lastHit = Conductor.songPosition;
+				}
+			}
+			if (PlayState.instance != null && PlayState.instance.gf != null && PlayState.instance.gf.lastAnimContext != DANCE) {
+				PlayState.instance.gf.__lockAnimThisFrame = true;
+				PlayState.instance.gf.lastHit = Conductor.songPosition;
+			}
 		}
 
 		for (i => s in members) s.updatePlayerInput(__pressed[i], __justPressed[i], __justReleased[i]);
@@ -374,7 +390,7 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	 * @param amount The amount of strums to generate (-1 for the default amount)
 	**/
 	public inline function generateStrums(amount:Int = -1) {
-		if(amount == -1) amount = Flags.DEFAULT_STRUM_AMOUNT;
+		if (amount <= 0) amount = Flags.DEFAULT_STRUM_AMOUNT;
 		for (i in 0...amount)
 			add(createStrum(i));
 	}
@@ -404,8 +420,11 @@ class StrumLine extends FlxTypedGroup<Strum> {
 			babyArrow.scrollSpeed = data.scrollSpeed;
 
 		var event = EventManager.get(StrumCreationEvent).recycle(babyArrow, PlayState.instance.strumLines.members.indexOf(this), i, animPrefix);
-		event.__doAnimation = playIntroAnimation == null ? (!MusicBeatState.skipTransIn && (PlayState.instance != null ? PlayState.instance.introLength > 0 : true)) : playIntroAnimation;
-		if (spritePath != null) event.sprite = spritePath;
+		event.__doAnimation = playIntroAnimation == null ? (!MusicBeatState.skipTransIn && (PlayState.instance != null ? (PlayState.instance.introLength > 0 && !PlayState.instance.skipCountdown) : true)) : playIntroAnimation;
+		if (spritePath != null)
+			event.sprite = spritePath;
+		else if (PlayState.instance != null && PlayState.instance.arrowSkin != null)
+			event.sprite = PlayState.getNoteSkinPath(PlayState.instance.arrowSkin);
 		if (PlayState.instance != null) event = PlayState.instance.gameAndCharsEvent("onStrumCreation", event);
 
 		if (!event.cancelled) {
@@ -429,9 +448,16 @@ class StrumLine extends FlxTypedGroup<Strum> {
 
 		if (event.__doAnimation)
 		{
-			babyArrow.y -= 10;
-			babyArrow.alpha = 0;
-			FlxTween.tween(babyArrow, {y: babyArrow.y + 10, alpha: 1}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i * (4 / (data.keyCount != null ? data.keyCount : 4)))});
+			if (PlayState.instance != null && !PlayState.instance.postCreated)
+			{
+				babyArrow.__pendingIntroAnim = true;
+			}
+			else
+			{
+				babyArrow.y -= 10;
+				babyArrow.alpha = 0;
+				FlxTween.tween(babyArrow, {y: babyArrow.y + 10, alpha: 1}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i * (4 / (data.keyCount != null ? data.keyCount : 4)))});
+			}
 		}
 		babyArrow.playAnim('static');
 
@@ -467,6 +493,10 @@ class StrumLine extends FlxTypedGroup<Strum> {
 			note.kill();
 			notes.remove(note, true);
 			note.destroy();
+			if (PlayState.instance != null) {
+				PlayState.instance.__psychNotesCacheVersion++;
+				PlayState.instance.__psychNotesCachePos = Math.NaN;
+			}
 		}
 	}
 

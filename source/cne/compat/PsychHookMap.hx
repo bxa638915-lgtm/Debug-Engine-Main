@@ -29,13 +29,13 @@ class PsychHookMap
 	/** Builds the scalar arguments expected by Psych's goodNoteHit callback. */
 	public static function makeNoteHitArguments(noteIndex:Int, direction:Int, noteType:String, isSustainNote:Bool):Array<Dynamic>
 	{
-		return [noteIndex, direction, noteType, isSustainNote];
+		return [noteIndex, direction, noteType == null ? "" : noteType, isSustainNote];
 	}
 
 	/** Builds the scalar arguments expected by Psych's noteMiss callback. */
 	public static function makeNoteMissArguments(noteIndex:Int, direction:Int, noteType:String, isSustainNote:Bool):Array<Dynamic>
 	{
-		return [noteIndex, direction, noteType, isSustainNote];
+		return [noteIndex, direction, noteType == null ? "" : noteType, isSustainNote];
 	}
 
 	/** Returns a note's zero-based index in its CNE note group, or -1 if absent. */
@@ -95,7 +95,7 @@ class PsychHookMap
 	/** The callback gained strumTime in Psych 1.0.4. */
 	public static function makeSpawnNoteArguments(profile:String, noteIndex:Int, noteData:Int, noteType:String, isSustainNote:Bool, strumTime:Float):Array<Dynamic>
 	{
-		var args:Array<Dynamic> = [noteIndex, noteData, noteType, isSustainNote];
+		var args:Array<Dynamic> = [noteIndex, noteData, noteType == null ? "" : noteType, isSustainNote];
 		if (profile != "0.6.3") args.push(strumTime);
 		return args;
 	}
