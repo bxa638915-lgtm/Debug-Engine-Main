@@ -195,6 +195,7 @@ class MusicBeatState extends FlxState implements IBeatCancellableReceiver
 		super.createPost();
 		persistentUpdate = true;
 		call("postCreate");
+		funkin.editors.uibuilder.UIHXStateBridge.apply(this, Type.getClassName(Type.getClass(this)));
 		if(!Flags.DISABLE_TRANSITIONS) {
 			if (!skipTransIn)
 				startTransition(null);
@@ -301,10 +302,12 @@ class MusicBeatState extends FlxState implements IBeatCancellableReceiver
 	}
 
 	public override function destroy() {
-		super.destroy();
-		graphicCache.destroy();
+		flixel.tweens.FlxTween.cancelTweensOf(this);
 		call("destroy");
-		stateScripts = FlxDestroyUtil.destroy(stateScripts);
+		stateScripts = flixel.util.FlxDestroyUtil.destroy(stateScripts);
+		if (graphicCache != null)
+			graphicCache.destroy();
+		super.destroy();
 	}
 
 	public override function draw() {

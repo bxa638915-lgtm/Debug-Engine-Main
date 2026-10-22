@@ -22,6 +22,7 @@ using StringTools;
 /**
  * A class that handles loading a stage and putting the sprites into the state.
 **/
+@:keep
 class Stage extends FlxBasic implements IBeatReceiver {
 	public var extra:Map<String, Dynamic> = [];
 
@@ -94,9 +95,13 @@ class Stage extends FlxBasic implements IBeatReceiver {
 		// Fallback: try Psych Engine stages/<name>.json and convert on-the-fly
 		if (stageXML == null) {
 			var jsonPath = Paths.file('stages/$stageName.json');
+			if (!Assets.exists(jsonPath))
+				jsonPath = Paths.file('data/stages/$stageName.json');
 			try if (Assets.exists(jsonPath)) {
 				var contents = Assets.getText(jsonPath);
 				var luaPath = Paths.file('stages/$stageName.lua');
+				if (!Assets.exists(luaPath))
+					luaPath = Paths.file('data/stages/$stageName.lua');
 				var luaContents:String = null;
 				var isEditor = targetState != null ? !Std.isOfType(targetState, PlayState) : (FlxG.state != null && !Std.isOfType(FlxG.state, PlayState));
 				#if !LUA_ALLOWED
@@ -393,8 +398,38 @@ class Stage extends FlxBasic implements IBeatReceiver {
 	 * @param posName The name of the character position
 	 * @param def The default value
 	**/
-	public inline function isCharFlipped(posName:String, def:Bool = false)
-		return characterPoses[posName] != null ? characterPoses[posName].flipX : def;
+	/**
+	 * Returns the StageCharPos for a given position or character alias name.
+	 * Resolves common aliases (dad/opponent, bf/boyfriend/player, gf/girlfriend).
+	**/
+	public function getCharPos(posName:String):Null<StageCharPos> {
+		if (posName == null) return null;
+		if (characterPoses.exists(posName)) return characterPoses.get(posName);
+		var lower = posName.toLowerCase();
+		if (characterPoses.exists(lower)) return characterPoses.get(lower);
+		switch(lower) {
+			case "opponent" | "dad":
+				return characterPoses.exists("dad") ? characterPoses.get("dad") : characterPoses.get("opponent");
+			case "boyfriend" | "bf" | "player":
+				if (characterPoses.exists("boyfriend")) return characterPoses.get("boyfriend");
+				if (characterPoses.exists("bf")) return characterPoses.get("bf");
+				return characterPoses.get("player");
+			case "girlfriend" | "gf":
+				return characterPoses.exists("girlfriend") ? characterPoses.get("girlfriend") : characterPoses.get("gf");
+			default:
+				return null;
+		}
+	}
+
+	/**
+	 * Checks if a character is flipped or not.
+	 * @param posName The name of the character position
+	 * @param def The default value
+	**/
+	public inline function isCharFlipped(posName:String, def:Bool = false) {
+		var charPos = getCharPos(posName);
+		return charPos != null ? charPos.flipX : def;
+	}
 
 	/**
 	 * Applies the character stuff to the character.
@@ -404,7 +439,17 @@ class Stage extends FlxBasic implements IBeatReceiver {
 	 * @param id The ID of the character
 	**/
 	public function applyCharStuff(char:Character, posName:String, id:Float = 0) {
-		var charPos = characterPoses[char.curCharacter] != null ? characterPoses[char.curCharacter] : characterPoses[posName];
+		var charPos = getCharPos(char.curCharacter);
+		if (charPos == null) charPos = getCharPos(posName);
+		if (charPos == null) {
+			if (char.isPlayer) {
+				charPos = getCharPos("boyfriend");
+			} else if (StringTools.startsWith(char.curCharacter.toLowerCase(), "gf") || posName == "gf" || posName == "girlfriend") {
+				charPos = getCharPos("girlfriend");
+			} else {
+				charPos = getCharPos("dad");
+			}
+		}
 		if (charPos != null) {
 			charPos.prepareCharacter(char, id);
 			var idx = state.members.indexOf(charPos);
@@ -413,6 +458,11 @@ class Stage extends FlxBasic implements IBeatReceiver {
 			else
 				state.add(char);
 		} else {
+			var defInfo = getDefaultPos(posName != null ? posName : (char.isPlayer ? "boyfriend" : "dad"));
+			var posOffX = char.positionOffset != null ? char.positionOffset.x : 0;
+			var posOffY = char.positionOffset != null ? char.positionOffset.y : 0;
+			char.setPosition(defInfo.x + (id * 20) + posOffX, defInfo.y + posOffY);
+			char.scrollFactor.set(defInfo.scroll, defInfo.scroll);
 			state.add(char);
 		}
 	}
@@ -455,7 +505,10 @@ class Stage extends FlxBasic implements IBeatReceiver {
 	public static function getList(?mods:Bool = false, ?xmlOnly:Bool = false, includeFolders:Bool = false, folder:String = 'data/stages/'):Array<String> {
 		var list:Array<String> = [];
 		var extensions:Array<String> = ["xml"];
-		if (!xmlOnly) extensions.push("hx");
+		if (!xmlOnly) {
+			extensions.push("hx");
+			extensions.push("json");
+		}
 
 		if(includeFolders) {
 			for (path in Paths.getFolderDirectories(folder, true, mods ? MODS : BOTH)) {
@@ -472,11 +525,11 @@ class Stage extends FlxBasic implements IBeatReceiver {
 			}
 		}
 
-		// Fallback: also scan legacy Psych Engine stages/ folder for .json files
-		if (folder == 'data/stages/' && list.length == 0) {
+		// Also scan legacy Psych Engine stages/ folder for stages (.xml, .json, .hx)
+		if (folder == 'data/stages/') {
 			for (path in Paths.getFolderContent('stages/', false, mods ? MODS : BOTH)) {
 				var extension = Path.extension(path);
-				if (extension == "json") {
+				if (extensions.contains(extension)) {
 					list.pushOnce(Path.withoutExtension(path));
 				}
 			}

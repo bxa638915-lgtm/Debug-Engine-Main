@@ -141,4 +141,13 @@ class SplashGroup extends FlxTypedGroup<Splash> {
 
 		return __splash;
 	}
+
+	override public function destroy():Void {
+		xml = null;
+		__splash = null;
+		if (animationNames != null) {
+			animationNames = null;
+		}
+		super.destroy();
+	}
 }

@@ -1,0 +1,4 @@
+hxcpp_api_level=430
+hxcpp_smart_strings=1
+no_console=1
+hxcpp=C:\Users\esque\Downloads\A_1\A\Vs Impostor alternated Scripts Converts\DBE-Tests-Source\Debug Engine-Main\.haxelib\hxcpp/git/

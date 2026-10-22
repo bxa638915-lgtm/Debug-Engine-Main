@@ -39,6 +39,7 @@
 			<str id="pause.changeOptions">Change Options</str>
 			<str id="pause.exitToMenu">Exit to menu</str>
 			<str id="pause.exitToCharter">Exit to charter</str>
+			<str id="pause.skipTime">Skip Time</str>
 			<str id="pause.resumeCutscene">Resume Cutscene</str>
 			<str id="pause.skipCutscene">Skip Cutscene</str>
 			<str id="pause.restartCutscene">Restart Cutscene</str>

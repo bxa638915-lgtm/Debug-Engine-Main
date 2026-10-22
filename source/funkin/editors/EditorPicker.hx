@@ -40,6 +40,18 @@ class EditorPicker extends MusicBeatSubstate {
 			state: UIDebugState
 		},
 		#end
+		#if sys
+		{
+			name: "Mod REA Inspector",
+			id: "debugOptions",
+			state: dbe.compatibility.rea.REAModAnalyzerState
+		},
+		{
+			name: "Console & Log Capture",
+			id: "debugOptions",
+			state: dbe.compatibility.rea.DBEConsoleCaptureState
+		},
+		#end
 		{
 			name: "Wiki",
 			id: "wiki",
@@ -80,7 +92,7 @@ class EditorPicker extends MusicBeatSubstate {
 
 		optionHeight = FlxG.height / options.length;
 		for(k=>o in options) {
-			var visualName = (o.id != null) ? TU.translate("editor." + o.id + ".name") : o.name;
+			var visualName = (o.id != null && o.id != "debugOptions") ? TU.translate("editor." + o.id + ".name") : o.name;
 			var spr = new EditorPickerOption(visualName, o.id, optionHeight);
 			spr.y = k * optionHeight;
 			add(spr);

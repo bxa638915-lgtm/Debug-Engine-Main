@@ -102,6 +102,10 @@ class HScript extends Script {
 			#end
 		});
 		interp.variables.set("ClientPrefs", funkin.options.Options);
+		interp.variables.set("FlxCamera", funkin.game.HudCamera);
+		#if sys
+		dbe.compatibility.rea.REARuntimeBridge.injectHScriptGlobals(this);
+		#end
 
 		#if GLOBAL_SCRIPT
 		funkin.backend.scripting.GlobalScript.call("onScriptCreated", [this, "hscript"]);
@@ -110,6 +114,11 @@ class HScript extends Script {
 	}
 
 	public override function loadFromString(code:String) {
+		if (code != null) {
+			code = StringTools.replace(code, "import flixel.FlxCamera;", "import funkin.game.HudCamera as FlxCamera;");
+			code = StringTools.replace(code, "import flixel.FlxCamera\n", "import funkin.game.HudCamera as FlxCamera\n");
+			code = StringTools.replace(code, "import flixel.FlxCamera\r\n", "import funkin.game.HudCamera as FlxCamera\r\n");
+		}
 		this.code = code;
 		this.expr = null;
 		if (parser != null) parser.line = 1;
@@ -126,9 +135,17 @@ class HScript extends Script {
 	}
 
 	private function importFailedCallback(cl:Array<String>, ?asName:String):Bool {
+		#if sys
+		if (dbe.compatibility.rea.REARuntimeBridge.resolveHScriptImport(interp, cl, asName)) {
+			return true;
+		}
+		#end
 		var full = cl.join(".");
 		var targetVar = asName != null ? asName : cl[cl.length - 1];
 		switch (full) {
+			case "flixel.FlxCamera" | "FlxCamera":
+				interp.variables.set(targetVar, funkin.game.HudCamera);
+				return true;
 			case "options.OptionsState" | "OptionsState":
 				interp.variables.set(targetVar, funkin.options.OptionsMenu);
 				return true;
@@ -247,6 +264,13 @@ class HScript extends Script {
 		interp.scriptObject = parent;
 		if (parent != null) {
 			interp.variables.set("game", parent);
+			if (Std.isOfType(parent, funkin.game.PlayState)) {
+				var ps:funkin.game.PlayState = cast parent;
+				interp.variables.set("camHUD", ps.camHUD);
+				interp.variables.set("camGame", ps.camGame);
+				interp.variables.set("camOther", ps.camOther);
+				interp.variables.set("camera", ps.camera);
+			}
 		}
 	}
 
@@ -255,6 +279,7 @@ class HScript extends Script {
 		interp.execute(parser.mk(EBlock([]), 0, 0));
 		if (expr != null) {
 			lastExecutionResult = interp.execute(expr);
+			interp.variables.set("FlxCamera", funkin.game.HudCamera);
 			call("new", []);
 		}
 
@@ -295,6 +320,15 @@ class HScript extends Script {
 					runHaxeExprCacheOrder.push(source);
 				}
 			}
+		}
+
+		if (funkin.game.PlayState.instance != null) {
+			var ps = funkin.game.PlayState.instance;
+			if (!interp.variables.exists("game")) interp.variables.set("game", ps);
+			if (!interp.variables.exists("camHUD")) interp.variables.set("camHUD", ps.camHUD);
+			if (!interp.variables.exists("camGame")) interp.variables.set("camGame", ps.camGame);
+			if (!interp.variables.exists("camOther")) interp.variables.set("camOther", ps.camOther);
+			if (!interp.variables.exists("camera")) interp.variables.set("camera", ps.camera);
 		}
 
 		lastExecutionResult = expr == null ? null : interp.execute(expr);

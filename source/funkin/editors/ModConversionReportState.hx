@@ -42,13 +42,28 @@ class ModConversionReportState extends MusicBeatState {
 		details.wordWrap = true;
 		add(details);
 
-		var hint = new FlxText(32, FlxG.height - 52, FlxG.width - 64, "Press Enter or Esc to continue without the blocked package", 16);
-		hint.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.GRAY, CENTER);
+		var hint = new FlxText(32, FlxG.height - 62, FlxG.width - 64, "[E] Fornecer Executavel Original (.exe) via REA\n[ENTER / ESC] Continuar sem o mod bloqueado", 16);
+		hint.setFormat(Paths.font("vcr.ttf"), 16, 0xFF00FFCC, CENTER);
 		add(hint);
 	}
 
 	public override function update(elapsed:Float):Void {
 		super.update(elapsed);
+
+		if (FlxG.keys.justPressed.E && reports.length > 0) {
+			var firstReport = reports[0];
+			var src:String = Std.string(Reflect.field(firstReport, "source"));
+			var modName = haxe.io.Path.withoutDirectory(src != null ? src : "");
+			if (modName != "") {
+				openSubState(new dbe.compatibility.rea.REAModExePromptSubState(modName, firstReport, function(success:Bool) {
+					if (success) {
+						FlxG.switchState(new funkin.backend.system.MainState());
+					}
+				}));
+				return;
+			}
+		}
+
 		if (controls.ACCEPT || controls.BACK || FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.ESCAPE)
 			FlxG.switchState(cast Type.createInstance(returnState, []));
 	}

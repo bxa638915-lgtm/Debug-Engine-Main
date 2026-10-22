@@ -78,16 +78,64 @@ class RuntimeModConverter {
 		return _convert(sourcePath, managedRoot, files, sourceFormat);
 	}
 
+	/**
+	 * Learns engine architecture, RTTI classes and file routes from a target executable using REA.
+	 */
+	public static function learnFromExecutable(exePath:String):Int {
+		if (exePath == null || !FileSystem.exists(exePath)) return 0;
+		var analysis = dbe.compatibility.rea.REAModAnalyzer.analyzeTarget(exePath);
+		return dbe.compatibility.rea.REARuntimeBridge.learnFromAnalysis(analysis);
+	}
+
+	/**
+	 * Automatically discovers any companion executable associated with a mod source.
+	 */
+	public static function findCompanionExecutable(modSourcePath:String):Null<String> {
+		return dbe.compatibility.rea.REARuntimeBridge.findCompanionExecutable(modSourcePath);
+	}
+
+	/**
+	 * High-level conversion that analyzes a mod (or its executable) with REA, learns its profile,
+	 * and converts it into a managed DBE runtime format.
+	 */
+	public static function convertWithREA(source:String, ?managedRoot:String, ?sourceFormat:String = "auto", ?customExePath:String):Dynamic {
+		if (managedRoot == null) managedRoot = defaultManagedRoot();
+		if (customExePath != null && FileSystem.exists(customExePath)) {
+			learnFromExecutable(customExePath);
+		}
+		return prepare(source, managedRoot, sourceFormat);
+	}
+
 	/** Inspect and normalize a mod only when it is a recognized, incompatible package. */
 	public static function prepare(source:String, managedRoot:String, sourceFormat:String = "auto"):Dynamic {
 		var detectedFormat = "unknown";
 		try {
+			// REA Integration: If source is an executable (.exe), auto-convert with REA extractor & converter!
+			if (FileSystem.exists(source) && !FileSystem.isDirectory(source) && Path.extension(source).toLowerCase() == "exe") {
+				var analysis = dbe.compatibility.rea.REAModAnalyzer.analyzeTarget(source);
+				return dbe.compatibility.rea.REAModAnalyzer.autoConvert(analysis, managedRoot);
+			}
+
 			if (FileSystem.exists(source) && !FileSystem.isDirectory(source) && Path.extension(source).toLowerCase() != "zip")
 				return {blocked: false, converted: false, loadPath: source, report: null};
 			var isArchive = FileSystem.exists('$source.zip');
 			var actualSource = isArchive ? '$source.zip' : source;
 			if (!FileSystem.exists(actualSource))
 				return {blocked: false, converted: false, loadPath: source, report: null};
+
+			// REA Integration: Discover and learn from companion executable if available
+			var companionExe = dbe.compatibility.rea.REARuntimeBridge.findCompanionExecutable(actualSource);
+			if (companionExe != null) {
+				dbe.compatibility.rea.REARuntimeBridge.ensureInitialized();
+				var curExe = dbe.compatibility.rea.REARuntimeBridge.activeProfile != null ? Reflect.field(dbe.compatibility.rea.REARuntimeBridge.activeProfile, "sourceExecutable") : null;
+				if (curExe == null || curExe != companionExe) {
+					try {
+						var analysis = dbe.compatibility.rea.REAModAnalyzer.analyzeTarget(companionExe);
+						dbe.compatibility.rea.REARuntimeBridge.learnFromAnalysis(analysis);
+					} catch (_:Dynamic) {}
+				}
+			}
+
 			var files = FileSystem.exists(actualSource) && !FileSystem.isDirectory(actualSource)
 				? _listArchiveFiles(Path.normalize(FileSystem.fullPath(actualSource)))
 				: _listDirectoryFiles(Path.normalize(FileSystem.fullPath(actualSource)));
@@ -240,7 +288,9 @@ class RuntimeModConverter {
 					}
 				} catch (_:Dynamic) {}
 			}
-			_deleteTree(outputPath);
+			try {
+				_deleteTree(outputPath);
+			} catch (_:Dynamic) {}
 		}
 
 		var packageRootLabel = packageRoot.length == 0 ? "." : packageRoot.join("/");
@@ -300,7 +350,9 @@ class RuntimeModConverter {
 						var luaCompanionName = _replaceExtension(name, ".lua");
 						var luaCompanion = _findFile(files, luaCompanionName);
 						var luaContents:String = null;
+						#if !LUA_ALLOWED
 						if (luaCompanion != null) try { luaContents = luaCompanion.read().toString(); } catch (_:Dynamic) {}
+						#end
 						outputContents = Bytes.ofString(_convertPsychStageJson(name, contents.toString(), unsupported, warnings, luaContents));
 					} else if (mapped.toLowerCase().startsWith("data/weeks/weeks/") && mapped.toLowerCase().endsWith(".xml"))
 						outputContents = Bytes.ofString(_convertPsychWeekJson(name, contents.toString(), unsupported, warnings));
@@ -354,17 +406,59 @@ class RuntimeModConverter {
 				warnings: _unique(warnings),
 				incompatibilities: []
 			};
+			dbe.compatibility.rea.REARuntimeBridge.ensureInitialized();
+			var prof = dbe.compatibility.rea.REARuntimeBridge.activeProfile;
+			if (prof != null) {
+				Reflect.setField(report, "reaProfile", {
+					sourceExecutable: Reflect.field(prof, "sourceExecutable"),
+					detectedEngine: Reflect.field(prof, "detectedEngine"),
+					engineVersion: Reflect.field(prof, "engineVersion"),
+					psychLuaProfile: Reflect.field(prof, "psychLuaProfile"),
+					learnedRulesCount: Reflect.field(prof, "learnedRulesCount"),
+					learnedAt: Reflect.field(prof, "learnedAt")
+				});
+			}
 			File.saveContent(Path.join([staging, REPORT_NAME]), haxe.Json.stringify(report, null, "\t") + "\n");
 			File.saveContent(Path.join([staging, COMPLETE_MARKER]), "ok\n");
-			if (FileSystem.exists(outputPath))
-				_deleteTree(outputPath);
-			FileSystem.rename(staging, outputPath);
-			if (FileSystem.exists(stagingRoot))
-				_deleteTree(stagingRoot);
+			if (FileSystem.exists(outputPath)) {
+				try { _deleteTree(outputPath); } catch (_:Dynamic) {}
+			}
+			_moveOrMergeDirectory(staging, outputPath);
+			if (FileSystem.exists(stagingRoot)) {
+				try { _deleteTree(stagingRoot); } catch (_:Dynamic) {}
+			}
 			return report;
 		} catch (error:Dynamic) {
-			if (FileSystem.exists(stagingRoot)) _deleteTree(stagingRoot);
+			if (FileSystem.exists(stagingRoot)) {
+				try { _deleteTree(stagingRoot); } catch (_:Dynamic) {}
+			}
 			throw error;
+		}
+	}
+
+	static function _safeReadFileBytes(full:String):Bytes {
+		try {
+			return File.getBytes(full);
+		} catch (e:Dynamic) {
+			#if windows
+			var winLong = full.replace("/", "\\");
+			if (!winLong.startsWith("\\\\?\\")) winLong = "\\\\?\\" + winLong;
+			return File.getBytes(winLong);
+			#else
+			throw e;
+			#end
+		}
+	}
+
+	static function _safeFileSize(full:String):Int {
+		try {
+			return FileSystem.stat(full).size;
+		} catch (_:Dynamic) {
+			try {
+				return _safeReadFileBytes(full).length;
+			} catch (e:Dynamic) {
+				throw e;
+			}
 		}
 	}
 
@@ -375,20 +469,40 @@ class RuntimeModConverter {
 		var total:Float = 0;
 		function walk(current:String, relative:String, depth:Int):Void {
 			if (depth > 128) throw new haxe.Exception("Mod folder nesting exceeds 128 levels.");
-			for (entry in FileSystem.readDirectory(current)) {
+			var entries:Array<String> = [];
+			try {
+				entries = FileSystem.readDirectory(current);
+			} catch (_:Dynamic) {
+				#if windows
+				var winLong = current.replace("/", "\\");
+				if (!winLong.startsWith("\\\\?\\")) winLong = "\\\\?\\" + winLong;
+				entries = FileSystem.readDirectory(winLong);
+				#end
+			}
+			for (entry in entries) {
 				var full = Path.join([current, entry]);
 				var name = normalizeRelativePath(relative == "" ? entry : '$relative/$entry');
-				if (FileSystem.isDirectory(full)) {
+				var isDir = false;
+				try {
+					isDir = FileSystem.isDirectory(full);
+				} catch (_:Dynamic) {
+					#if windows
+					var winLong = full.replace("/", "\\");
+					if (!winLong.startsWith("\\\\?\\")) winLong = "\\\\?\\" + winLong;
+					try { isDir = FileSystem.isDirectory(winLong); } catch (_:Dynamic) {}
+					#end
+				}
+				if (isDir) {
 					walk(full, name, depth + 1);
 				} else {
 					var key = name.toLowerCase();
 					if (seen.exists(key)) throw new haxe.Exception('Case-insensitive file collision: ${seen.get(key)} and $name');
 					seen.set(key, name);
-					var size = FileSystem.stat(full).size;
+					var size = _safeFileSize(full);
 					if (size > MAX_FILE_SIZE) throw new haxe.Exception('File exceeds the $MAX_FILE_SIZE-byte limit: $name');
 					total += size;
 					if (total > MAX_TOTAL_SIZE) throw new haxe.Exception("Package exceeds the 4 GiB expanded-size limit.");
-					files.push({name: name, size: size, read: function() return File.getBytes(full)});
+					files.push({name: name, size: size, read: function() return _safeReadFileBytes(full)});
 					if (files.length > MAX_FILES) throw new haxe.Exception('Package contains more than $MAX_FILES files.');
 				}
 			}
@@ -518,6 +632,10 @@ class RuntimeModConverter {
 		var vslice = false;
 		for (name in names) {
 			if (name == "pack.json" || name.endsWith("/pack.json") || name == "scripts/modchart.lua" || name.endsWith("/scripts/modchart.lua")) psych = true;
+			if (name.startsWith("custom_events/") || name.indexOf("/custom_events/") >= 0
+				|| name.startsWith("custom_notetypes/") || name.indexOf("/custom_notetypes/") >= 0
+				|| (name.startsWith("weeks/") && name.endsWith(".json"))
+				|| (name.startsWith("characters/") && name.endsWith(".json"))) psych = true;
 			if (name == "data/config/modpack.ini" || name.endsWith("/data/config/modpack.ini")) cne = true;
 			if (~/((^|\/)data\/(events|characters|stages)\/[^\/]+\.hx$)/.match(name)) cne = true;
 			if (name == "_polymod_meta.json" || name.endsWith("/_polymod_meta.json")) {
@@ -529,13 +647,10 @@ class RuntimeModConverter {
 				} catch (_:Dynamic) {}
 			}
 			if (name.startsWith("assets/preload/") || name.startsWith("assets/shared/")) vslice = true;
+			if (name.endsWith("-chart.json") || name.endsWith("-metadata.json")) vslice = true;
 		}
 		if (_hasVSliceAnimateAssetSignature(files)) vslice = true;
 		if (psych && cne) throw new haxe.Exception("Ambiguous mod package markers: psych and cne. Choose a source format explicitly.");
-		// CNE's modpack.ini and Haxe scripts are structural markers. Polymod api_version
-		// metadata is shared with V-Slice mods, and CNE packages can also contain V-Slice
-		// chart data, so the explicit CNE structure wins over that generic metadata.
-		// pack.json and modchart.lua are the explicit Psych markers; assets/preload alone is only a weak V-Slice hint.
 		if (psych) return "psych";
 		if (cne) return "cne";
 		if (vslice) return "vslice";
@@ -697,6 +812,14 @@ class RuntimeModConverter {
 		if (parts.length == 0) throw new haxe.Exception('Package root cannot be a file: $name');
 		if (parts[0].toLowerCase() == "assets" && parts.length > 1 && CANONICAL_ROOTS.contains(parts[1].toLowerCase())) parts.shift();
 		if (parts.length >= 3 && parts[0].toLowerCase() == "mods" && CANONICAL_ROOTS.contains(parts[2].toLowerCase())) parts = parts.slice(2);
+		var relativeJoined = parts.join("/");
+		var learnedRoute = dbe.compatibility.rea.REARuntimeBridge.getLearnedRoute(relativeJoined);
+		if (learnedRoute != null) {
+			if (learnedRoute == "preserve_custom_stage_data_json") return relativeJoined;
+			if (learnedRoute == "psych_mod_settings") return "data/settings.json";
+			if (learnedRoute == "psych_achievements") return "data/achievements.json";
+			if (learnedRoute == "psych_loading_script") return "data/LoadingScreen.hx";
+		}
 		if (format == "psych") {
 			var first = parts[0].toLowerCase();
 			var extension = Path.extension(parts[parts.length - 1]).toLowerCase();
@@ -704,7 +827,12 @@ class RuntimeModConverter {
 				var menuImage = _mappedPsychMenuImage(parts, extension);
 				if (menuImage != null) return menuImage;
 			}
-			if (first == "characters") return "data/characters/" + parts.slice(1).join("/");
+			if (first == "characters") {
+				if (parts.length == 3 && extension == "json" && Path.withoutExtension(parts[2]).toLowerCase() == parts[1].toLowerCase()) {
+					return "data/characters/" + parts[2];
+				}
+				return "data/characters/" + parts.slice(1).join("/");
+			}
 			if (first == "custom_notetypes") {
 				if (extension == "png" || extension == "xml")
 					return "images/game/notes/" + parts.slice(1).join("/");
@@ -713,7 +841,9 @@ class RuntimeModConverter {
 			if (first == "custom_events" && (extension == "lua" || extension == "hx" || extension == "txt" || extension == "json"))
 				return "data/events/" + parts.slice(1).join("/");
 			if (first == "stages") {
-				if (extension == "json") return _replaceJsonExtension("data/stages/" + parts.slice(1).join("/"));
+				// Only top-level stages/<stage>.json is a Psych stage metadata file;
+				// nested JSONs like stages/customMenu/customMenuSongs.json are custom script data files!
+				if (extension == "json" && parts.length == 2) return _replaceJsonExtension("data/stages/" + parts.slice(1).join("/"));
 				if (extension == "png") return "images/stages/" + parts.slice(1).join("/");
 				return "data/stages/" + parts.slice(1).join("/");
 			}
@@ -726,8 +856,8 @@ class RuntimeModConverter {
 				return "data/events/" + parts.slice(2).join("/");
 			if (parts.length >= 3 && first == "data" && parts[1].toLowerCase() == "stages") {
 				var extWithDot = '.' + extension;
-				if (extension == "json") return _replaceJsonExtension(parts.join("/"));
-				if (extension == "xml" || SCRIPT_EXTENSIONS.contains(extWithDot)) return parts.join("/");
+				if (extension == "json" && parts.length == 3) return _replaceJsonExtension(parts.join("/"));
+				if (extension == "json" || extension == "xml" || SCRIPT_EXTENSIONS.contains(extWithDot)) return parts.join("/");
 			}
 			if (parts.length >= 3 && first == "data" && parts[1].toLowerCase() == "weeks" && extension == "json") {
 				var weekTail = parts.slice(2);
@@ -772,6 +902,9 @@ class RuntimeModConverter {
 				}
 			}
 		}
+		var tailExt = '.' + Path.extension(parts[parts.length - 1]).toLowerCase();
+		if (parts.length >= 2 && SCRIPT_EXTENSIONS.contains(tailExt))
+			return parts.join("/");
 		if (!CANONICAL_ROOTS.contains(parts[0].toLowerCase()) && !METADATA_FILES.contains(parts[0].toLowerCase()))
 			return "_dbe_preserved/" + parts.join("/");
 		return parts.join("/");
@@ -916,11 +1049,16 @@ class RuntimeModConverter {
 			if (contents == null || contents.length != file.size) continue;
 			try {
 				var chartData:Dynamic = haxe.Json.parse(contents.toString());
-				var song:Dynamic = Reflect.hasField(chartData, "song") ? chartData.song : chartData;
+				var song:Dynamic = chartData;
+				if (Reflect.hasField(chartData, "song")) {
+					var sf:Dynamic = Reflect.field(chartData, "song");
+					if (sf != null && Type.typeof(sf) == TObject)
+						song = sf;
+				}
 
 				var bpm:Float = song.bpm != null ? song.bpm : 100;
 				var scrollSpeed:Float = song.speed != null ? song.speed : 1.0;
-				var displayName:String = song.song != null ? song.song : songName;
+				var displayName:String = (Reflect.hasField(chartData, "song") && Std.isOfType(chartData.song, String)) ? chartData.song : (song.song != null ? song.song : songName);
 				var needsVoices:Bool = song.needsVoices != null ? song.needsVoices : true;
 				var player1:String = song.player1 != null ? song.player1 : "bf";
 				var player2:String = song.player2 != null ? song.player2 : "dad";
@@ -985,6 +1123,23 @@ class RuntimeModConverter {
 			var ini = '[Common]\nNAME="Converted Psych Mod"\nAPI_VERSION=1\n';
 			generated.push({source: "pack.json", target: "data/config/modpack.ini", contents: Bytes.ofString(ini), reason: "generated CNE modpack config"});
 		}
+		// 4. Generate data/config/dbe-compat.json using REA-learned Psych Lua profile (1.0.4 vs 0.6.3)
+		if (!existingTargets.exists("data/config/dbe-compat.json")) {
+			dbe.compatibility.rea.REARuntimeBridge.ensureInitialized();
+			var learnedProf = "1.0.4";
+			if (dbe.compatibility.rea.REARuntimeBridge.activeProfile != null) {
+				var p:Dynamic = Reflect.field(dbe.compatibility.rea.REARuntimeBridge.activeProfile, "psychLuaProfile");
+				if (p != null && Std.isOfType(p, String)) learnedProf = cast p;
+			}
+			var compatJson = '{\n\t"psychLuaProfile": "$learnedProf"\n}\n';
+			generated.push({
+				source: "(REA learned compatibility profile)",
+				target: "data/config/dbe-compat.json",
+				contents: Bytes.ofString(compatJson),
+				reason: "generated DBE Psych compatibility profile from REA"
+			});
+			existingTargets.set("data/config/dbe-compat.json", true);
+		}
 		generated.sort(function(a, b) return Reflect.compare(a.target, b.target));
 		return generated;
 	}
@@ -999,8 +1154,9 @@ class RuntimeModConverter {
 		if (extension == "json" && relative[0].toLowerCase() == "characters") return true;
 		if (relative.length >= 3 && relative[0].toLowerCase() == "data" && relative[1].toLowerCase() == "characters") return true;
 		if (extension != "json") return false;
-		if (relative[0].toLowerCase() == "stages" || relative[0].toLowerCase() == "weeks") return true;
-		return relative.length >= 3 && relative[0].toLowerCase() == "data"
+		if (relative[0].toLowerCase() == "stages" && relative.length == 2) return true;
+		if (relative[0].toLowerCase() == "weeks") return true;
+		return relative.length == 3 && relative[0].toLowerCase() == "data"
 			&& (relative[1].toLowerCase() == "stages" || relative[1].toLowerCase() == "weeks");
 	}
 
@@ -1055,40 +1211,16 @@ class RuntimeModConverter {
 			gfNode.set("alpha", "0");
 		}
 
-		// Calculate startCamPosX and startCamPosY (focused on opponent/dad at song start)
-		var opVector:Dynamic = Reflect.field(data, "opponent");
-		var opCamVector:Dynamic = Reflect.field(data, "camera_opponent");
-		var opX:Float = 100;
-		var opY:Float = 100;
-		if (opVector != null && Std.isOfType(opVector, Array) && (cast opVector:Array<Dynamic>).length >= 2) {
-			var arr:Array<Dynamic> = cast opVector;
-			if (arr[0] != null) opX = Std.parseFloat(Std.string(arr[0]));
-			if (arr[1] != null) opY = Std.parseFloat(Std.string(arr[1]));
-		}
-		var camOffX:Float = 0;
-		var camOffY:Float = 0;
-		if (opCamVector != null && Std.isOfType(opCamVector, Array) && (cast opCamVector:Array<Dynamic>).length >= 2) {
-			var arr:Array<Dynamic> = cast opCamVector;
-			if (arr[0] != null) camOffX = Std.parseFloat(Std.string(arr[0]));
-			if (arr[1] != null) camOffY = Std.parseFloat(Std.string(arr[1]));
-		}
-		var startCamX:Float = opX + 150 + camOffX;
-		var startCamY:Float = opY - 100 + camOffY;
-		if (opX == 0 && opY == 0 && camOffX == 0 && camOffY == 0) {
-			startCamX = 600;
-			startCamY = 400;
-		}
-		root.set("startCamPosX", Std.string(startCamX));
-		root.set("startCamPosY", Std.string(startCamY));
-
 		// Camera speed if present
 		var camSpeed:Dynamic = Reflect.field(data, "camera_speed");
 		if (camSpeed != null) root.set("cameraSpeed", Std.string(camSpeed));
 
-		// Parse Lua companion file for background/foreground sprites
+		// Parse Lua companion file for background/foreground sprites only if Lua is not supported at runtime
 		var luaSprites:Array<Dynamic> = [];
+		#if !LUA_ALLOWED
 		if (luaContents != null && luaContents.length > 0)
 			luaSprites = _parsePsychStageLua(luaContents);
+		#end
 
 		// Background sprites (before character nodes)
 		for (spr in luaSprites) {
@@ -1659,12 +1791,12 @@ class RuntimeModConverter {
 			var dir = Path.join([managedRoot, entry]);
 			if (!FileSystem.isDirectory(dir)) continue;
 			if (entry.startsWith(".dbe-staging-") || entry.startsWith(".dbe-mod-conversion-")) {
-				_deleteTree(dir);
+				try { _deleteTree(dir); } catch (_:Dynamic) {}
 				continue;
 			}
 			var reportFile = Path.join([dir, REPORT_NAME]);
 			if (!FileSystem.exists(reportFile)) {
-				_deleteTree(dir);
+				try { _deleteTree(dir); } catch (_:Dynamic) {}
 				continue;
 			}
 			try {
@@ -1674,7 +1806,7 @@ class RuntimeModConverter {
 					var repNorm = Path.normalize(repSource).toLowerCase();
 					var repFull = FileSystem.exists(repSource) ? Path.normalize(FileSystem.fullPath(repSource)).toLowerCase() : repNorm;
 					if (normalizedSource == null || repNorm == normalizedSource || repFull == normalizedSource || (sourceBase != null && (repNorm.endsWith("/" + sourceBase) || repNorm == sourceBase))) {
-						_deleteTree(dir);
+						try { _deleteTree(dir); } catch (_:Dynamic) {}
 						cleared++;
 					}
 				}
@@ -1684,13 +1816,99 @@ class RuntimeModConverter {
 	}
 
 	static function _deleteTree(path:String):Void {
-		if (!FileSystem.exists(path)) return;
-		for (entry in FileSystem.readDirectory(path)) {
-			var child = Path.join([path, entry]);
-			if (FileSystem.isDirectory(child)) _deleteTree(child);
-			else FileSystem.deleteFile(child);
+		if (path == null || !FileSystem.exists(path)) return;
+		try {
+			#if windows
+			try {
+				funkin.backend.utils.NativeAPI.setFileAttributes(path, 0x80); // FILE_ATTRIBUTE_NORMAL
+			} catch (_:Dynamic) {}
+			#end
+			for (entry in FileSystem.readDirectory(path)) {
+				var child = Path.join([path, entry]);
+				if (FileSystem.isDirectory(child)) {
+					_deleteTree(child);
+				} else {
+					_safeDeleteFile(child);
+				}
+			}
+			try {
+				FileSystem.deleteDirectory(path);
+			} catch (_:Dynamic) {
+				#if windows
+				try {
+					var winDir = path.replace("/", "\\");
+					Sys.command('cmd /c rmdir /s /q "' + winDir + '" >nul 2>&1');
+				} catch (_:Dynamic) {}
+				#end
+			}
+		} catch (_:Dynamic) {
+			#if windows
+			try {
+				var winDir = path.replace("/", "\\");
+				Sys.command('cmd /c rmdir /s /q "' + winDir + '" >nul 2>&1');
+			} catch (_:Dynamic) {}
+			#end
 		}
-		FileSystem.deleteDirectory(path);
+	}
+
+	static function _safeDeleteFile(filePath:String):Void {
+		if (filePath == null || !FileSystem.exists(filePath)) return;
+		#if windows
+		try {
+			funkin.backend.utils.NativeAPI.setFileAttributes(filePath, 0x80); // FILE_ATTRIBUTE_NORMAL
+		} catch (_:Dynamic) {}
+		#end
+
+		try {
+			FileSystem.deleteFile(filePath);
+		} catch (_:Dynamic) {
+			#if windows
+			try {
+				var winPath = filePath.replace("/", "\\");
+				if (winPath.length >= 240 && !winPath.startsWith("\\\\?\\")) {
+					try {
+						FileSystem.deleteFile("\\\\?\\" + winPath);
+						return;
+					} catch (_:Dynamic) {}
+				}
+				Sys.command('cmd /c attrib -r -h -s "' + winPath + '" >nul 2>&1 && del /f /q /a "' + winPath + '" >nul 2>&1');
+			} catch (_:Dynamic) {}
+			#end
+		}
+	}
+
+	static function _moveOrMergeDirectory(sourceDir:String, targetDir:String):Void {
+		if (!FileSystem.exists(targetDir)) {
+			try {
+				FileSystem.rename(sourceDir, targetDir);
+				return;
+			} catch (_:Dynamic) {}
+		}
+		_copyDirectoryContents(sourceDir, targetDir);
+	}
+
+	static function _copyDirectoryContents(src:String, dest:String):Void {
+		if (!FileSystem.exists(dest)) _createDirectories(dest);
+		for (entry in FileSystem.readDirectory(src)) {
+			var sChild = Path.join([src, entry]);
+			var dChild = Path.join([dest, entry]);
+			if (FileSystem.isDirectory(sChild)) {
+				_copyDirectoryContents(sChild, dChild);
+			} else {
+				try {
+					#if windows
+					try {
+						funkin.backend.utils.NativeAPI.setFileAttributes(dChild, 0x80);
+					} catch (_:Dynamic) {}
+					#end
+					File.copy(sChild, dChild);
+				} catch (_:Dynamic) {
+					try {
+						File.saveBytes(dChild, File.getBytes(sChild));
+					} catch (_:Dynamic) {}
+				}
+			}
+		}
 	}
 }
 

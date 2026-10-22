@@ -1,0 +1,59 @@
+﻿================================================================================
+  DBE ENGINE DIAGNOSTIC SUMMARY
+================================================================================
+  Timestamp        : 2026-10-19 19:06:40
+  Duration         : 2.35s
+  Exit Code        : -1
+  Total Log Lines  : 8
+  Errors Detected  : 0
+  Warnings         : 0
+  Script Issues    : 0
+  Missing Assets   : 0
+
+--- [0] REA LEARNED ENGINE PROFILE STATUS ---
+  Profile Path     : C:\Users\esque\Downloads\A_1\A\Vs Impostor alternated Scripts Converts\DBE-Tests-Source\Debug Engine-Main\export\release\windows\bin\mods\_dbe_rea_learned_profile.json
+  Source EXE       : C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/export/release/windows/bin/mods/PsychEngine.exe
+  Detected Engine  : PsychEngine (1.0.x)
+  Psych Lua Profile: 1.0.4
+  Learned Rules    : 1355
+  Learned At       : 2026-10-19 18:42:42
+  Profile Path     : C:\Users\esque\Downloads\A_1\A\Vs Impostor alternated Scripts Converts\DBE-Tests-Source\Debug Engine-Main\mods\_dbe_rea_learned_profile.json
+  Source EXE       : C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/export/release/windows/bin/mods/PsychEngine.exe
+  Detected Engine  : PsychEngine (1.0.x)
+  Psych Lua Profile: 1.0.4
+  Learned Rules    : 1355
+  Learned At       : 2026-10-19 18:42:42
+
+--- [0B] RECENT MOD CONVERSION REPORTS ---
+  * Mod Source: ./mods/Suffering Siblings
+    Format: psych -> dbe | Incompatibilities: 0 | Warnings: 70
+  * Mod Source: C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/export/release/windows/bin/mods/Project Crafted [v1.0.2]
+    Format: psych -> dbe | Incompatibilities: 0 | Warnings: 71
+  * Mod Source: C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/mods/PsychEngine_REA
+    Format: psych -> dbe | Incompatibilities: 0 | Warnings: 30
+
+--- [1] MOD & REA COMPATIBILITY EVENTS (1) ---
+  [19:06:40.845][STDOUT] Called from ApplicationMain::create ApplicationMain.hx line 132
+
+--- [2] HSCRIPT / LUA SCRIPT ERRORS & WARNINGS (0) ---
+  (None recorded)
+
+--- [3] MISSING ASSETS / PATH FAILURES (0) ---
+  (None recorded)
+
+--- [4] ALL ERRORS (0) ---
+  (None recorded)
+
+--- [5] ALL WARNINGS (0) ---
+  (None recorded)
+
+--- [6] LAST 60 CONSOLE LINES BEFORE EXIT ---
+  [19:06:38.990][STDOUT] [  19:06:38  |   VERBOSE   ] [lime.utils.Preloader] Preloading asset library
+  [19:06:40.836][STDOUT] Called from lime.utils.Preloader::load lime/utils/Preloader.hx line 116
+  [19:06:40.845][STDOUT] Called from ApplicationMain::create ApplicationMain.hx line 132
+  [19:06:40.847][STDOUT] Called from lime.utils.Log::verbose lime/utils/Log.hx line 92
+  [19:06:40.848][STDOUT] Called from funkin.backend.system.Logs::trace funkin/backend/system/Logs.hx line 155
+  [19:06:40.851][STDOUT] Called from funkin.backend.system.Logs::__showInConsole funkin/backend/system/Logs.hx line 145
+  [19:06:40.852][STDOUT] Called from hxcpp::__hxcpp_main
+  [19:06:40.853][STDOUT] Called from ApplicationMain::main ApplicationMain.hx line 30
+

@@ -69,7 +69,10 @@ class Main extends Sprite
 
 	// You can pretty much ignore everything from here on - your code should go in your states.
 
+	private static var _preInited:Bool = false;
 	public static function preInit() {
+		if (_preInited) return;
+		_preInited = true;
 		#if sys
 		funkin.backend.utils.NativeAPI.registerAsDPICompatible();
 		funkin.backend.system.CommandLineHandler.parseCommandLine(Sys.args());
@@ -79,6 +82,7 @@ class Main extends Sprite
 
 	public function new()
 	{
+		preInit();
 		super();
 
 		instance = this;
@@ -174,6 +178,12 @@ class Main extends Sprite
 		#end
 
 		initTransition();
+
+		#if VIDEO_CUTSCENES
+		try {
+			hxvlc.util.Handle.init();
+		} catch (_:Dynamic) {}
+		#end
 	}
 
 	public static function applySoundCurve(volume:Float) {
@@ -239,6 +249,19 @@ class Main extends Sprite
 			PlayerSettings.solo.controls.DEV_CONSOLE)
 			NativeAPI.allocConsole();
 
+		#if sys
+		if (FlxG.keys != null) {
+			if (FlxG.keys.justPressed.F9) {
+				FlxG.switchState(new dbe.compatibility.rea.REAModAnalyzerState());
+			} else if (FlxG.keys.justPressed.F10) {
+				FlxG.switchState(new dbe.compatibility.rea.DBEConsoleCaptureState());
+			} else if (FlxG.keys.justPressed.F11) {
+				var saved = dbe.compatibility.rea.DBEConsoleCapture.saveDiagnosticSummary();
+				Logs.infos('Saved diagnostic snapshot to: $saved', GREEN, "DBECapture");
+			}
+		}
+		#end
+
 		#if IMGUI_ENABLED
 		if ((ImGuiIO.configFlags & ImGuiConfigFlags.ViewportsEnable) != 0)
 		{
@@ -267,6 +290,12 @@ class Main extends Sprite
 		// does'nt clear bitmaps since flixel fork does it auto
 
 		MemoryUtil.clearMajor();
+		#if sys
+		if (FlxG.state != null) {
+			var stName = Type.getClassName(Type.getClass(FlxG.state));
+			Logs.verbose('Switched to state: $stName (Mod: ${ModsFolder.currentModFolder != null ? ModsFolder.currentModFolder : "base"})', LIGHTGRAY, "State");
+		}
+		#end
 	}
 
 	public static var noCwdFix:Bool = false;

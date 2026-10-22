@@ -1,0 +1,45 @@
+-main ApplicationMain 
+-cp C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/.haxelib/flixel-addons/git
+-D flixel-addons=4.0.0
+-cp C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/.haxelib/flixel/git
+-D flixel=6.1.2
+--macro lime._internal.macros.DefineMacro.run()
+--macro haxe.macro.Compiler.addMetadata("@:autoBuild(lime._internal.macros.AssetsMacro.embedBytes())", "haxe.io.Bytes")
+-cp C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/.haxelib/lime/git/src
+-D lime=8.3.1
+-cp C:/Users/esque/Downloads/A_1/A/Vs Impostor alternated Scripts Converts/DBE-Tests-Source/Debug Engine-Main/.haxelib/openfl/git/src
+-D openfl=9.5.2
+-cp source
+-D lime-openal
+-D lime-cne
+-D FLX_NO_GAMEPAD
+-D flixel-cne
+-D lime-opus
+-D native
+-D lime-openalsoft
+-D lime-curl
+-D openfl-native
+-D lime-imgui
+-D CNE_OPENFL
+-D lime-harfbuzz
+-D lime-funkin
+-D lime-threads
+-D tools=8.3.1
+-D lime-cairo
+-D lime-threads-deque
+-D openfl-funkin
+-D lime-opengl
+-D no-compilation
+-D lime-native
+-D lime-vorbis
+-D openfl-cne
+-D FLX_NO_SOUND_TRAY
+-D lime-cffi
+-D lime-drlibs
+-D windows
+-D desktop
+--remap flash:openfl
+--macro flixel.system.macros.FlxDefines.run()
+-cp bin/windows/haxe
+-cpp bin/windows/obj
+--macro keep("dbe.launcher.ui.Main")

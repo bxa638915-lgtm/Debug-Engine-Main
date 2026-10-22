@@ -15,6 +15,10 @@ import funkin.editors.extra.CameraHoverDummy;
 import funkin.editors.ui.*;
 import funkin.editors.ui.UIContextMenu.UIContextMenuOption;
 import funkin.editors.uibuilder.UIBuilderData;
+import funkin.editors.uibuilder.UIHXData;
+import funkin.editors.uibuilder.LiveStateHost;
+import funkin.editors.uibuilder.LiveStateHost.LiveMemberInfo;
+import funkin.editors.uibuilder.UIHXStateBridge;
 import openfl.events.IOErrorEvent;
 import openfl.net.FileFilter;
 import openfl.net.FileReference;
@@ -90,6 +94,12 @@ class UIBuilderEditor extends UIState {
 	public var showGrid:Bool = true;
 	public var gridSize:Int = 16;
 	public var snapToGrid:Bool = false;
+
+	// ── Modo de Teste Interativo ─────────────────────────────
+	public var isTestMode:Bool = false;
+	public var testModeGroup:FlxTypedGroup<FlxBasic>;
+	public var testModeExitBtn:UIButton;
+	public var testModeToast:UIText;
 
 	// ── Histórico (Undo / Redo) ───────────────────────────────
 	public var undoStack:Array<String> = [];
@@ -169,6 +179,33 @@ class UIBuilderEditor extends UIState {
 
 		add(uiGroup);
 
+		// Grupo do Modo de Teste Interativo
+		testModeGroup = new FlxTypedGroup<FlxBasic>();
+		testModeGroup.cameras = [uiCamera];
+		testModeGroup.visible = false;
+
+		var bannerBorder = new FlxSprite((FlxG.width - 664) * 0.5, 6).makeSolid(664, 40, 0xFF00FFC8);
+		bannerBorder.alpha = 0.6;
+		testModeGroup.add(bannerBorder);
+
+		var bannerBg = new FlxSprite((FlxG.width - 660) * 0.5, 8).makeSolid(660, 36, 0xEE12121C);
+		testModeGroup.add(bannerBg);
+
+		var lblTest = new UIText(bannerBg.x + 15, bannerBg.y + 8, 460, "▶ MODO DE TESTE ATIVO [Cima/Baixo/Enter/Mouse]", 12);
+		testModeGroup.add(lblTest);
+
+		testModeExitBtn = new UIButton(bannerBg.x + 480, bannerBg.y + 5, "[ESC] Voltar ao Editor", function() {
+			exitTestMode();
+		}, 165, 26);
+		testModeExitBtn.color = 0xFFFF4455;
+		testModeGroup.add(testModeExitBtn);
+
+		testModeToast = new UIText((FlxG.width - 700) * 0.5, bannerBg.y + 46, 700, "", 14);
+		testModeToast.alignment = CENTER;
+		testModeGroup.add(testModeToast);
+
+		add(testModeGroup);
+
 		_refreshCanvas();
 		_refreshHierarchy();
 		_syncProperties();
@@ -189,6 +226,7 @@ class UIBuilderEditor extends UIState {
 						label: "New Project (Blank)",
 						keybind: [CONTROL, N],
 						onSelect: function(_) {
+							LiveStateHost.destroyCurrentState();
 							project = UIBuilderData.createDefaultProject("UntitledUI");
 							selectedIndex = -1;
 							_recordHistory();
@@ -208,6 +246,16 @@ class UIBuilderEditor extends UIState {
 						label: "Save (JSON)",
 						keybind: [CONTROL, S],
 						onSelect: function(_) { _saveJsonDialog(); }
+					},
+					{
+						label: "Open UIHX (.uihx)...",
+						keybind: [CONTROL, SHIFT, O],
+						onSelect: function(_) { _openUIHXDialog(); }
+					},
+					{
+						label: "Save UIHX (.uihx)",
+						keybind: [CONTROL, SHIFT, S],
+						onSelect: function(_) { _saveUIHXDialog(); }
 					},
 					null,
 					{
@@ -324,6 +372,34 @@ class UIBuilderEditor extends UIState {
 					{
 						label: "Dialogue Box Frame",
 						onSelect: function(_) { _addPresetDialogueBox(); }
+					},
+					null,
+					{
+						label: "MainMenuState (Real Code)",
+						onSelect: function(_) { _inspectLiveState("MainMenuState"); }
+					},
+					{
+						label: "PauseSubState (Real Code)",
+						onSelect: function(_) { _inspectLiveState("PauseSubState"); }
+					},
+					{
+						label: "StoryMenuState (Real Code)",
+						onSelect: function(_) { _inspectLiveState("StoryMenuState"); }
+					}
+				]
+			},
+			{
+				label: "Live Code",
+				childs: [
+					{
+						label: "Test Menu (Play Mode)",
+						keybind: [F5],
+						onSelect: function(_) { enterTestMode(); }
+					},
+					{
+						label: "Run in Full Game (Transition)",
+						keybind: [F6],
+						onSelect: function(_) { _runInFullGame(); }
 					}
 				]
 			}
@@ -619,6 +695,37 @@ class UIBuilderEditor extends UIState {
 
 	// ── Atualização e Interação ────────────────────────────────
 	public override function update(elapsed:Float) {
+		if (FlxG.keys.justPressed.F5) {
+			if (isTestMode) exitTestMode();
+			else enterTestMode();
+			return;
+		}
+
+		if (isTestMode) {
+			if (FlxG.keys.justPressed.ESCAPE || controls.BACK) {
+				exitTestMode();
+				return;
+			}
+
+			if (FlxG.mouse.justPressed && testModeExitBtn != null && testModeExitBtn.visible) {
+				if (FlxG.mouse.screenX >= testModeExitBtn.x && FlxG.mouse.screenX <= testModeExitBtn.x + testModeExitBtn.bWidth &&
+				    FlxG.mouse.screenY >= testModeExitBtn.y && FlxG.mouse.screenY <= testModeExitBtn.y + testModeExitBtn.bHeight) {
+					exitTestMode();
+					return;
+				}
+			}
+
+			super.update(elapsed);
+
+			LiveStateHost.updateInteractive(elapsed);
+
+			if (LiveStateHost.lastInterceptedStateChange != null) {
+				testModeToast.text = '[Ação Interceptada] Redirecionamento para: ' + LiveStateHost.lastInterceptedStateChange;
+				LiveStateHost.lastInterceptedStateChange = null;
+			}
+			return;
+		}
+
 		super.update(elapsed);
 
 		_handleCanvasInput();
@@ -781,6 +888,30 @@ class UIBuilderEditor extends UIState {
 
 	// ── Renderização do Canvas e Previews ─────────────────────
 	function _refreshCanvas() {
+		if (LiveStateHost.scrapedMembers.length > 0 && LiveStateHost.scrapedMembers.length == project.elements.length) {
+			previewGroup.clear();
+			for (i in 0...LiveStateHost.scrapedMembers.length) {
+				var info = LiveStateHost.scrapedMembers[i];
+				var el = project.elements[i];
+				if (info != null && info.sprite != null && el != null) {
+					info.sprite.x = el.x;
+					info.sprite.y = el.y;
+					info.sprite.alpha = el.alpha;
+					info.sprite.visible = el.visible;
+					if (el.width > 0 && el.height > 0 && (info.sprite.width != el.width || info.sprite.height != el.height)) {
+						info.sprite.setGraphicSize(el.width, el.height);
+						info.sprite.updateHitbox();
+					}
+					if (el.extra != null && el.extra.rotation != null) {
+						info.sprite.angle = el.extra.rotation;
+					}
+					info.sprite.cameras = [canvasCamera];
+					previewGroup.add(info.sprite);
+				}
+			}
+			return;
+		}
+
 		for (sprite in previewGroup.members.copy())
 			if (sprite != null) sprite.destroy();
 		previewGroup.clear();
@@ -1098,6 +1229,92 @@ class UIBuilderEditor extends UIState {
 		}));
 	}
 
+	function _saveUIHXDialog() {
+		var screenDef = UIHXData.fromProjectData(project, STATE, project.name);
+		var uihxStr = UIHXData.stringify(screenDef);
+		openSubState(new SaveSubstate(uihxStr, {
+			defaultSaveFile: '${project.name}.uihx'
+		}));
+	}
+
+	function _openUIHXDialog() {
+		#if sys
+		var fileRef = new FileReference();
+		fileRef.addEventListener(openfl.events.Event.SELECT, function(_) {
+			fileRef.load();
+		});
+		fileRef.addEventListener(openfl.events.Event.COMPLETE, function(_) {
+			var content:String = fileRef.data.toString();
+			var loadedProject:UIProjectData;
+			try {
+				var screenDef = UIHXData.parse(content);
+				loadedProject = UIHXData.toProjectData(screenDef);
+			} catch (e:Dynamic) {
+				openSubState(new UIWarningSubstate("Could not open UIHX screen", 'The selected .uihx file could not be loaded.\n\n${Std.string(e)}', [
+					{label: "OK", onClick: function(_) {}}
+				]));
+				return;
+			}
+
+			project = loadedProject;
+			selectedIndex = -1;
+			undoStack = [];
+			redoStack = [];
+			_refreshCanvasSurface();
+			_refreshCanvas();
+			_refreshHierarchy();
+			_fitCanvasToView();
+		});
+		fileRef.browse([new FileFilter("UIHX Screen Layout (*.uihx)", "*.uihx")]);
+		#end
+	}
+
+	function _loadUIHXTemplate(screenName:String, screenType:UIHXScreenType) {
+		var templateDef = UIHXData.createScreenTemplate(screenName, screenType);
+		project = UIHXData.toProjectData(templateDef);
+		selectedIndex = -1;
+		undoStack = [];
+		redoStack = [];
+		_refreshCanvasSurface();
+		_refreshCanvas();
+		_refreshHierarchy();
+		_fitCanvasToView();
+	}
+
+	function _inspectLiveState(className:String) {
+		previewGroup.clear();
+		LiveStateHost.destroyCurrentState();
+		var liveMembers:Array<LiveMemberInfo> = [];
+		try {
+			liveMembers = LiveStateHost.loadLiveState(className, canvasCamera);
+		} catch (e:Dynamic) {
+			openSubState(new UIWarningSubstate("Live State Error", 'Could not instantiate $className: ${Std.string(e)}', [
+				{label: "OK", onClick: function(_) {}}
+			]));
+			return;
+		}
+
+		if (liveMembers.length == 0) {
+			openSubState(new UIWarningSubstate("Live State Inspection", 'No visual display members were found in $className.', [
+				{label: "OK", onClick: function(_) {}}
+			]));
+			return;
+		}
+
+		var shortName = className.split(".").pop();
+		var isSub = shortName.toLowerCase().indexOf("substate") >= 0;
+		var screenDef = UIHXStateBridge.captureLiveStateToUIHX(liveMembers, shortName, isSub ? SUBSTATE : STATE, className);
+		project = UIHXData.toProjectData(screenDef);
+		selectedIndex = -1;
+		undoStack = [];
+		redoStack = [];
+
+		_refreshCanvasSurface();
+		_refreshCanvas();
+		_refreshHierarchy();
+		_fitCanvasToView();
+	}
+
 	function _exportHScriptDialog() {
 		var code = UIBuilderData.generateHScript(project);
 		openSubState(new SaveSubstate(code, {
@@ -1178,5 +1395,85 @@ class UIBuilderEditor extends UIState {
 				g.setPixel32(w - 1, y, color);
 			}
 		}
+	}
+
+	public function enterTestMode():Void {
+		if (isTestMode) return;
+		if (LiveStateHost.currentActiveState == null) {
+			openSubState(new UIWarningSubstate("Nenhum State Ativo", "Selecione e execute um State pelo menu 'Live Code' antes de iniciar o teste interativo.", [
+				{label: "OK", onClick: function(_) {}}
+			]));
+			return;
+		}
+
+		isTestMode = true;
+		uiGroup.visible = false;
+		selectionBox.visible = false;
+		selectionHandle.visible = false;
+		gridSpr.visible = false;
+		testModeGroup.visible = true;
+		testModeToast.text = "";
+
+		_refreshCanvas();
+		LiveStateHost.enableInteractiveMode();
+	}
+
+	public function exitTestMode():Void {
+		if (!isTestMode) return;
+
+		LiveStateHost.disableInteractiveMode();
+
+		isTestMode = false;
+		testModeGroup.visible = false;
+		uiGroup.visible = true;
+		gridSpr.visible = showGrid;
+
+		_refreshCanvas();
+		_updateSelectionBox();
+		_syncProperties();
+	}
+
+	function _runInFullGame():Void {
+		if (LiveStateHost.currentActiveState == null) {
+			openSubState(new UIWarningSubstate("Nenhum State Ativo", "Selecione e execute um State pelo menu 'Live Code' antes de testar em tela cheia no jogo.", [
+				{label: "OK", onClick: function(_) {}}
+			]));
+			return;
+		}
+
+		var className = Type.getClassName(Type.getClass(LiveStateHost.currentActiveState));
+		var shortName = className.split(".").pop();
+
+		// Salva o layout .uihx automaticamente antes de transicionar
+		var screenDef = UIHXData.fromProjectData(project, (shortName.toLowerCase().indexOf("substate") >= 0) ? SUBSTATE : STATE, project.name);
+		var uihxStr = UIHXData.stringify(screenDef);
+		#if sys
+		try {
+			var dir = "assets/data/ui";
+			if (!sys.FileSystem.exists(dir)) sys.FileSystem.createDirectory(dir);
+			sys.io.File.saveContent('$dir/${shortName.toLowerCase()}.uihx', uihxStr);
+		} catch (e:Dynamic) {}
+		#end
+
+		LiveStateHost.destroyCurrentState();
+
+		switch (shortName) {
+			case "MainMenuState":
+				FlxG.switchState(new funkin.menus.MainMenuState());
+			case "StoryMenuState":
+				FlxG.switchState(new funkin.menus.StoryMenuState());
+			case "ModSwitchMenu":
+				FlxG.switchState(new funkin.menus.ModSwitchMenu());
+			case "PauseSubState":
+				FlxG.switchState(new funkin.game.PlayState());
+			default:
+				var cls = Type.resolveClass(className);
+				if (cls != null) FlxG.switchState(Type.createInstance(cls, []));
+		}
+	}
+
+	override function destroy() {
+		LiveStateHost.destroyCurrentState();
+		super.destroy();
 	}
 }

@@ -30,6 +30,7 @@ import animate.FlxAnimateFrames;
 
 using StringTools;
 
+@:keep
 @:allow(funkin.desktop.editors.CharacterEditor)
 @:allow(funkin.game.StrumLine)
 @:allow(funkin.game.PlayState)
@@ -69,6 +70,7 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 	}
 
 	public var playerOffsets:Bool = false;
+	public var singEndTime:Float = 0;
 
 	public var icon:String = null;
 	public var iconColor:Null<FlxColor> = null;
@@ -100,6 +102,71 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 	public var globalOffset:FlxPoint = FlxPoint.get(0, 0);
 	public var extraOffset:FlxPoint = FlxPoint.get(0, 0);
 	public var positionOffset:FlxPoint = FlxPoint.get(0, 0);
+
+	@:noCompletion private var _cameraPosition:Array<Float> = [0.0, 0.0];
+	public var cameraPosition(get, set):Array<Float>;
+	private function get_cameraPosition():Array<Float> {
+		if (_cameraPosition == null) _cameraPosition = [0.0, 0.0];
+		_cameraPosition[0] = cameraOffset != null ? cameraOffset.x : 0.0;
+		_cameraPosition[1] = cameraOffset != null ? cameraOffset.y : 0.0;
+		return _cameraPosition;
+	}
+	private function set_cameraPosition(v:Array<Float>):Array<Float> {
+		if (v != null) {
+			_cameraPosition = v;
+			if (cameraOffset != null) {
+				cameraOffset.set(v.length > 0 ? v[0] : 0.0, v.length > 1 ? v[1] : 0.0);
+			}
+		}
+		return v;
+	}
+
+	@:noCompletion private var _positionArray:Array<Float> = [0.0, 0.0];
+	public var positionArray(get, set):Array<Float>;
+	private function get_positionArray():Array<Float> {
+		if (_positionArray == null) _positionArray = [0.0, 0.0];
+		_positionArray[0] = getCharacterPositionX();
+		_positionArray[1] = getCharacterPositionY();
+		return _positionArray;
+	}
+	private function set_positionArray(v:Array<Float>):Array<Float> {
+		if (v != null) {
+			_positionArray = v;
+			var vx = v.length > 0 ? v[0] : 0.0;
+			var vy = v.length > 1 ? v[1] : 0.0;
+			setCharacterPosition(vx, vy);
+		}
+		return v;
+	}
+
+	public function getCharacterPositionX():Float {
+		if (isPsychCamera) return positionOffset != null ? positionOffset.x : 0.0;
+		if (positionOffset != null && positionOffset.x != 0) return positionOffset.x;
+		return globalOffset != null ? globalOffset.x : 0.0;
+	}
+
+	public function getCharacterPositionY():Float {
+		if (isPsychCamera) return positionOffset != null ? positionOffset.y : 0.0;
+		if (positionOffset != null && positionOffset.y != 0) return positionOffset.y;
+		return globalOffset != null ? globalOffset.y : 0.0;
+	}
+
+	public function setCharacterPosition(newX:Null<Float>, newY:Null<Float>):Void {
+		var usePositionOffset = isPsychCamera || (positionOffset != null && (positionOffset.x != 0 || positionOffset.y != 0));
+		if (usePositionOffset) {
+			if (positionOffset != null) {
+				if (newX != null) positionOffset.x = newX;
+				if (newY != null) positionOffset.y = newY;
+			}
+		} else {
+			if (globalOffset != null) {
+				if (newX != null) globalOffset.x = newX;
+				if (newY != null) globalOffset.y = newY;
+			}
+		}
+	}
+
+
 
 	public var xml:Access;
 	public var scripts:ScriptPack;
@@ -230,6 +297,26 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 		}
 	}
 
+	public function isHoldingNote():Bool {
+		if (singEndTime > funkin.backend.system.Conductor.songPosition) return true;
+		if (PlayState.instance == null || PlayState.instance.strumLines == null) return false;
+		for (sl in PlayState.instance.strumLines.members) {
+			if (sl == null || sl.characters == null) continue;
+			var isGf = (PlayState.instance.gf == this);
+			var hasChar = sl.characters.contains(this) || (isGf && ((sl.data != null && sl.data.type == 2) || (PlayState.instance.boyfriend != null && sl.characters.contains(PlayState.instance.boyfriend))));
+			if (hasChar) {
+				if (!sl.cpu && !sl.botplay && sl.isAnyPressed()) return true;
+				if (sl.notes != null && sl.notes.members != null) {
+					for (n in sl.notes.members) {
+						if (n != null && n.alive && n.isSustainNote && n.strumTime <= (funkin.backend.system.Conductor.songPosition + 50) && (n.strumTime + n.sustainLength) >= (funkin.backend.system.Conductor.songPosition - 50))
+							return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	public function tryDance() {
 		var event = new CancellableEvent();
 		scripts.call("onTryDance", [event]);
@@ -243,29 +330,7 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 
 		switch (lastAnimContext) {
 			case SING | MISS:
-				var isHolding = false;
-				if (PlayState.instance != null && PlayState.instance.strumLines != null) {
-					for (sl in PlayState.instance.strumLines.members) {
-						if (sl == null || sl.characters == null) continue;
-						var hasChar = sl.characters.contains(this) || (PlayState.instance.gf == this && ((sl.data != null && sl.data.type == 2) || (PlayState.instance.boyfriend != null && sl.characters.contains(PlayState.instance.boyfriend))));
-						if (hasChar) {
-							if (!sl.cpu && !sl.botplay && sl.isAnyPressed()) {
-								isHolding = true;
-								break;
-							}
-							if (sl.notes != null && sl.notes.members != null) {
-								for (n in sl.notes.members) {
-									if (n != null && n.alive && n.isSustainNote && n.strumTime <= Conductor.songPosition && (n.strumTime + n.sustainLength) >= Conductor.songPosition) {
-										isHolding = true;
-										break;
-									}
-								}
-							}
-							if (isHolding) break;
-						}
-					}
-				}
-				if (isHolding) {
+				if (isHoldingNote()) {
 					lastHit = Conductor.songPosition;
 					return;
 				}
@@ -389,12 +454,25 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 	}
 
 	public override function playAnim(AnimName:String, ?Force:Bool, Context:PlayAnimContext = NONE, Reversed:Bool = false, Frame:Int = 0) {
+		var isIdle = (AnimName == "idle" || StringTools.startsWith(AnimName, "idle") || AnimName == "danceLeft" || AnimName == "danceRight");
+		if (isIdle && (lastAnimContext == SING || (animation.curAnim != null && StringTools.startsWith(animation.curAnim.name, "sing"))) && isHoldingNote()) {
+			return;
+		}
+
 		var event = EventManager.get(PlayAnimEvent).recycle(AnimName, Force, Reversed, Frame, Context);
 		scripts.call("onPlayAnim", [event]);
 		if (event.cancelled) return;
 
 		specialAnim = false;
 		super.playAnim(event.animName, event.force, event.context, event.reverse, event.startingFrame);
+
+		if (isPsychCamera) {
+			var daOffset = getAnimOffset(event.animName);
+			var sx = scale.x != 0 ? scale.x : 1;
+			var sy = scale.y != 0 ? scale.y : 1;
+			frameOffset.set(daOffset.x / sx, daOffset.y / sy);
+			daOffset.putWeak();
+		}
 
 		offset.set((isPlayer != playerOffsets) ? globalOffset.x : -globalOffset.x, -globalOffset.y);
 		if (event.context == SING || event.context == MISS)
@@ -418,16 +496,26 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 	}
 
 	public override function destroy() {
+		flixel.tweens.FlxTween.cancelTweensOf(this);
+
 		if(scripts != null) {
 			scripts.call('destroy');
-			scripts.destroy();
+			scripts = flixel.util.FlxDestroyUtil.destroy(scripts);
 		}
-		super.destroy();
 
-		cameraOffset.put();
-		globalOffset.put();
-		extraOffset.put();
-		positionOffset.put();
+		if (animOffsets != null) {
+			for (p in animOffsets) {
+				if (p != null) p.put();
+			}
+			animOffsets.clear();
+		}
+
+		if (cameraOffset != null) cameraOffset.put();
+		if (globalOffset != null) globalOffset.put();
+		if (extraOffset != null) extraOffset.put();
+		if (positionOffset != null) positionOffset.put();
+
+		super.destroy();
 	}
 
 	@:noCompletion var __reverseTrailProcedure:Bool = false;
@@ -551,6 +639,7 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 
 		fixChar(__switchAnims, !hasInterval);
 		dance();
+		Logs.trace('Character ${curCharacter} built: anims=${animation.getNameList()} curAnim=${getAnimName()} frame=${frame != null ? frame.name : "<null>"} pos=($x, $y) scale=(${scale.x}, ${scale.y}) flipX=$flipX', TRACE);
 
 		for (info in xmlImportedScripts) if (info.shortLived) {
 			var script = info.getScript();
@@ -742,7 +831,7 @@ class Character extends FunkinSprite implements IBeatReceiver implements IOffset
 		}
 
 		var spriteName:String = CharacterJSONAdapter.getSpritePath(data, charName);
-		var isPlayer:Bool = CharacterJSONAdapter.getIsPlayer(data);
+		var isPlayer:Bool = CharacterJSONAdapter.getIsPlayer(data, charName);
 		var flipX:Bool = data.flip_x == true || data.flipX == true;
 		var holdTime:Float = data.sing_duration != null ? data.sing_duration : (data.holdTime != null ? data.holdTime : 4);
 		var scale:Float = data.scale != null ? data.scale : 1;

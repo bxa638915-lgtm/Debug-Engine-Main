@@ -175,6 +175,7 @@ class MusicBeatSubstate extends FlxSubState implements IBeatCancellableReceiver
 	public override function createPost() {
 		super.createPost();
 		call("postCreate");
+		funkin.editors.uibuilder.UIHXStateBridge.apply(this, Type.getClassName(Type.getClass(this)));
 	}
 	public function call(name:String, ?args:Array<Dynamic>, ?defaultVal:Dynamic):Dynamic {
 		// calls the function on the assigned script

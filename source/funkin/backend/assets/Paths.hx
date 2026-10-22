@@ -85,8 +85,11 @@ class Paths
 
 		idx = file.lastIndexOf(".");
 		if (idx != -1) {
-			e.unshift(file.substr(idx + 1));
-			file = file.substr(0, idx);
+			var extCandidate = file.substr(idx + 1);
+			if (extCandidate.length > 0 && ~/^[a-zA-Z0-9_]+$/.match(extCandidate)) {
+				e.unshift(extCandidate);
+				file = file.substr(0, idx);
+			}
 		}
 
 		var prefix = library == null ? 'assets/' : '$library:assets/';
@@ -182,6 +185,23 @@ class Paths
 
 	static public function image(key:String, ?library:String, checkForAtlas:Bool = true, ?ext:OneOfTwo<String, Array<String>>) {
 		final defaultPath = getPath('images/$key', library, ext != null ? ext : Flags.IMAGE_EXTS);
+		if (Assets.exists(defaultPath)) {
+			if (checkForAtlas) {
+				final ogExt = Path.extension(defaultPath);
+				var atlasPath = getPath('images/$key/spritemap1', library, ext != null ? ext : Flags.IMAGE_EXTS);
+				var multiplePath = getPath('images/$key/1', library, ext != null ? ext : Flags.IMAGE_EXTS);
+				if (atlasPath != null && Assets.exists(atlasPath)) return atlasPath.substr(0, atlasPath.length - 15) + '.$ogExt';
+				if (multiplePath != null && Assets.exists(multiplePath)) return multiplePath.substr(0, multiplePath.length - 6) + '.$ogExt';
+			}
+			return defaultPath;
+		}
+		if (key != null) {
+			var slug = key.toLowerCase().replace(" ", "-");
+			if (slug != key) {
+				var slugPath = getPath('images/$slug', library, ext != null ? ext : Flags.IMAGE_EXTS);
+				if (Assets.exists(slugPath)) return slugPath;
+			}
+		}
 		if (checkForAtlas) {
 			final ogExt = Path.extension(defaultPath);
 			var atlasPath = getPath('images/$key/spritemap1', library, ext != null ? ext : Flags.IMAGE_EXTS);

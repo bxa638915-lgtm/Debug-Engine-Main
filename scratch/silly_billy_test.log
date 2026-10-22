@@ -1,0 +1,13 @@
+--- STDOUT ---
+[0m[37m[  [0m[35m14:34:49[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[37mSwitched to mod: [0m[92m(TioDragonX) BUGFIX - Silly Billy (V3) FANCHARTED--716807--07eadb22-24ab-424d-bca4-95f178e812a4[0m
+
+[0m[37m[  [0m[35m14:34:50[0m[37m  |[0m[33m   WARNING   [0m[37m] [0m[93mMod package was not loaded: Invalid directory[0m
+
+[0m[37m[  [0m[35m14:34:50[0m[37m  |[0m[96m INFORMATION [0m[37m] [0m[94m[Language] [0m[37mFound languages: en/English, es/Español, it/Italiano, pl/Polski, pt/Português[0m
+
+[0m[37m[  [0m[35m14:34:50[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[94m[Language] [0m[37mSetting Language To: [0m[92mEnglish (en)[0m
+
+[0m[37m[  [0m[35m14:34:52[0m[37m  |[0m[96m INFORMATION [0m[37m] [0m[94m[Discord] [0m[37mConnected to User Dev S.Hx ([0m[90mdev_scx4dc[0m[37m)[0m
+
+
+--- STDERR ---

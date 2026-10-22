@@ -69,6 +69,27 @@ class PsychLuaSubState extends FlxSubState
 			justOpened = false;
 			return;
 		}
+
+		var isGameOver = substateName.toLowerCase().indexOf("gameover") >= 0 || (game != null && (game.health <= 0 || !game.canDie));
+		var controls = funkin.options.PlayerSettings.solo.controls;
+		if (isGameOver)
+		{
+			if (controls.BACK || flixel.FlxG.keys.justPressed.ESCAPE)
+			{
+				if (flixel.FlxG.sound.music != null) flixel.FlxG.sound.music.stop();
+				flixel.FlxG.sound.music = null;
+				flixel.FlxG.switchState(PlayState.isStoryMode ? new funkin.menus.StoryMenuState() : new funkin.menus.FreeplayState());
+				return;
+			}
+			if (controls.RESET || flixel.FlxG.keys.justPressed.R)
+			{
+				funkin.backend.MusicBeatState.skipTransOut = true;
+				var request = funkin.backend.assets.SongLoadRequest.fromPlayState("retry");
+				funkin.backend.assets.SongLoader.start(request, () -> PlayState.SONG);
+				return;
+			}
+		}
+
 		if (game != null && game.scripts != null)
 			game.scripts.call("onCustomSubstateUpdate", [substateName, elapsed]);
 		super.update(elapsed);

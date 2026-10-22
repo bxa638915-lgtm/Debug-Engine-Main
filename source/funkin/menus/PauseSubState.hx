@@ -43,6 +43,9 @@ class PauseSubState extends MusicBeatSubstate
 	public var game:PlayState = PlayState.instance; // shortcut
 
 	private var __cancelDefault:Bool = false;
+	private var skipTimeSelected:Float = 0;
+	private var songLength:Float = 0;
+	private var hasChangedSkipTime:Bool = false;
 
 	public function new(?items:Array<String>, ?selectCall:NameEvent->Void, ?excludeList:Array<ParentDisableable>) {
 		super();
@@ -56,6 +59,9 @@ class PauseSubState extends MusicBeatSubstate
 	override function create()
 	{
 		super.create();
+
+		songLength = (game != null && game.inst != null && game.inst.length > 0) ? game.inst.length : (FlxG.sound.music != null ? FlxG.sound.music.length : 0);
+		skipTimeSelected = Conductor.songPosition > 0 ? Conductor.songPosition : 0;
 
 		if (menuItems.contains("Exit to charter") && !PlayState.chartingMode)
 			menuItems.remove("Exit to charter");
@@ -116,7 +122,7 @@ class PauseSubState extends MusicBeatSubstate
 		for (i in 0...menuItems.length)
 		{
 			var pauseId = "pause." + TU.raw2Id(menuItems[i]);
-			var songText:Alphabet = new Alphabet(0, (70 * i) + 30, TU.translate(pauseId), "bold");
+			var songText:Alphabet = new Alphabet(0, (70 * i) + 30, TU.translate(pauseId, null, menuItems[i]), "bold");
 			songText.isMenuItem = true;
 			songText.targetY = i;
 			grpMenuShit.add(songText);
@@ -132,7 +138,7 @@ class PauseSubState extends MusicBeatSubstate
 	override function createPost() {
 		super.createPost();
 		pauseScript.call("postCreate");
-		game.updateDiscordPresence();
+		if (game != null) game.updateDiscordPresence();
 	}
 
 	override function update(elapsed:Float)
@@ -153,6 +159,26 @@ class PauseSubState extends MusicBeatSubstate
 		if (upP || downP || scroll != 0)  // like this we wont break mods that expect a 0 change event when calling sometimes  - Nex
 			changeSelection((upP ? -1 : 0) + (downP ? 1 : 0) - scroll);
 
+		if (menuItems[curSelected] == "Skip Time")
+		{
+			var left = controls.LEFT_P;
+			var right = controls.RIGHT_P;
+			if (left || right)
+			{
+				hasChangedSkipTime = true;
+				var step:Float = FlxG.keys.pressed.SHIFT ? 20000 : 5000;
+				if (left) skipTimeSelected -= step;
+				if (right) skipTimeSelected += step;
+
+				if (skipTimeSelected < 0) skipTimeSelected = 0;
+				if (songLength > 0 && skipTimeSelected > songLength - 1000)
+					skipTimeSelected = songLength - 1000;
+
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
+				updateSkipTimeLabel();
+			}
+		}
+
 		if (controls.ACCEPT)
 			selectOption();
 	}
@@ -166,6 +192,31 @@ class PauseSubState extends MusicBeatSubstate
 		switch (event.name)
 		{
 			case "Resume":
+				close();
+			case "Skip Time":
+				var target = skipTimeSelected;
+				if (!hasChangedSkipTime) {
+					if (Conductor.songPosition <= 0) {
+						var firstNote = game.getFirstNoteTime();
+						target = firstNote > 2000 ? (firstNote - 1200) : 5000;
+					} else {
+						target += 5000;
+					}
+				}
+
+				if (target < Conductor.songPosition) {
+					// Ao retroceder, reinicia o estado do zero e salta até o target
+					// (exatamente como a Psych Engine faz), garantindo que personagens,
+					// eventos, estágios, shaders e variáveis voltem ao estado correto daquele instante!
+					PlayState.startOnTime = target <= 100 ? 0 : target;
+					parentDisabler.reset();
+					game.registerSmoothTransition();
+					var request = SongLoadRequest.fromPlayState("retry");
+					SongLoader.start(request, () -> PlayState.SONG);
+					return;
+				}
+
+				game.skipTime(target);
 				close();
 			case "Restart Song":
 				parentDisabler.reset();
@@ -226,6 +277,33 @@ class PauseSubState extends MusicBeatSubstate
 			item.targetY = i - curSelected;
 
 			item.alpha = (item.targetY == 0) ? 1 : 0.6;
+		}
+
+		updateSkipTimeLabel();
+	}
+
+	private function formatTime(ms:Float):String {
+		if (ms < 0) ms = 0;
+		var totalSeconds = Math.floor(ms / 1000);
+		var minutes = Math.floor(totalSeconds / 60);
+		var seconds = totalSeconds % 60;
+		var secStr = seconds < 10 ? "0" + seconds : "" + seconds;
+		var minStr = minutes < 10 ? "0" + minutes : "" + minutes;
+		return '$minStr:$secStr';
+	}
+
+	private function updateSkipTimeLabel():Void {
+		var idx = menuItems.indexOf("Skip Time");
+		if (idx != -1 && grpMenuShit != null && idx < grpMenuShit.members.length) {
+			var item = grpMenuShit.members[idx];
+			if (item != null) {
+				var baseText = TU.translate("pause.skipTime", null, "Skip Time");
+				if (curSelected == idx) {
+					item.text = '< $baseText: ${formatTime(skipTimeSelected)} / ${formatTime(songLength)} >';
+				} else {
+					item.text = baseText;
+				}
+			}
 		}
 	}
 }

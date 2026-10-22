@@ -9,6 +9,11 @@ import haxe.Log;
 
 final class Logs {
 	private static var __showing:Bool = false;
+	#if sys
+	private static var __logFileReady:Bool = false;
+	private static var __latestLogPath:String = "logs/dbe_console_latest.log";
+	private static var __errorsLogPath:String = "logs/dbe_errors_latest.log";
+	#end
 
 	public static final LOG_WARNING_TEXT =     '   WARNING   ';
 	public static final LOG_ERROR_TEXT =       '    ERROR    ';
@@ -20,13 +25,16 @@ final class Logs {
 
 	public static var nativeTrace = Log.trace;
 	public static function init() {
+		#if sys
+		initLogFiles();
+		#end
 		Log.trace = function(v:Dynamic, ?infos:Null<haxe.PosInfos>) {
 			var data = [
-				logText('${infos.fileName}:${infos.lineNumber}: ', CYAN, TRACE),
+				logText('${infos != null ? infos.fileName : "?"}:${infos != null ? infos.lineNumber : 0}: ', CYAN, TRACE),
 				logText(Std.string(v), LIGHTGRAY, TRACE)
 			];
 
-			if (infos.customParams != null) {
+			if (infos != null && infos.customParams != null) {
 				for (i in infos.customParams) {
 					data.push(
 						logText("," + Std.string(i), LIGHTGRAY, TRACE)
@@ -83,6 +91,40 @@ final class Logs {
 		};
 	}
 
+	#if sys
+	private static function initLogFiles():Void {
+		if (__logFileReady) return;
+		__logFileReady = true;
+		try {
+			if (!sys.FileSystem.exists("logs")) {
+				sys.FileSystem.createDirectory("logs");
+			}
+			var header = '=== DBE Console Log Started at ${Date.now().toString()} | Args: ${Sys.args().join(" ")} ===\n';
+			sys.io.File.saveContent(__latestLogPath, header);
+			sys.io.File.saveContent(__errorsLogPath, header);
+		} catch (_:Dynamic) {}
+	}
+
+	private static function appendToLogFile(plainLine:String, level:Level):Void {
+		try {
+			if (!__logFileReady) initLogFiles();
+			var out = sys.io.File.append(__latestLogPath, false);
+			out.writeString(plainLine + "\n");
+			out.flush();
+			out.close();
+
+			if (level == WARNING || level == ERROR || level == FAILURE
+				|| plainLine.indexOf("ERROR") != -1 || plainLine.indexOf("WARNING") != -1
+				|| plainLine.indexOf("Exception") != -1 || plainLine.indexOf("Failed") != -1) {
+				var errOut = sys.io.File.append(__errorsLogPath, false);
+				errOut.writeString(plainLine + "\n");
+				errOut.flush();
+				errOut.close();
+			}
+		} catch (_:Dynamic) {}
+	}
+	#end
+
 	public static function prepareColoredTrace(text:Array<LogText>, level:Level = INFO) {
 		var time = Date.now();
 		var superCoolText = [
@@ -115,6 +157,11 @@ final class Logs {
 	}
 
 	public static function __showInConsole(text:Array<LogText>) {
+		var plainLine = [for(t in text) t.text.replace("\r", "")].join("");
+		var lineLevel:Level = (text != null && text.length > 0) ? text[0].level : INFO;
+		#if sys
+		try dbe.compatibility.rea.DBEConsoleCapture.recordLog(plainLine, lineLevel) catch (_:Dynamic) {}
+		#end
 		#if (sys && !mobile)
 		while(__showing) {
 			Sys.sleep(0.05);
@@ -122,10 +169,11 @@ final class Logs {
 		__showing = true;
 		for(t in text) {
 			NativeAPI.setConsoleColors(t.color);
-			Sys.print(t.text);
+			Sys.print(t.text.replace("\r", ""));
 		}
 		NativeAPI.setConsoleColors();
-		Sys.println("\r");
+		Sys.println("");
+		try Sys.stdout().flush() catch (_:Dynamic) {}
 		__showing = false;
 		#elseif mobile
 		while(__showing) {
@@ -133,11 +181,11 @@ final class Logs {
 		}
 		__showing = true;
 		@:privateAccess
-		Sys.print([for(t in text) t.text].join(""));
+		Sys.print(plainLine);
 		__showing = false;
 		#else
 		@:privateAccess
-		nativeTrace([for(t in text) t.text].join(""));
+		nativeTrace(plainLine);
 		#end
 
 		#if IMGUI_ENABLED

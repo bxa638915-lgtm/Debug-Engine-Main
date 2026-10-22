@@ -37,7 +37,9 @@ class CharacterGhost extends Character {
 			alpha = 0.4; color = 0xFFAEAEAE;
 
 			var flxanim:FlxAnimation = animation._animations.get(anim);
-			animation.play(anim, true, false, flxanim.frames.length - 1);
+			if (flxanim == null || flxanim.frames == null || flxanim.frames.length == 0) continue;
+			var targetFrame = (anim == animName) ? animFrame : 0;
+			animation.play(anim, true, false, targetFrame);
 
 			setAnimOffset(anim);
 			super.draw();
@@ -65,7 +67,13 @@ class CharacterGhost extends Character {
 	public function setAnimOffset(anim:String) {
 		var daOffset:FlxPoint = animOffsets.get(anim);
 		if (daOffset != null) {
-			frameOffset.set(daOffset.x, daOffset.y);
+			if (isPsychCamera) {
+				var sx = scale.x != 0 ? scale.x : 1;
+				var sy = scale.y != 0 ? scale.y : 1;
+				frameOffset.set(daOffset.x / sx, daOffset.y / sy);
+			} else {
+				frameOffset.set(daOffset.x, daOffset.y);
+			}
 			daOffset.putWeak();
 		}
 

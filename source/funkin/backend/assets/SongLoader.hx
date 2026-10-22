@@ -115,6 +115,11 @@ class SongLoader {
 		return job == null ? null : job.errorMessage;
 	}
 
+	public static function getManifest(generation:Int):Null<SongAssetManifest> {
+		var job = getActive(generation);
+		return job == null ? null : job.manifest;
+	}
+
 	public static function takePrepared():Null<PreparedSong> {
 		if (active == null || active.report.status != "completed" || active.preparedTaken) return null;
 		active.preparedTaken = true;
@@ -160,13 +165,26 @@ class SongLoader {
 						if (loaded) job.audioDataByPath.set(entry.path, data);
 						else failure = "Audio data could not be decoded.";
 					}
+
+				case VIDEO:
+					#if VIDEO_CUTSCENES
+					try {
+						loaded = VideoPreloadCache.precacheVideo(entry.path);
+						if (!loaded) failure = "Video preload could not be initialized.";
+					} catch (e:Dynamic) {
+						failure = Std.string(e);
+					}
+					#else
+					loaded = true;
+					#end
 			}
 		} catch (e:Dynamic) {
 			failure = Std.string(e);
 		}
 
 		if (entry.kind == IMAGE) job.report.recordBitmap(entry.path, cacheHit);
-		else job.report.recordAudio(entry.path, cacheHit, loaded);
+		else if (entry.kind == AUDIO) job.report.recordAudio(entry.path, cacheHit, loaded);
+		else job.report.recordVideo(entry.path, loaded);
 
 		job.report.addPhaseTime("assets", elapsedMs(started));
 		if (failure != null) {
@@ -177,7 +195,7 @@ class SongLoader {
 			}
 		}
 
-		if (loaded && entry.kind == IMAGE) job.report.assetsLoaded++;
+		if (loaded && (entry.kind == IMAGE || entry.kind == VIDEO)) job.report.assetsLoaded++;
 	}
 
 	static function finish(job:LoadJob, status:String, phase:Null<String>, error:Null<String>):Void {

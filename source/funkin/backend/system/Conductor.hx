@@ -64,6 +64,10 @@ final class Conductor
 			return songPosition - (songOffset = Options.songOffset);
 	}
 
+	public static var rawSongPosition(get, set):Float;
+	private static inline function get_rawSongPosition():Float return @:bypassAccessor songPosition;
+	private static inline function set_rawSongPosition(val:Float):Float return @:bypassAccessor songPosition = val;
+
 	/**
 	 * Offset of the song
 	 */
@@ -376,7 +380,7 @@ final class Conductor
 		else {
 			var state = FlxG.state;
 			while (state != null) {
-				if (state is IBeatCancellableReceiver && cast(FlxG.state, IBeatCancellableReceiver).cancelConductorUpdate) return;
+				if (state is IBeatCancellableReceiver && cast(state, IBeatCancellableReceiver).cancelConductorUpdate) return;
 				state = state.subState;
 			}
 		}

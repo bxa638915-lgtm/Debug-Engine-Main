@@ -35,6 +35,7 @@ class PsychChartImporter
     // Import Meta
     base.meta.name = song.song;
     base.meta.rawSongName = song.song;
+    base.stage = (song.stage != null && song.stage != "") ? song.stage : 'mainStage';
     base.scrollSpeed = song.scrollSpeed != null ? song.scrollSpeed : 1.0;
     if (song.arrowSkin != null && song.arrowSkin != "") {
       base.arrowSkin = song.arrowSkin;
@@ -45,7 +46,7 @@ class PsychChartImporter
       base.meta.splashSkin = song.splashSkin;
     }
 
-    // Create 2 default strumlines (Opponent 0, Player 1)
+    // Create 3 default strumlines (Opponent 0, Player 1, Girlfriend 2)
     base.strumLines.push({
       characters: [song.player2 != null ? song.player2 : "dad"],
       type: 0,
@@ -60,13 +61,48 @@ class PsychChartImporter
       keyCount: 4,
       notes: []
     });
+    var gfName:String = (song.gfVersion != null && song.gfVersion != "") ? song.gfVersion : ((song.player3 != null && song.player3 != "") ? song.player3 : "gf");
+    base.strumLines.push({
+      characters: [gfName],
+      type: 2,
+      position: "girlfriend",
+      keyCount: 4,
+      notes: []
+    });
 
-    // Import Notes
+    // Import Notes & Section Events
     if (song.notes != null)
     {
+      var curBPM:Float = song.bpm != null ? song.bpm : 100;
+      var curCrochet:Float = ((60 / curBPM) * 1000);
+      var curTime:Float = 0;
+      var curCamTarget:Int = -1;
       var sections:Array<Dynamic> = cast song.notes;
       for (section in sections)
       {
+        if (section == null) continue;
+
+        var beatsPerMeasure:Float = (section.sectionBeats != null) ? section.sectionBeats : 4;
+        var targetStrum:Int = (section.gfSection == true) ? 2 : (section.mustHitSection == true ? 1 : 0);
+        if (curCamTarget != targetStrum) {
+          curCamTarget = targetStrum;
+          base.events.push({
+            time: curTime,
+            name: "Camera Movement",
+            params: [targetStrum],
+            global: true
+          });
+        }
+
+        if (section.changeBPM == true && section.bpm != null && section.bpm != curBPM) {
+          curCrochet = ((60 / (curBPM = section.bpm)) * 1000);
+          base.events.push({
+            time: curTime,
+            name: "BPM Change",
+            params: [section.bpm],
+            global: true
+          });
+        }
         if (section != null && section.sectionNotes != null)
         {
           var sectionNotes:Array<Dynamic> = cast section.sectionNotes;
@@ -100,6 +136,8 @@ class PsychChartImporter
             });
           }
         }
+
+        curTime += curCrochet * beatsPerMeasure;
       }
     }
 

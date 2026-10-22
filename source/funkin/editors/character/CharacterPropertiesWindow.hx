@@ -38,7 +38,9 @@ class CharacterPropertiesWindow extends UISliceSprite {
 			members.push(uiText); labels.set(ui, uiText);
 		}
 
-		positionXStepper = new UINumericStepper(x+16, y+36, character.globalOffset.x, 0.001, 2, null, null, 104);
+		var curPosX = character.getCharacterPositionX();
+		var curPosY = character.getCharacterPositionY();
+		positionXStepper = new UINumericStepper(x+16, y+36, curPosX, 0.001, 2, null, null, 104);
 		positionXStepper.onChange = (text:String) -> {
 			@:privateAccess positionXStepper.__onChange(text);
 			this.changePosition(positionXStepper.value, null);
@@ -48,7 +50,7 @@ class CharacterPropertiesWindow extends UISliceSprite {
 
 		members.push(positionXYComma = new UIText(positionXStepper.x+104-32+0, positionXStepper.y + 9, 0, ",", 22));
 
-		positionYStepper = new UINumericStepper(positionXStepper.x+104-32+26, positionXStepper.y, character.globalOffset.y, 0.001, 2, null, null, 104);
+		positionYStepper = new UINumericStepper(positionXStepper.x+104-32+26, positionXStepper.y, curPosY, 0.001, 2, null, null, 104);
 		positionYStepper.onChange = (text:String) -> {
 			@:privateAccess positionYStepper.__onChange(text);
 			this.changePosition(null, positionYStepper.value);
@@ -118,23 +120,26 @@ class CharacterPropertiesWindow extends UISliceSprite {
 	}
 
 	public function changePosition(newPosX:Null<Float>, newPosY:Null<Float>, addToUndo:Bool = true) {
-		if (newPosX != null && newPosY != null && newPosX == character.globalOffset.x && newPosY == character.globalOffset.y)
+		var curX = character.getCharacterPositionX();
+		var curY = character.getCharacterPositionY();
+		if (newPosX != null && newPosY != null && newPosX == curX && newPosY == curY)
 			return;
 		else if (addToUndo) {
-			if (newPosX != null && newPosX == character.globalOffset.x) return;
-			if (newPosY != null && newPosY == character.globalOffset.y) return;
+			if (newPosX != null && newPosX == curX) return;
+			if (newPosY != null && newPosY == curY) return;
 		}
-		var oldPosition:FlxPoint = character.globalOffset.clone();
+		var oldPosition:FlxPoint = FlxPoint.get(curX, curY);
 
-		if (newPosX != null) character.globalOffset.x = newPosX;
-		if (newPosY != null) character.globalOffset.y = newPosY;
+		character.setCharacterPosition(newPosX, newPosY);
 
+		CharacterEditor.instance.updateCharacterStagePosition();
 		CharacterEditor.instance.playAnimation(character.getAnimName());
 
-		positionXStepper.label.text = Std.string(character.globalOffset.x);
-		positionYStepper.label.text = Std.string(character.globalOffset.y);
+		positionXStepper.label.text = Std.string(character.getCharacterPositionX());
+		positionYStepper.label.text = Std.string(character.getCharacterPositionY());
 
-		if (addToUndo) CharacterEditor.undos.addToUndo(CCharEditPosition(oldPosition, character.globalOffset.clone()));
+		var newPosPoint:FlxPoint = FlxPoint.get(character.getCharacterPositionX(), character.getCharacterPositionY());
+		if (addToUndo) CharacterEditor.undos.addToUndo(CCharEditPosition(oldPosition, newPosPoint));
 		else oldPosition.put();
 	}
 

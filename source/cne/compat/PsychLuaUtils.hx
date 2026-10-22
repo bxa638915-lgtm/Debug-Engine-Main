@@ -62,10 +62,14 @@ class PsychLuaUtils
 		};
 	}
 
-	public static function cameraFromString(cam:String):flixel.FlxCamera
+	public static function cameraFromString(cam:Dynamic):flixel.FlxCamera
 	{
 		var game = funkin.game.PlayState.instance;
+		var fallback:flixel.FlxCamera = (game != null && game.camGame != null) ? game.camGame : flixel.FlxG.camera;
+		if (cam == null) return fallback;
+		var str = Std.string(cam);
 		if (game == null) return flixel.FlxG.camera;
-		return PsychLuaCamera.resolve(cam, game.camGame, game.camHUD, game.camOther, flixel.FlxG.camera);
+		var resolved:flixel.FlxCamera = PsychLuaCamera.resolve(str, game.camGame, game.camHUD, game.camOther, fallback);
+		return resolved != null ? resolved : fallback;
 	}
 }

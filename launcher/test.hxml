@@ -1,0 +1,4 @@
+-cp source
+-cp tests
+-main TestMain
+--interp

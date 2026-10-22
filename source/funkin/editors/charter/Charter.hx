@@ -70,12 +70,14 @@ class Charter extends UIState {
 	public var topMenuSpr:UITopMenu;
 	public var playerPreviewWindow:CharterCharacterPreviewWindow;
 	public var opponentPreviewWindow:CharterCharacterPreviewWindow;
+	public var modchartPreviewWindow:CharterModchartPreviewWindow;
 	private var previewTimelinePosition:Null<Float> = null;
 	private var previewAltSingByLine:Map<Int, Bool> = [];
 	private var previewAltIdleByLine:Map<Int, Bool> = [];
 	private var previewCharactersByLine:Map<Int, String> = [];
 	private var playerPreviewOption:UIContextMenuOption;
 	private var opponentPreviewOption:UIContextMenuOption;
+	private var modchartPreviewOption:UIContextMenuOption;
 	public var gridBackdrops:CharterBackdropGroup;
 	public var leftEventsBackdrop:EventBackdrop;
 	public var localAddEventSpr:CharterEventAdd;
@@ -362,6 +364,11 @@ class Charter extends UIState {
 						label: translate("view.opponentPreview"),
 						icon: 1,
 						onSelect: _view_toggleOpponentPreview
+					},
+					modchartPreviewOption = {
+						label: "Modchart Preview",
+						icon: 0,
+						onSelect: _view_toggleModchartPreview
 					},
 					null,
 					{
@@ -2312,10 +2319,27 @@ class Charter extends UIState {
 		uiGroup.add(opponentPreviewWindow);
 		uiGroup.add(playerPreviewWindow);
 
+		modchartPreviewWindow = new CharterModchartPreviewWindow(playerX - 100, previewY + 50, 480, 240, uiCamera, function() {
+			if (modchartPreviewOption != null) modchartPreviewOption.icon = 0;
+		}, onModchartPreviewWindowFocus);
+		modchartPreviewWindow.visible = false;
+		uiGroup.add(modchartPreviewWindow);
+
 		updateCharacterPreviewWindows();
 	}
 
 	private function onCharacterPreviewWindowFocus(window:CharterCharacterPreviewWindow):Void {
+		uiGroup.members.remove(window);
+		uiGroup.members.push(window);
+		FlxG.cameras.remove(window.previewCamera, false);
+		FlxG.cameras.add(window.previewCamera, false);
+		if (window.chromeCamera != null) {
+			FlxG.cameras.remove(window.chromeCamera, false);
+			FlxG.cameras.add(window.chromeCamera, false);
+		}
+	}
+
+	private function onModchartPreviewWindowFocus(window:CharterModchartPreviewWindow):Void {
 		uiGroup.members.remove(window);
 		uiGroup.members.push(window);
 		FlxG.cameras.remove(window.previewCamera, false);
@@ -2549,6 +2573,17 @@ class Charter extends UIState {
 	function _view_toggleOpponentPreview(option:UIContextMenuOption):Void {
 		var show = opponentPreviewWindow != null && !opponentPreviewWindow.visible;
 		if (opponentPreviewWindow != null) opponentPreviewWindow.setPreviewVisible(show);
+		option.icon = show ? 1 : 0;
+	}
+
+	function _view_toggleModchartPreview(option:UIContextMenuOption):Void {
+		var show = modchartPreviewWindow != null && !modchartPreviewWindow.visible;
+		if (modchartPreviewWindow != null) {
+			modchartPreviewWindow.visible = show;
+			modchartPreviewWindow.active = show;
+			if (modchartPreviewWindow.previewCamera != null) modchartPreviewWindow.previewCamera.visible = show;
+			if (modchartPreviewWindow.chromeCamera != null) modchartPreviewWindow.chromeCamera.visible = show;
+		}
 		option.icon = show ? 1 : 0;
 	}
 

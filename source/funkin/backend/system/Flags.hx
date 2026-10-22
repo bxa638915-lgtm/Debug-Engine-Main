@@ -57,8 +57,8 @@ class Flags {
 
 	@:lazy public static var VERSION_MESSAGE:String = 'Codename Engine v$VERSION';
 
-	public static var REPO_NAME:String = "CodenameEngine";
-	public static var REPO_OWNER:String = "CodenameCrew";
+	public static var REPO_NAME:String = "Debug-Engine-Main";
+	public static var REPO_OWNER:String = "bxa638915-lgtm";
 	public static var REPO_URL:String = 'https://github.com/$REPO_OWNER/$REPO_NAME';
 
 	@:lazy public static var PATHS_CACHE_LIFETIME:Null<Int> = null;
@@ -197,7 +197,7 @@ class Flags {
 	// Resume Cutscene -> pause.resumeCutscene
 	// Skip Cutscene -> pause.skipCutscene
 	// Restart Cutscene -> pause.restartCutscene
-	public static var DEFAULT_PAUSE_ITEMS:Array<String> = ['Resume', 'Restart Song', 'Change Controls', 'Change Options', 'Exit to menu', "Exit to charter"];
+	public static var DEFAULT_PAUSE_ITEMS:Array<String> = ['Resume', 'Restart Song', 'Skip Time', 'Change Controls', 'Change Options', 'Exit to menu', "Exit to charter"];
 	public static var DEFAULT_CUTSCENE_PAUSE_ITEMS:Array<String> = ['Resume Cutscene', 'Skip Cutscene', 'Restart Cutscene', 'Exit to menu'];
 	public static var DEFAULT_GITAROO:Bool = true;
 	public static var GITAROO_CHANCE:Float = 0.1;

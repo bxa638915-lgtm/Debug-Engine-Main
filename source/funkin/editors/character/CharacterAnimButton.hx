@@ -310,8 +310,19 @@ class CharacterAnimButton extends UIButton {
 
 		parent.character.animOffsets[anim].set(animData.x, animData.y);
 
-		if (parent.character.getAnimName() == anim && Options.playAnimOnOffset)
-			CharacterEditor.instance.playAnimation(anim);
+		if (parent.character.getAnimName() == anim) {
+			if (Options.playAnimOnOffset)
+				CharacterEditor.instance.playAnimation(anim);
+			else {
+				if (parent.character.isPsychCamera) {
+					var sx = parent.character.scale.x != 0 ? parent.character.scale.x : 1;
+					var sy = parent.character.scale.y != 0 ? parent.character.scale.y : 1;
+					parent.character.frameOffset.set(animData.x / sx, animData.y / sy);
+				} else {
+					parent.character.frameOffset.set(animData.x, animData.y);
+				}
+			}
+		}
 
 		positionXStepper.label.text = Std.string(animData.x);
 		positionYStepper.label.text = Std.string(animData.y);

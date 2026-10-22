@@ -6,12 +6,22 @@ import haxe.ds.ObjectMap;
 /**
  * Camera meant for PlayState hud, allows for flipping the camera.
 **/
+@:keep
 class HudCamera extends FlxCamera {
 	/**
 	 * Whenever the camera should flip the y axis.
 	 * Keeps the sprites not flipped, but the positions are flipped.
 	 */
 	public var downscroll:Bool = false;
+
+	public function new(X:Float = 0, Y:Float = 0, Width:Int = 0, Height:Int = 0, Zoom:Float = 0) {
+		super(Std.int(X), Std.int(Y), Width, Height, Zoom);
+		if (funkin.game.PlayState.instance != null) {
+			this.downscroll = funkin.game.PlayState.instance.downscroll;
+		} else {
+			this.downscroll = funkin.options.Options.downscroll;
+		}
+	}
 
 	public static var bypassedObjects:ObjectMap<FlxObject, Bool> = new ObjectMap<FlxObject, Bool>();
 	public static var bypassedXObjects:ObjectMap<FlxObject, Bool> = new ObjectMap<FlxObject, Bool>();

@@ -25,7 +25,7 @@ class VideoCutscene extends Cutscene {
 	var localPath:String;
 
 	#if VIDEO_CUTSCENES
-	final video:FlxVideoSprite = new FlxVideoSprite();
+	var video:FlxVideoSprite;
 	final mutex = new sys.thread.Mutex();
 
 	var cutsceneCamera:FlxCamera;
@@ -58,22 +58,39 @@ class VideoCutscene extends Cutscene {
 
 		parseSubtitles();
 
+		video = new FlxVideoSprite();
+		video.visible = false;
 		add(video);
 		video.antialiasing = true;
 		video.bitmap.onEndReached.add(close);
-		video.bitmap.onFormatSetup.add(function() if (video.bitmap != null && video.bitmap.bitmapData != null) {
-			final width = video.bitmap.bitmapData.width;
-			final height = video.bitmap.bitmapData.height;
-			final scale:Float = Math.min(FlxG.width / width, FlxG.height / height);
-			video.setGraphicSize(width * scale, height * scale);
-			video.updateHitbox();
-			video.screenCenter();
-		});
+		var onFormat = function() {
+			if (video != null && video.bitmap != null && video.bitmap.bitmapData != null) {
+				final width:Float = video.bitmap.bitmapData.width;
+				final height:Float = video.bitmap.bitmapData.height;
+				if (width > 1 && height > 1) {
+					final scale:Float = Math.min(FlxG.width / width, FlxG.height / height);
+					video.setGraphicSize(width * scale, height * scale);
+					video.updateHitbox();
+					video.screenCenter();
+					// Safety fallback if onDisplay is slightly delayed
+					flixel.util.FlxTimer.wait(0.15, function() {
+						if (video != null) video.visible = true;
+					});
+				}
+			}
+		};
+		video.bitmap.onFormatSetup.add(onFormat);
 
-		//cover = new FlxSprite(0, FlxG.height * 0.85).makeSolid(FlxG.width + 50, FlxG.height + 50, 0xFF000000);
-		//cover.scrollFactor.set(0, 0);
-		//cover.screenCenter();
-		//add(cover);
+		var onFirstDisplay:Void->Void = null;
+		onFirstDisplay = function() {
+			if (video != null) {
+				video.visible = true;
+				if (video.bitmap != null && onFirstDisplay != null) {
+					video.bitmap.onDisplay.remove(onFirstDisplay);
+				}
+			}
+		};
+		video.bitmap.onDisplay.add(onFirstDisplay);
 
 		bg = new FlxSprite(0, FlxG.height * 0.85).makeGraphic(1, 1, 0xFF000000);
 		bg.alpha = 0.5;
@@ -83,33 +100,16 @@ class VideoCutscene extends Cutscene {
 		subtitle.alignment = CENTER;
 		subtitle.visible = false;
 
-		text = new FunkinText(10, 10, Std.int(FlxG.width / 2), "Loading video...");
-		text.cameras = [cutsceneCamera];
-		text.visible = false;
-		@:privateAccess
-		text.regenGraphic();
-		add(text);
-
-		loadingBackdrop = new FlxBackdrop(text.graphic, X);
-		loadingBackdrop.y = FlxG.height - 20 - loadingBackdrop.height;
-		loadingBackdrop.velocity.x = 70;
-		loadingBackdrop.cameras = [cutsceneCamera];
-		add(loadingBackdrop);
-
-		loadingBackdrop.alpha = 0;
-		FlxTween.tween(loadingBackdrop, {alpha: 1}, 0.5, {ease: FlxEase.sineInOut});
-
-		Main.execAsync(function() {
-			if (video.load(localPath)) FlxTimer.wait(0.001, function() {
-				mutex.acquire(); onReady(); mutex.release();
-			});
-			else { mutex.acquire(); close(); mutex.release(); }
-		});
-
 		add(bg);
 		add(subtitle);
 
 		cameras = [cutsceneCamera];
+
+		if (video.load(localPath, [":file-caching=0", ":network-caching=0", ":clock-jitter=0"])) {
+			onReady();
+		} else {
+			close();
+		}
 		#else
 		close();
 		#end
@@ -175,11 +175,15 @@ class VideoCutscene extends Cutscene {
 
 	public inline function onReady() {
 		trace("VideoCutscene: Ready");
-		FlxTween.cancelTweensOf(loadingBackdrop);
-		FlxTween.tween(loadingBackdrop, {alpha: 0}, 0.7, {ease: FlxEase.sineInOut, onComplete: function(_) {
+		if (loadingBackdrop != null) {
+			FlxTween.cancelTweensOf(loadingBackdrop);
 			loadingBackdrop.destroy();
+			loadingBackdrop = null;
+		}
+		if (text != null) {
 			text.destroy();
-		}});
+			text = null;
+		}
 
 		pausable = __loaded = true;
 		video.play();

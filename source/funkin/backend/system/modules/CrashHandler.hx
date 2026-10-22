@@ -108,6 +108,9 @@ final class CrashHandler {
 		recovered = false;
 
 		var report = formatReport(message, stack);
+		#if sys
+		try dbe.compatibility.rea.DBEConsoleCapture.recordCrash(report) catch (_:Dynamic) {}
+		#end
 		trace(report);
 		quarantine();
 

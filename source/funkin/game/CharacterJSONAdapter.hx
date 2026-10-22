@@ -2,14 +2,28 @@ package funkin.game;
 
 /** Maps Funkin character-data JSON and legacy Psych-style JSON to Character's XML schema. */
 class CharacterJSONAdapter {
-	/** Reads native role metadata and Psych 1.0.4's editor-only role field. */
-	public static function getIsPlayer(data:Dynamic):Bool {
+	/** Reads native role metadata and Psych 1.0.4's editor-only role field with BF naming fallback. */
+	public static function getIsPlayer(data:Dynamic, ?characterName:String):Bool {
 		if (data == null) return false;
 
 		var value:Dynamic = Reflect.field(data, "isPlayer");
 		if (value == null) value = Reflect.field(data, "_editor_isPlayer");
 		if (value == true) return true;
-		return Std.isOfType(value, String) && StringTools.trim(Std.string(value)).toLowerCase() == "true";
+		if (Std.isOfType(value, String) && StringTools.trim(Std.string(value)).toLowerCase() == "true") return true;
+
+		// Fallback for Psych 0.6 / 0.7 characters without role metadata:
+		if (characterName != null) {
+			var lower = characterName.toLowerCase();
+			if (lower == "bf" || lower == "boyfriend" || StringTools.startsWith(lower, "bf-") || StringTools.startsWith(lower, "bf_") || StringTools.startsWith(lower, "boyfriend-") || StringTools.startsWith(lower, "boyfriend_") || StringTools.startsWith(lower, "bfsword"))
+				return true;
+		}
+		var img:Dynamic = Reflect.field(data, "image");
+		if (img != null) {
+			var imgLower = Std.string(img).toLowerCase();
+			if (imgLower.indexOf("/bf") >= 0 || imgLower.indexOf("/boyfriend") >= 0)
+				return true;
+		}
+		return false;
 	}
 
 	public static function getSpritePath(data:Dynamic, characterName:String):String {

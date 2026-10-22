@@ -168,6 +168,30 @@ class Chart {
 			if (isVariant) path += '$variant/';
 
 			data.difficulties = [for(f in Paths.getFolderContent(path, false, fromMods ? MODS : SOURCE)) if (Path.extension(f.toUpperCase()) == "JSON") Path.withoutExtension(f)];
+			if (data.difficulties.length <= 0) {
+				var dataPath = 'data/$songName/';
+				for (f in Paths.getFolderContent(dataPath, false, fromMods ? MODS : SOURCE)) {
+					if (Path.extension(f.toUpperCase()) == "JSON") {
+						var baseName = Path.withoutExtension(f);
+						var lower = baseName.toLowerCase();
+						if (lower == "events" || lower.startsWith("dialogue") || lower.startsWith("cutscene")) continue;
+						var ignoredAux:Array<String> = [
+							"picospeaker", "characterlist", "characters", "metadata", "meta",
+							"config", "stage", "modcharts", "scripts", "preload", "credits", "camera", "chart"
+						];
+						if (ignoredAux.contains(lower)) continue;
+
+						if (lower == songName.toLowerCase()) {
+							if (!data.difficulties.contains("normal")) data.difficulties.push("normal");
+						} else if (lower.startsWith(songName.toLowerCase() + "-")) {
+							var diff = baseName.substr(songName.length + 1);
+							if (diff != "" && !data.difficulties.contains(diff)) data.difficulties.push(diff);
+						} else {
+							if (!data.difficulties.contains(baseName)) data.difficulties.push(baseName);
+						}
+					}
+				}
+			}
 			if (data.difficulties.length == 3) {
 				var tempDiffs = [];
 				for (d in data.difficulties) switch(d.toLowerCase()) {
@@ -196,6 +220,28 @@ class Chart {
 			return VSliceParser.parseAssets(songName, difficulty, variant);
 
 		var chartPath = Paths.chart(songName, difficulty, variant);
+		if (!Assets.exists(chartPath)) {
+			var diffLower = difficulty.toLowerCase();
+			var songLower = songName.toLowerCase();
+			var candidates:Array<String> = [
+				Paths.chart(songName, diffLower, variant),
+				Paths.file('songs/$songName/charts/$diffLower.json'),
+				Paths.file('songs/$songName/charts/$difficulty.json'),
+				Paths.file('data/$songName/$songName-$diffLower.json'),
+				Paths.file('data/$songName/$songName.json'),
+				Paths.file('data/$songName/$songLower.json'),
+				Paths.file('data/$songName/$diffLower.json'),
+				Paths.file('songs/$songName/$songName-$diffLower.json'),
+				Paths.file('songs/$songName/$songName.json'),
+				Paths.file('songs/$songName/$diffLower.json')
+			];
+			for (cand in candidates) {
+				if (cand != null && Assets.exists(cand)) {
+					chartPath = cand;
+					break;
+				}
+			}
+		}
 		var base:ChartData = {
 			strumLines: [],
 			noteTypes: [],

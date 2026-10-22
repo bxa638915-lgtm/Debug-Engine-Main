@@ -39,6 +39,7 @@
 			<str id="pause.changeOptions">Opções</str>
 			<str id="pause.exitToMenu">Sair para menu</str>
 			<str id="pause.exitToCharter">Sair para editor</str>
+			<str id="pause.skipTime">Pular Tempo</str>
 			<str id="pause.resumeCutscene">Resumir Cena</str>
 			<str id="pause.skipCutscene">Saltar Cena</str>
 			<str id="pause.restartCutscene">Recomeçar Cena</str>

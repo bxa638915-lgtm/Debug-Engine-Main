@@ -22,14 +22,16 @@ class Note extends FlxSprite
 		if (this.strumLine != null) {
 			if (this.strumLine.notes != null)
 				this.strumLine.notes.remove(this, true);
-			strLine.notes.add(this);
-			strLine.notes.sortNotes();
+			if (strLine != null && strLine.notes != null) {
+				strLine.notes.add(this);
+				strLine.notes.sortNotes();
+			}
+			if (PlayState.instance != null) {
+				PlayState.instance.__psychNotesCacheVersion++;
+				PlayState.instance.__psychNotesCachePos = Math.NaN;
+			}
 		}
-		if (PlayState.instance != null) {
-			PlayState.instance.__psychNotesCacheVersion++;
-			PlayState.instance.__psychNotesCachePos = Math.NaN;
-		}
-		return strumLine = strLine;
+		return this.strumLine = strLine;
 	}
 
 	private inline function get_mustPress():Bool {
@@ -118,7 +120,7 @@ class Note extends FlxSprite
 
 	public var strumID(get, never):Int;
 	private function get_strumID() {
-		return if (noteData < 0) 0; else noteData % strumLine.members.length;
+		return if (noteData < 0) 0; else if (strumLine != null && strumLine.members != null && strumLine.members.length > 0) noteData % strumLine.members.length; else (noteData >= 0 ? noteData : 0);
 	}
 
 	public var sustainLength:Float = 0;
@@ -259,6 +261,13 @@ class Note extends FlxSprite
 		}
 	}
 
+	public function reloadNote(?prefix:String = "", ?texture:String = "", ?suffix:String = ""):Void {
+		var skin = (texture != null && texture != "") ? texture : (PlayState.instance != null ? PlayState.instance.arrowSkin : "default");
+		if (prefix != null && prefix != "") skin = prefix + skin;
+		if (suffix != null && suffix != "") skin = skin + suffix;
+		reloadNoteTexture(skin);
+	}
+
 	static var DEFAULT_FIELDS:Array<String> = ["time", "id", "type", "sLen"];
 
 	public function new(strumLine:StrumLine, noteData:ChartNote, sustain:Bool = false, sustainLength:Float = 0, sustainOffset:Float = 0, ?prev:Note) {
@@ -274,7 +283,7 @@ class Note extends FlxSprite
 		if (this.prevNote != null) this.prevNote.nextNote = this;
 		this.noteTypeID = noteData.type.getDefault(0);
 		this.isSustainNote = sustain;
-		this.sustainLength = sustainLength;
+		this.sustainLength = sustain ? sustainLength : noteData.sLen;
 		this.strumLine = strumLine;
 		for(field in Reflect.fields(noteData)) if(!DEFAULT_FIELDS.contains(field))
 			this.extra.set(field, Reflect.field(noteData, field));
@@ -343,6 +352,10 @@ class Note extends FlxSprite
 					this.hitCausesMiss = cfg.get("hitCausesMiss").toLowerCase() == "true";
 				if (cfg.exists("lowPriority"))
 					this.lowPriority = cfg.get("lowPriority").toLowerCase() == "true";
+				if (cfg.exists("offsetX"))
+					this.offsetX = Std.parseFloat(cfg.get("offsetX"));
+				if (cfg.exists("offsetY"))
+					this.offsetY = Std.parseFloat(cfg.get("offsetY"));
 			}
 		}
 
@@ -463,8 +476,8 @@ class Note extends FlxSprite
 
 			var offX:Float = offsetX;
 			var offY:Float = offsetY;
-			if (offX != 0) offX += (width - __lastStrumW) * 0.5;
-			if (offY != 0) offY += (height - __lastStrumH) * 0.5;
+			if (offX != 0) offX += origin.x - __lastStrumHalfW;
+			if (offY != 0) offY += origin.y - __lastStrumHalfH;
 
 			x = -origin.x + offset.x + offX + (originalY * __lastAngleCos) + __strum.x + __lastStrumHalfW;
 			y = -origin.y + offset.y + offY + (originalY * __lastAngleSin) + __strum.y + __lastStrumHalfH;
@@ -560,8 +573,16 @@ class Note extends FlxSprite
 	}
 
 	public override function destroy() {
-		super.destroy();
+		try {
+			flixel.tweens.FlxTween.cancelTweensOf(this);
+		} catch(e:Dynamic) {}
+		clipRect = flixel.util.FlxDestroyUtil.put(clipRect);
 
-		clipRect = FlxDestroyUtil.put(clipRect);
+		if (extra != null) {
+			extra.clear();
+			extra = null;
+		}
+
+		super.destroy();
 	}
 }

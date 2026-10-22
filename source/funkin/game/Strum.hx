@@ -264,8 +264,8 @@ class Strum extends FlxSprite {
 				__noteOffset.set(__lastAngleCos * distance, __lastAngleSin * distance);
 				var offX:Float = daNote.offsetX;
 				var offY:Float = daNote.offsetY;
-				if (offX != 0) offX += (daNote.width - __lastStrumW) * 0.5;
-				if (offY != 0) offY += (daNote.height - __lastStrumH) * 0.5;
+				if (offX != 0) offX += daNote.origin.x - __lastStrumHalfW;
+				if (offY != 0) offY += daNote.origin.y - __lastStrumHalfH;
 				__noteOffset.x += -daNote.origin.x + daNote.offset.x + offX;
 				__noteOffset.y += -daNote.origin.y + daNote.offset.y + offY;
 				if (daNote.isSustainNote) {
@@ -337,5 +337,19 @@ class Strum extends FlxSprite {
 	**/
 	public inline function getAnim() {
 		return animation.name;
+	}
+
+	override public function destroy():Void {
+		flixel.tweens.FlxTween.cancelTweensOf(this);
+		if (extra != null) {
+			extra.clear();
+			extra = null;
+		}
+		strumLine = null;
+		super.destroy();
+	}
+
+	public function reloadNote(?customSkin:String = ""):Void {
+		// Psych compatibility
 	}
 }

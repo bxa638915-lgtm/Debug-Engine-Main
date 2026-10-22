@@ -62,7 +62,7 @@ class FNFLegacyParser {
 		result.meta.bpm = data.bpm;
 		result.meta.needsVoices = data.needsVoices.getDefault(true);
 
-		var camFocusedBF:Bool = false;
+		var curCamTarget:Int = -1;
 		var altAnims:Bool = false;
 		var beatsPerMeasure:Float = data.beatsPerMeasure.getDefault(Flags.DEFAULT_BEATS_PER_MEASURE);
 		var curBPM:Float = data.bpm;
@@ -87,11 +87,13 @@ class FNFLegacyParser {
 				});	
 			}
 
-			if (camFocusedBF != (camFocusedBF = section.mustHitSection)) {
+			var targetStrum:Int = (section.gfSection == true) ? 2 : (section.mustHitSection == true ? 1 : 0);
+			if (curCamTarget != targetStrum) {
+				curCamTarget = targetStrum;
 				result.events.push({
 					time: curTime,
 					name: "Camera Movement",
-					params: [camFocusedBF ? 1 : 0]
+					params: [targetStrum]
 				});
 			}
 

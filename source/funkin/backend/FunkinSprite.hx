@@ -190,21 +190,7 @@ class FunkinSprite extends FlxAnimate implements IBeatReceiver implements IOffse
 
 	// ANIMATE ATLAS DRAWING
 	#if REGION
-	public override function destroy()
-	{
-		if (animOffsets != null) {
-			for (key in animOffsets.keys()) {
-				final point = animOffsets[key];
-				animOffsets.remove(key);
-				if (point != null)
-					point.put();
-			}
-			animOffsets = null;
-		}
-		super.destroy();
 
-		_rect2 = FlxDestroyUtil.put(_rect2);
-	}
 	#end
 
 	// OFFSETTING
@@ -213,7 +199,12 @@ class FunkinSprite extends FlxAnimate implements IBeatReceiver implements IOffse
 
 	public function addOffset(name:String, x:Float = 0, y:Float = 0)
 	{
-		animOffsets[name] = FlxPoint.get(x, y);
+		var p = animOffsets.get(name);
+		if (p != null) {
+			p.set(x, y);
+		} else {
+			animOffsets[name] = FlxPoint.get(x, y);
+		}
 	}
 
 	public function switchOffset(anim1:String, anim2:String)
@@ -366,5 +357,33 @@ class FunkinSprite extends FlxAnimate implements IBeatReceiver implements IOffse
 	}
 	override function checkFlipY() {
 		return super.checkFlipY() != camera.flipY;
+	}
+
+	override public function destroy():Void {
+		flixel.tweens.FlxTween.cancelTweensOf(this);
+		if (animOffsets != null) {
+			for (point in animOffsets) {
+				if (point != null)
+					point.put();
+			}
+			animOffsets.clear();
+			animOffsets = null;
+		}
+		if (extra != null) {
+			extra.clear();
+			extra = null;
+		}
+		if (animDatas != null) {
+			animDatas.clear();
+			animDatas = null;
+		}
+		if (beatAnims != null) {
+			beatAnims = null;
+		}
+		if (_rect2 != null) {
+			_rect2.put();
+			_rect2 = null;
+		}
+		super.destroy();
 	}
 }

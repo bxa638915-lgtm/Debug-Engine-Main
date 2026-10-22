@@ -1,0 +1,153 @@
+{
+  "formatVersion": "1.0.0",
+  "screenName": "PauseSubState",
+  "screenType": "substate",
+  "targetStateClass": "PauseSubState",
+  "canvasWidth": 1280,
+  "canvasHeight": 720,
+  "defaultCamera": "camOther",
+  "globalTheme": {
+    "primaryColor": -16711736,
+    "secondaryColor": -15592926,
+    "accentColor": -65451,
+    "backgroundColor": -1728053248,
+    "fontName": "vcr.ttf"
+  },
+  "nodes": [
+    {
+      "id": "dimBackground",
+      "type": "panel",
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "text": "",
+      "fontSize": 14,
+      "color": -1,
+      "bgColor": -1442840576,
+      "borderColor": 0,
+      "alpha": 0.7,
+      "camera": "camOther",
+      "scrollFactorX": 0,
+      "scrollFactorY": 0,
+      "imagePath": "",
+      "alignment": "left",
+      "visible": true,
+      "active": true,
+      "anchor": "top-left",
+      "zIndex": 0
+    },
+    {
+      "id": "pauseWindow",
+      "type": "panel",
+      "x": 440,
+      "y": 160,
+      "width": 400,
+      "height": 400,
+      "text": "JOGO PAUSADO",
+      "fontSize": 20,
+      "color": -16711736,
+      "bgColor": -292425696,
+      "borderColor": -16711736,
+      "alpha": 1.0,
+      "camera": "camOther",
+      "scrollFactorX": 0,
+      "scrollFactorY": 0,
+      "imagePath": "",
+      "alignment": "center",
+      "visible": true,
+      "active": true,
+      "anchor": "center",
+      "zIndex": 1
+    },
+    {
+      "id": "btnResume",
+      "type": "button",
+      "x": 480,
+      "y": 240,
+      "width": 320,
+      "height": 48,
+      "text": "CONTINUAR",
+      "fontSize": 18,
+      "color": -1,
+      "bgColor": -14671819,
+      "borderColor": -16711736,
+      "alpha": 1.0,
+      "camera": "camOther",
+      "scrollFactorX": 0,
+      "scrollFactorY": 0,
+      "imagePath": "",
+      "alignment": "center",
+      "visible": true,
+      "active": true,
+      "anchor": "center",
+      "zIndex": 2,
+      "events": [
+        {
+          "trigger": "onClick",
+          "action": "closeSubState"
+        }
+      ]
+    },
+    {
+      "id": "btnRestart",
+      "type": "button",
+      "x": 480,
+      "y": 310,
+      "width": 320,
+      "height": 48,
+      "text": "REINICIAR CANCAO",
+      "fontSize": 18,
+      "color": -1,
+      "bgColor": -14671819,
+      "borderColor": -16711736,
+      "alpha": 1.0,
+      "camera": "camOther",
+      "scrollFactorX": 0,
+      "scrollFactorY": 0,
+      "imagePath": "",
+      "alignment": "center",
+      "visible": true,
+      "active": true,
+      "anchor": "center",
+      "zIndex": 3,
+      "events": [
+        {
+          "trigger": "onClick",
+          "action": "custom",
+          "param": "restartSong"
+        }
+      ]
+    },
+    {
+      "id": "btnQuit",
+      "type": "button",
+      "x": 480,
+      "y": 380,
+      "width": 320,
+      "height": 48,
+      "text": "SAIR PARA O MENU",
+      "fontSize": 18,
+      "color": -1,
+      "bgColor": -14671819,
+      "borderColor": -52430,
+      "alpha": 1.0,
+      "camera": "camOther",
+      "scrollFactorX": 0,
+      "scrollFactorY": 0,
+      "imagePath": "",
+      "alignment": "center",
+      "visible": true,
+      "active": true,
+      "anchor": "center",
+      "zIndex": 4,
+      "events": [
+        {
+          "trigger": "onClick",
+          "action": "changeState",
+          "target": "MainMenuState"
+        }
+      ]
+    }
+  ]
+}

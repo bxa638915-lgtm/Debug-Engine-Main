@@ -16,6 +16,7 @@ class SongLoadReport {
 	public var phaseMs:Map<String, Float> = [];
 	public var bitmapResources:Int = 0;
 	public var audioResources:Int = 0;
+	public var videoResources:Int = 0;
 	public var assetsLoaded:Int = 0;
 	public var duplicateCount:Int = 0;
 	public var bitmapCacheHits:Int = 0;
@@ -42,6 +43,11 @@ class SongLoadReport {
 	public function recordAudio(path:String, cacheHit:Bool, loaded:Bool):Void {
 		audioResources++;
 		if (cacheHit) audioCacheHits++ else audioCacheMisses++;
+		if (loaded) assetsLoaded++;
+	}
+
+	public function recordVideo(path:String, loaded:Bool):Void {
+		videoResources++;
 		if (loaded) assetsLoaded++;
 	}
 

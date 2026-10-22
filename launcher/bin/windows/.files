@@ -1,0 +1,16 @@
+bin/windows/bin/fonts/vcr.ttf
+bin/windows/bin/images/icon16.png
+bin/windows/bin/images/icon32.png
+bin/windows/bin/images/icon64.png
+bin/windows/bin/images/iconOG.png
+bin/windows/bin/flixel/sounds/beep.ogg
+bin/windows/bin/flixel/sounds/flixel.ogg
+bin/windows/bin/flixel/fonts/nokiafc22.ttf
+bin/windows/bin/flixel/fonts/monsterrat.ttf
+bin/windows/bin/flixel/images/ui/button.png
+bin/windows/bin/flixel/images/logo/default.png
+bin/windows/bin/flixel/images/transitions/circle.png
+bin/windows/bin/flixel/images/transitions/diagonal_gradient.png
+bin/windows/bin/flixel/images/transitions/diamond.png
+bin/windows/bin/flixel/images/transitions/square.png
+bin/windows/bin/manifest/default.json

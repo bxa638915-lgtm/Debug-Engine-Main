@@ -107,7 +107,7 @@ class GameOverSubstate extends MusicBeatSubstate
 		if (controls.ACCEPT) endBullshit();
 		if (controls.BACK) exit();
 
-		if (!isEnding && ((!lossSFX.playing) || (character.getAnimName() == "firstDeath" && character.isAnimFinished())) && (FlxG.sound.music == null || !FlxG.sound.music.playing))
+		if (!isEnding && ((lossSFX == null || !lossSFX.playing) || (character.getAnimName() == "firstDeath" && character.isAnimFinished())) && (FlxG.sound.music == null || !FlxG.sound.music.playing))
 		{
 			var event = new CancellableEvent();
 			gameoverScript.call("deathStart", [event]);
@@ -155,7 +155,7 @@ class GameOverSubstate extends MusicBeatSubstate
 
 		var sound = FlxG.sound.play(Paths.sound(retrySFX));
 
-		var secsLength:Float = sound.length / 1000;
+		var secsLength:Float = (sound != null) ? (sound.length / 1000) : 1.5;
 		var waitTime = 0.7;
 		var fadeOutTime = secsLength - 0.7;
 
@@ -197,8 +197,18 @@ class GameOverSubstate extends MusicBeatSubstate
 
 	override function destroy()
 	{
-		gameoverScript.call("destroy");
-		gameoverScript.destroy();
+		flixel.tweens.FlxTween.cancelTweensOf(this);
+
+		if (lossSFX != null) {
+			lossSFX.stop();
+			lossSFX.destroy();
+			lossSFX = null;
+		}
+
+		if (gameoverScript != null) {
+			gameoverScript.call("destroy");
+			gameoverScript = flixel.util.FlxDestroyUtil.destroy(gameoverScript);
+		}
 
 		super.destroy();
 		instance = null;

@@ -53,6 +53,16 @@ jobs:
         with:
           name: Codename Engine
           path: export/release/windows/bin
+      - name: Building Launcher
+        run: |
+          cd launcher
+          haxelib run lime build windows -release
+          cd ..
+      - name: Uploading Launcher artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: DBE Launcher (Windows)
+          path: launcher/bin/windows/bin
       # - name: Clearing already existing cache
       #   uses: actions/github-script@v9
       #   with:

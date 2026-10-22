@@ -55,6 +55,8 @@ class PsychLuaPropertyPath
 				case "framerate": return funkin.options.Options.framerate;
 				case "camZooms": return funkin.options.Options.camZoomOnBeat;
 				case "noteSplashes": return funkin.options.Options.splashesEnabled;
+				case "opponentStrums": return true;
+				case "nopixelstage" | "nopixel" | "nocredits": return false;
 				default:
 			}
 		}
@@ -93,11 +95,29 @@ class PsychLuaPropertyPath
 			var index = Std.parseInt(part);
 			return index != null && index >= 0 && index < items.length ? items[index] : null;
 		}
+		if (Std.isOfType(value, flixel.group.FlxGroup.FlxTypedGroup))
+		{
+			var grp:flixel.group.FlxGroup.FlxTypedGroup<Dynamic> = cast value;
+			if (part == "length") return grp.members != null ? grp.members.length : 0;
+			if (part == "members") return grp.members != null ? grp.members : [];
+			var index = Std.parseInt(part);
+			return index != null && grp.members != null && index >= 0 && index < grp.members.length ? grp.members[index] : null;
+		}
 		if (Std.isOfType(value, funkin.game.PlayState))
 		{
 			var game:funkin.game.PlayState = cast value;
 			switch (part)
 			{
+				case "grpNoteSplashes":
+					return game.splashHandler != null && game.splashHandler.members != null ? game.splashHandler.members : [];
+				case "timeBar":
+					return game.timeBar;
+				case "timeBarBG" | "timeBG":
+					return game.timeBarBG != null ? game.timeBarBG : (cast game.timeBar);
+				case "timeTxt":
+					return game.timeTxt;
+				case "songName" | "curSong":
+					return game.curSong != null ? game.curSong : (game.rawSongName != null ? game.rawSongName : (funkin.game.PlayState.SONG != null && funkin.game.PlayState.SONG.meta != null ? funkin.game.PlayState.SONG.meta.name : ""));
 				case "score" | "songScore": return game.songScore;
 				case "misses" | "songMisses": return game.misses;
 				case "hits" | "songHits": return game.ratingNum;
@@ -105,6 +125,8 @@ class PsychLuaPropertyPath
 				case "ratingFC": return game.misses == 0 ? (game.combo > 0 ? "FC" : "Clear") : (game.misses < 10 ? "SDCB" : "Clear");
 				case "ratingPercent": return game.accuracy;
 				case "playbackRate": return game.playbackRate;
+				case "botPlay" | "botplay" | "cpuControlled":
+					return (game.playerStrums != null && (game.playerStrums.botplay || game.playerStrums.cpu));
 				case "opponentStrums" | "cpuStrums":
 					game.ensureStrumsAndNotesGenerated();
 					return game.cpuStrums != null ? game.cpuStrums : (game.strumLines.members != null && game.strumLines.members.length > 0 ? game.strumLines.members[0] : null);
@@ -119,7 +141,44 @@ class PsychLuaPropertyPath
 					if (opp != null && opp.members != null) for (s in opp.members) if (s != null) strums.push(s);
 					if (pl != null && pl.members != null) for (s in pl.members) if (s != null) strums.push(s);
 					return strums;
+				case "unspawnNotes":
+					return game.unspawnNotes;
+				case "noteGroup":
+					return game.strumLines;
+				case "boyfriendGroup":
+					return game.boyfriendGroup != null ? game.boyfriendGroup : game.boyfriend;
+				case "dadGroup":
+					return game.dadGroup != null ? game.dadGroup : game.dad;
+				case "gfGroup":
+					return game.gfGroup != null ? game.gfGroup : game.gf;
+				case "healthBar":
+					return game.healthBar;
+				case "healthBarBG":
+					return game.healthBarBG;
+				case "iconP1":
+					return game.iconP1;
+				case "iconP2":
+					return game.iconP2;
+				case "camOther":
+					return game.camOther;
+				case "camHUD":
+					return game.camHUD;
+				case "camGame":
+					return game.camGame;
 				default:
+			}
+		}
+		if (funkin.game.PlayState.instance != null)
+		{
+			var game = funkin.game.PlayState.instance;
+			if (value == game.healthBar || value == game.healthBarBG)
+			{
+				if (part == "y")
+				{
+					var isDs = funkin.options.Options.downscroll || (game.camHUD != null && game.camHUD.downscroll);
+					if (isDs && !funkin.game.HudCamera.shouldBypassDownscroll(value))
+						return (value == game.healthBarBG) ? (flixel.FlxG.height * 0.11 - 4) : (flixel.FlxG.height * 0.11);
+				}
 			}
 		}
 		if (isFlxPoint(value))
@@ -130,6 +189,18 @@ class PsychLuaPropertyPath
 				case "y" | "1": Reflect.getProperty(value, "y");
 				default: null;
 			};
+		}
+		if (Std.isOfType(value, funkin.game.Note))
+		{
+			var note:funkin.game.Note = cast value;
+			switch (part)
+			{
+				case "hitHealth":
+					return note.hitHealth != null ? note.hitHealth : 0.023;
+				case "missHealth":
+					return note.missHealth != null ? note.missHealth : 0.0475;
+				default:
+			}
 		}
 		if (part == "direction" && hasNoteAngle(value))
 		{
@@ -257,26 +328,61 @@ class PsychLuaPropertyPath
 		{
 			var anim:Dynamic = null;
 			if (Std.isOfType(value, flixel.animation.FlxAnimationController))
-				anim = (cast value:flixel.animation.FlxAnimationController).curAnim;
+			{
+				var ctrl:flixel.animation.FlxAnimationController = cast value;
+				anim = ctrl.curAnim;
+			}
 			else if (Std.isOfType(value, flixel.FlxSprite))
+			{
 				anim = (cast value:flixel.FlxSprite).animation?.curAnim;
+			}
+			else if (Std.isOfType(value, flixel.animation.FlxAnimation))
+			{
+				anim = value;
+			}
 			else
 				anim = Reflect.getProperty(value, "curAnim");
 
-			if (anim != null)
+			return anim;
+		}
+		if (Std.isOfType(value, flixel.animation.FlxAnimation))
+		{
+			var anim:flixel.animation.FlxAnimation = cast value;
+			switch (part)
 			{
-				return {
-					name: Reflect.getProperty(anim, "name"),
-					curFrame: Reflect.getProperty(anim, "curFrame"),
-					finished: Reflect.getProperty(anim, "finished"),
-					frameRate: Reflect.getProperty(anim, "frameRate"),
-					looped: Reflect.getProperty(anim, "looped"),
-					reversed: Reflect.getProperty(anim, "reversed"),
-					numFrames: Reflect.getProperty(anim, "numFrames"),
-					paused: Reflect.getProperty(anim, "paused")
-				};
+				case "name": return anim.name;
+				case "curFrame": return anim.curFrame;
+				case "finished":
+					var animFinished:Bool = anim.finished;
+					@:privateAccess {
+						var parentCtrl = anim.parent;
+						if (parentCtrl != null && parentCtrl._sprite != null && Std.isOfType(parentCtrl._sprite, funkin.game.Character)) {
+							var char:funkin.game.Character = cast parentCtrl._sprite;
+							if (char.isHoldingNote() && anim.name != null && StringTools.startsWith(anim.name, "sing"))
+								animFinished = false;
+						}
+					}
+					return animFinished;
+				case "frameRate": return anim.frameRate;
+				case "numFrames": return anim.numFrames;
+				case "paused": return anim.paused;
+				case "looped": return anim.looped;
+				case "reversed": return anim.reversed;
 			}
-			return null;
+		}
+		if (part == "finished" && Std.isOfType(value, flixel.animation.FlxAnimation))
+		{
+			var flxAnim:flixel.animation.FlxAnimation = cast value;
+			var animFinished:Bool = flxAnim.finished;
+			@:privateAccess {
+				var parentCtrl = flxAnim.parent;
+				if (parentCtrl != null && parentCtrl._sprite != null && Std.isOfType(parentCtrl._sprite, funkin.game.Character)) {
+					var char:funkin.game.Character = cast parentCtrl._sprite;
+					if (char.isHoldingNote() && flxAnim.name != null && StringTools.startsWith(flxAnim.name, "sing"))
+						animFinished = false;
+				}
+			}
+			return animFinished;
 		}
 		if (part == "holdTimer")
 		{
@@ -472,6 +578,34 @@ class PsychLuaPropertyPath
 			return newValue;
 		}
 		var field = property;
+		if (field == "curFrame")
+		{
+			var frameInt:Int = Std.int(Math.floor(Std.parseFloat(Std.string(newValue))));
+			if (Std.isOfType(target, flixel.animation.FlxAnimation))
+			{
+				var a:flixel.animation.FlxAnimation = cast target;
+				a.curFrame = frameInt;
+				return a.curFrame;
+			}
+			if (Std.isOfType(target, flixel.animation.FlxAnimationController))
+			{
+				var ctrl:flixel.animation.FlxAnimationController = cast target;
+				if (ctrl.curAnim != null)
+				{
+					ctrl.curAnim.curFrame = frameInt;
+					return ctrl.curAnim.curFrame;
+				}
+			}
+			if (Std.isOfType(target, flixel.FlxSprite))
+			{
+				var spr:flixel.FlxSprite = cast target;
+				if (spr.animation != null && spr.animation.curAnim != null)
+				{
+					spr.animation.curAnim.curFrame = frameInt;
+					return spr.animation.curAnim.curFrame;
+				}
+			}
+		}
 		if (isFlxPoint(target) && (field == "x" || field == "y" || field == "0" || field == "1"))
 		{
 			var axis = (field == "0" ? "x" : (field == "1" ? "y" : field));
@@ -637,6 +771,35 @@ class PsychLuaPropertyPath
 			var items:Array<Dynamic> = cast target;
 			if (index == null || index < 0 || index >= items.length) return null;
 			items[index] = newValue;
+			if (parent != null && Std.isOfType(parent, funkin.game.Character))
+			{
+				var char:funkin.game.Character = cast parent;
+				if (parts.length >= 2)
+				{
+					var propName = parts[parts.length - 2];
+					if (propName == "cameraPosition" && char.cameraOffset != null)
+					{
+						var fVal = Std.parseFloat(Std.string(newValue));
+						if (!Math.isNaN(fVal)) {
+							if (index == 0) char.cameraOffset.x = fVal;
+							else if (index == 1) char.cameraOffset.y = fVal;
+						}
+					}
+					else if (propName == "positionArray" && char.positionOffset != null)
+					{
+						var fVal = Std.parseFloat(Std.string(newValue));
+						if (!Math.isNaN(fVal)) {
+							if (index == 0) char.positionOffset.x = fVal;
+							else if (index == 1) char.positionOffset.y = fVal;
+						}
+					}
+					else if (propName == "healthColorArray")
+					{
+						char.healthColorArray = cast items;
+					}
+				}
+			}
+			return newValue;
 		}
 		else
 		{
@@ -712,6 +875,25 @@ class PsychLuaPropertyPath
 				return newValue;
 			}
 
+			if (field == "text" && Std.isOfType(target, flixel.text.FlxText) && newValue == null)
+				newValue = "";
+			else if (Std.isOfType(newValue, String) && field != "text" && field != "name" && field != "font" && field != "curCharacter" && field != "antialiasing")
+			{
+				var isNumField = (field == "x" || field == "y" || field == "alpha" || field == "angle" || field == "width" || field == "height" || field == "size");
+				if (!isNumField)
+				{
+					try {
+						var existing = Reflect.getProperty(target, field);
+						if (Std.isOfType(existing, Float) || Std.isOfType(existing, Int)) isNumField = true;
+					} catch (_:Dynamic) {}
+				}
+				if (isNumField)
+				{
+					var parsed = Std.parseFloat(cast newValue);
+					if (!Math.isNaN(parsed)) newValue = parsed;
+				}
+			}
+
 			try
 			{
 				Reflect.setProperty(target, field, newValue);
@@ -780,6 +962,38 @@ class PsychLuaPropertyPath
 					case "text":
 						if (game.missesTxt != null) game.missesTxt.visible = false;
 						if (game.accuracyTxt != null) game.accuracyTxt.visible = false;
+				}
+			}
+			else if (funkin.game.PlayState.instance != null && (target:Dynamic) == funkin.game.PlayState.instance.healthBar)
+			{
+				var game = funkin.game.PlayState.instance;
+				if (game.healthBarBG != null)
+				{
+					if (field == "visible") game.healthBarBG.visible = game.healthBar.visible;
+					else if (field == "alpha") game.healthBarBG.alpha = game.healthBar.alpha;
+				}
+			}
+			else if (funkin.game.PlayState.instance != null && ((target:Dynamic) == funkin.game.PlayState.instance.iconP1 || (target:Dynamic) == funkin.game.PlayState.instance.iconP2))
+			{
+				var icon:funkin.game.HealthIcon = cast target;
+				var game = funkin.game.PlayState.instance;
+				if (field == "x")
+				{
+					funkin.game.HudCamera.bypassX(icon);
+				}
+				else if (field == "y")
+				{
+					funkin.game.HudCamera.bypassDownscroll(icon);
+					var isDs = funkin.options.Options.downscroll || (game.camHUD != null && game.camHUD.downscroll);
+					if (isDs)
+					{
+						var otherIcon = (icon == game.iconP1) ? game.iconP2 : game.iconP1;
+						if (otherIcon != null && (!funkin.game.HudCamera.shouldBypassDownscroll(otherIcon) || Math.abs(otherIcon.y - icon.y) > 300))
+						{
+							otherIcon.y = icon.y;
+							funkin.game.HudCamera.bypassDownscroll(otherIcon);
+						}
+					}
 				}
 			}
 		}

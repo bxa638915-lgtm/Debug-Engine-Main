@@ -4,12 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Release name (e.g. v1.0.5 or v1.2-rc1)"
+        description: "Release tag (e.g. v1.1.0 or v1.2.0-beta.1)"
         required: true
       prerelease:
         description: "Is this a prerelease?"
         required: true
         type: boolean
+      assets_epoch:
+        description: "Assets Epoch generation (bump when asset structures change)"
+        required: false
+        default: "1"
+      breaking:
+        description: "Is this a breaking changes update?"
+        required: false
+        type: boolean
+        default: false
       custom_message:
         description: "Optional pre-changelog message"
         required: false
@@ -18,13 +27,21 @@ jobs:
   collect-release:
     name: Release ${{ github.event.inputs.tag_name }} Builds
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
+      - name: Setting up Haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: 4.3.7
+
+      # ---------------- Windows ----------------
       - name: Download Windows Full Build
         uses: dawidd6/action-download-artifact@v24
         with:
@@ -33,30 +50,34 @@ jobs:
           path: artifacts/windows/full_build
           allow_forks: false
 
-      - name: Download Windows Executable
+      - name: Download Windows Launcher
         uses: dawidd6/action-download-artifact@v24
+        continue-on-error: true
         with:
           workflow: windows.yml
-          name: Codename Engine (Executable Only)
-          path: artifacts/windows/executable
+          name: DBE Launcher (Windows)
+          path: artifacts/windows/launcher
           allow_forks: false
 
+      # ---------------- Mac OS ----------------
       - name: Download Mac OS Full Build
         uses: dawidd6/action-download-artifact@v24
         with:
           workflow: macos.yml
-          name: Codename Engine
+          name: Codename Engine-x64
           path: artifacts/macos/full_build
           allow_forks: false
 
-      - name: Download Mac OS Executable
+      - name: Download Mac OS Launcher
         uses: dawidd6/action-download-artifact@v24
+        continue-on-error: true
         with:
           workflow: macos.yml
-          name: Codename Engine (Executable Only)
-          path: artifacts/macos/executable
+          name: DBE Launcher (Mac)
+          path: artifacts/macos/launcher
           allow_forks: false
 
+      # ---------------- Linux ----------------
       - name: Download Linux Full Build
         uses: dawidd6/action-download-artifact@v24
         with:
@@ -65,135 +86,138 @@ jobs:
           path: artifacts/linux/full_build
           allow_forks: false
 
-      - name: Download Linux Executable
+      - name: Download Linux Launcher
         uses: dawidd6/action-download-artifact@v24
+        continue-on-error: true
         with:
           workflow: linux.yml
-          name: Codename Engine (Executable Only)
-          path: artifacts/linux/executable
+          name: DBE Launcher (Linux)
+          path: artifacts/linux/launcher
           allow_forks: false
 
-      - name: Prepare artifacts
+      # ---------------- Untar Mac if needed ----------------
+      - name: Prepare Mac files
         run: |
-          mkdir -p renamed
+          if [ -f artifacts/macos/full_build/CodenameEngine.tar.gz ]; then
+            mkdir -p artifacts/macos/extracted
+            tar -zxvf artifacts/macos/full_build/CodenameEngine.tar.gz -C artifacts/macos/extracted
+            rm -rf artifacts/macos/full_build
+            mv artifacts/macos/extracted artifacts/macos/full_build
+          fi
+
+      # ---------------- Check for Previous Manifests ----------------
+      - name: Fetch previous release manifest
+        id: prev_manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p prev_manifests
+          LATEST_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName' || echo "")
+          if [ -n "$LATEST_TAG" ]; then
+            echo "Latest release: $LATEST_TAG. Attempting to download previous manifests..."
+            gh release download "$LATEST_TAG" --repo ${{ github.repository }} --pattern "manifest-*.json" -D prev_manifests || true
+          fi
+
+      # ---------------- Run PackTool to generate Delta Manifests & Packages ----------------
+      - name: Package Engine & Generate Manifests
+        run: |
+          mkdir -p dist
+
+          PREV_WIN=""
+          [ -f prev_manifests/manifest-windows.json ] && PREV_WIN="--previous prev_manifests/manifest-windows.json"
+          PREV_LIN=""
+          [ -f prev_manifests/manifest-linux.json ] && PREV_LIN="--previous prev_manifests/manifest-linux.json"
+          PREV_MAC=""
+          [ -f prev_manifests/manifest-macos.json ] && PREV_MAC="--previous prev_manifests/manifest-macos.json"
 
           # Windows
-          mv artifacts/windows/executable/CodenameEngine.exe renamed/update-windows.exe
-          cd artifacts/windows/full_build
-          zip -r ../../../renamed/"Codename Engine-Windows.zip" *
-          cd -
-
-          # Mac OS
-          mv artifacts/macos/executable/CodenameEngine renamed/update-mac
-          cd artifacts/macos/full_build
-          if [ -f CodenameEngine.tar.gz ]; then
-            # Keep tar.gz as-is
-            cp CodenameEngine.tar.gz ../../../renamed/"Codename Engine-Mac.tar.gz"
-          else
-            # Zip contents at root
-            zip -r ../../../renamed/"Codename Engine-Mac.zip" *
-          fi
-          cd -
+          haxe -cp launcher/source --run dbe.launcher.tools.PackTool \
+            --dir artifacts/windows/full_build \
+            --tag ${{ github.event.inputs.tag_name }} \
+            --platform windows \
+            --epoch ${{ github.event.inputs.assets_epoch || '1' }} \
+            --breaking ${{ github.event.inputs.breaking || 'false' }} \
+            --exe CodenameEngine.exe \
+            --out dist/ $PREV_WIN
 
           # Linux
-          mv artifacts/linux/executable/CodenameEngine renamed/update-linux
-          cd artifacts/linux/full_build
-          zip -r ../../../renamed/"Codename Engine-Linux.zip" *
-          cd -
+          haxe -cp launcher/source --run dbe.launcher.tools.PackTool \
+            --dir artifacts/linux/full_build \
+            --tag ${{ github.event.inputs.tag_name }} \
+            --platform linux \
+            --epoch ${{ github.event.inputs.assets_epoch || '1' }} \
+            --breaking ${{ github.event.inputs.breaking || 'false' }} \
+            --exe CodenameEngine \
+            --out dist/ $PREV_LIN
 
-      - name: Find Base Release
-        id: get_base_release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Mac OS
+          haxe -cp launcher/source --run dbe.launcher.tools.PackTool \
+            --dir artifacts/macos/full_build \
+            --tag ${{ github.event.inputs.tag_name }} \
+            --platform macos \
+            --epoch ${{ github.event.inputs.assets_epoch || '1' }} \
+            --breaking ${{ github.event.inputs.breaking || 'false' }} \
+            --exe CodenameEngine \
+            --out dist/ $PREV_MAC
+
+      # ---------------- Package Launchers ----------------
+      - name: Package Launchers
         run: |
-          echo "Looking for base release..."
-          PRERELEASE="${{ github.event.inputs.prerelease }}"
-
-          if [[ "$PRERELEASE" == "true" ]]; then
-            BASE=$(gh release list --repo ${{ github.repository }} --json tagName,isPrerelease,isDraft \
-              -L 50 -q '.[] | select(.isPrerelease==false and .isDraft==false) | .tagName' | head -n 1)
-
-            if [ -z "$BASE" ]; then
-              echo "No stable release found, resorting to prereleases."
-              BASE=$(gh release list --repo ${{ github.repository }} --json tagName,isDraft \
-                -L 1 -q '.[] | select(.isDraft==false) | .tagName')
-            fi
-          else
-            BASE=$(gh release list --repo ${{ github.repository }} --json tagName,isPrerelease,isDraft \
-              -L 50 -q '.[] | select(.isPrerelease==false and .isDraft==false) | .tagName' | head -n 1)
+          # Windows Launcher
+          if [ -d artifacts/windows/launcher ]; then
+            cd artifacts/windows/launcher
+            zip -r ../../../dist/DBE-Launcher-windows.zip *
+            cd -
           fi
 
-          if [ -z "$BASE" ]; then
-            echo "No older release found; please make sure to have at least one older release containing the 'update-assets.zip' file in order to generate the differences."
-            exit 1
-          else
-            echo "Base release: $BASE"
-            echo "base_release=$BASE" >> $GITHUB_OUTPUT
+          # Linux Launcher
+          if [ -d artifacts/linux/launcher ]; then
+            cd artifacts/linux/launcher
+            zip -r ../../../dist/DBE-Launcher-linux.zip *
+            cd -
           fi
 
-      - name: Prepare update-assets.zip
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Looking for 'update-assets.zip' from release '${{ steps.get_base_release.outputs.base_release }}'"
-          ASSETS=$(gh release view "${{ steps.get_base_release.outputs.base_release }}" \
-            --repo "${{ github.repository }}" \
-            --json assets \
-            | jq -r '.assets[].name')
-
-          if echo "$ASSETS" | grep -xq "update-assets.zip"; then
-            mkdir -p update_assets_temp renamed
-            echo "Downloading assets from release '${{ steps.get_base_release.outputs.base_release }}'"
-            gh release download "${{ steps.get_base_release.outputs.base_release }}" \
-              --repo ${{ github.repository }} \
-              --pattern "update-assets.zip" \
-              -D update_assets_temp
-
-            unzip -q update_assets_temp/update-assets.zip -d update_assets_temp
-            cd update_assets_temp
-            zip -r ../renamed/update-assets.zip . -i assets
-          else
-            echo "No 'update-assets.zip' file found in release '${{ steps.get_base_release.outputs.base_release }}'; please make sure to have this file in that older release in order to generate the differences."
-            exit 1
+          # Mac OS Launcher
+          if [ -d artifacts/macos/launcher ]; then
+            cd artifacts/macos/launcher
+            zip -r ../../../dist/DBE-Launcher-macos.zip *
+            cd -
           fi
 
-      - name: Prepare pre-changelog message
-        id: pre_changelog_message
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # ---------------- Changelog Message ----------------
+      - name: Prepare changelog message
+        id: changelog_message
         run: |
-          echo "Preparing a pre-changelog message..."
-
-          BODY="If you would like to download the full builds of the engine from this release, please ignore the files starting with 'update-' as they're needed for the engine's internal autoupdater.\n\n"
-
+          BODY=""
           if [ -n "${{ github.event.inputs.custom_message }}" ]; then
-            BODY="${{ github.event.inputs.custom_message }}\n${BODY}"
+            BODY="${{ github.event.inputs.custom_message }}\n\n"
           fi
-
+          BODY="${BODY}### Atualizacao com DBE Launcher\nPara atualizar automaticamente preservando sua pasta \`mods/\`, abra o **DBE Launcher** e clique em **Atualizar**.\n"
           {
             echo "body<<EOF"
             echo -e "$BODY"
             echo "EOF"
           } >> $GITHUB_OUTPUT
-          echo -e "Final pre-changelog message:\n\n$BODY"
 
-      - name: Create GitHub Release with Assets
-        uses: softprops/action-gh-release@v3
+      # ---------------- Publish GitHub Release ----------------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           name: Release ${{ github.event.inputs.tag_name }}
-          draft: true
+          draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
-          body: ${{ steps.build_body.outputs.body }}
+          body: ${{ steps.changelog_message.outputs.body }}
           generate_release_notes: true
           files: |
-            renamed/Codename Engine-Windows.zip
-            renamed/Codename Engine-Mac.zip
-            renamed/Codename Engine-Mac.tar.gz
-            renamed/Codename Engine-Linux.zip
-            renamed/update-assets.zip
-            renamed/update-windows.exe
-            renamed/update-mac
-            renamed/update-linux
+            dist/DBE-windows.zip
+            dist/manifest-windows.json
+            dist/DBE-Launcher-windows.zip
+            dist/DBE-linux.zip
+            dist/manifest-linux.json
+            dist/DBE-Launcher-linux.zip
+            dist/DBE-macos.zip
+            dist/manifest-macos.json
+            dist/DBE-Launcher-macos.zip

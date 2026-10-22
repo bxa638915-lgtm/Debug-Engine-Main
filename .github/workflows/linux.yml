@@ -64,6 +64,16 @@ jobs:
         with:
           name: Codename Engine
           path: export/release/linux/bin/
+      - name: Building Launcher
+        run: |
+          cd launcher
+          haxelib run lime build linux -release
+          cd ..
+      - name: Uploading Launcher artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: DBE Launcher (Linux)
+          path: launcher/bin/linux/bin
       # - name: Clearing already existing cache
       #   uses: actions/github-script@v9
       #   with:

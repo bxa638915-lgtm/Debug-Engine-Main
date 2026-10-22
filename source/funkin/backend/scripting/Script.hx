@@ -69,7 +69,7 @@ class Script extends FlxBasic implements IFlxDestroyable
 			"FlxG" => flixel.FlxG,
 			"FlxSprite" => flixel.FlxSprite,
 			"FlxBasic" => flixel.FlxBasic,
-			"FlxCamera" => flixel.FlxCamera,
+			"FlxCamera" => funkin.game.HudCamera,
 			"FlxEase" => flixel.tweens.FlxEase,
 			"FlxTween" => flixel.tweens.FlxTween,
 			"FlxSound" => flixel.sound.FlxSound,
@@ -446,7 +446,8 @@ class Script extends FlxBasic implements IFlxDestroyable
 		var fileName = this.fileName;
 		if (remappedNames.exists(fileName))
 			fileName = remappedNames.get(fileName);
-		Logs.traceColored([Logs.logText(fileName, RED), Logs.logText(text)], ERROR);
+		var sep = (text != null && (StringTools.startsWith(text, ":") || StringTools.startsWith(text, " "))) ? "" : ": ";
+		Logs.traceColored([Logs.logText(fileName + sep, RED), Logs.logText(text)], ERROR);
 	}
 
 	override public function toString():String

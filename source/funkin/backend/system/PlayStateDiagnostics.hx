@@ -231,7 +231,11 @@ class PlayStateDiagnostics
 						continue;
 					}
 					var animName = character.getAnimName();
-					lines.push('  character[$j] id=${safe(character.curCharacter)} animation=${safe(animName)}');
+					var nameList = character.getNameList();
+					var curAnimObj = character.animation.curAnim;
+					var curFrameName = character.frame != null ? character.frame.name : "<null>";
+					var framesCount = character.frames != null ? character.frames.frames.length : -1;
+					lines.push('  character[$j] id=${safe(character.curCharacter)} animation=${safe(animName)} animList=[${nameList.join(",")}] curAnimObj=${curAnimObj != null ? curAnimObj.name + ":" + curAnimObj.curFrame + "/" + curAnimObj.numFrames : "null"} frame=$curFrameName totalFrames=$framesCount');
 					walkObject(lines, counts, seen, character, 'character[$i][$j]', camera, 2);
 				}
 			}

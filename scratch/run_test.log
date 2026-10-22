@@ -1,0 +1,6 @@
+[0m[37m[  [0m[35m15:37:48[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[37mSwitched to mod: [0m[92mMINDLESS[0m
+[0m[37m[  [0m[35m15:37:50[0m[37m  |[0m[33m   WARNING   [0m[37m] [0m[93mBlend Mode Extensions won't work in MOD_API_VERSION below than 2[0m
+[0m[37m[  [0m[35m15:37:50[0m[37m  |[0m[96m INFORMATION [0m[37m] [0m[94m[Language] [0m[37m[0m
+[0m[37m[  [0m[35m15:37:50[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[94m[Language] [0m[37mSetting Language To: [0m[92mEnglish (en)[0m
+[0m[37m[  [0m[35m15:37:52[0m[37m  |[0m[96m INFORMATION [0m[37m] [0m[94m[Discord] [0m[37mConnected to User Dev S.Hx ([0m[90mdev_scx4dc[0m[37m)[0m
+[0m[37m[  [0m[35m15:37:55[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[92m_VideoStartOnTimeFix.lua_embedded.hx:6: [0m[37mVideoWarmUp: dummy video missing (assets/videos/_VideoDummy.mp4), skipping warm-up[0m

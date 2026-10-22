@@ -405,20 +405,28 @@ class CharacterEditor extends UIState {
 		super.update(elapsed);
 	}
 
+	inline function _get_flip_multiplier():Float {
+		return (character != null && ((character.flipX) != (character.scale.x < 0))) ? -1 : 1;
+	}
+
 	inline function handleMouseOffsets() {
 		if (draggingCharacter) {
 			cameraHoverDummy.cursor = DRAG;
 
 			if (FlxG.mouse.justReleased) {
-				draggingOffset.x /= character.scale.x;
-				draggingOffset.y /= character.scale.y;
+				if (!character.isPsychCamera) {
+					draggingOffset.x /= (character.scale.x != 0 ? Math.abs(character.scale.x) : 1);
+					draggingOffset.y /= (character.scale.y != 0 ? Math.abs(character.scale.y) : 1);
+				}
 
-				_change_offset((draggingOffset.x * (character.isFlippedOffsets()  ? -1 : 1)), draggingOffset.y);
+				_change_offset(draggingOffset.x * _get_flip_multiplier(), draggingOffset.y);
 
 				draggingOffset.set(0, 0); draggingCharacter = false;
 				character.extraOffset = draggingOffset;
 			} else {
-				draggingOffset.x += FlxG.mouse.deltaScreenX; draggingOffset.y += FlxG.mouse.deltaScreenY;
+				var camZoom:Float = (charCamera != null && charCamera.zoom != 0) ? charCamera.zoom : 1.0;
+				draggingOffset.x += FlxG.mouse.deltaScreenX / camZoom;
+				draggingOffset.y += FlxG.mouse.deltaScreenY / camZoom;
 				character.extraOffset = draggingOffset;
 			}
 		} else {
@@ -661,14 +669,14 @@ class CharacterEditor extends UIState {
 		characterPropertiesWindow.editCharacterInfoUI();
 	function _edit_sprite(_) {}
 
-	function _offsets_left(_) _change_offset(-1, 0);
+	function _offsets_left(_) _change_offset(-1 * _get_flip_multiplier(), 0);
 	function _offsets_up(_) _change_offset(0, -1);
 	function _offsets_down(_) _change_offset(0, 1);
-	function _offsets_right(_) _change_offset(1, 0);
-	function _offsets_extra_left(_) _change_offset(-5, 0);
+	function _offsets_right(_) _change_offset(1 * _get_flip_multiplier(), 0);
+	function _offsets_extra_left(_) _change_offset(-5 * _get_flip_multiplier(), 0);
 	function _offsets_extra_up(_) _change_offset(0, -5);
 	function _offsets_extra_down(_) _change_offset(0, 5);
-	function _offsets_extra_right(_) _change_offset(5, 0);
+	function _offsets_extra_right(_) _change_offset(5 * _get_flip_multiplier(), 0);
 
 	function _offsets_drag_offsets_mouse(t) {
 		t.icon = (Options.characterDragging = !Options.characterDragging) ? 1 : 0;
@@ -708,7 +716,8 @@ class CharacterEditor extends UIState {
 		var newChilds:Array<UIContextMenuOption> = [];
 
 		var stageFileList = Stage.getList(true);
-		if (stageFileList.length == 0) stageFileList = Stage.getList(false);
+		for (st in Stage.getList(false))
+			stageFileList.pushOnce(st);
 
 		var stageText = TU.getRaw("characterEditor.stage.useStage");
 		for (stage in stageFileList)
@@ -748,8 +757,6 @@ class CharacterEditor extends UIState {
 		if (__stage == null) {
 			updateStagePositions([]);
 			changeStagePosition("NONE");
-
-			add(character);
 		} else {
 			stage = new Stage(__stage, this, false);
 			stage.onAddSprite = (sprite:FlxBasic) -> {
@@ -795,8 +802,17 @@ class CharacterEditor extends UIState {
 				stage.applyCharStuff(character, stagePosition, 0);
 			ensureCharacterStageLayering();
 			_animation_play(null);
-		} else
+		} else {
+			if (stage != null && stage.characterPoses.exists(stagePosition))
+				stage.characterPoses[stagePosition].revertCharacter(character);
 			stagePosition = position.toLowerCase();
+			remove(character);
+			var posX:Float = character.positionOffset != null ? character.positionOffset.x : 0;
+			var posY:Float = character.positionOffset != null ? character.positionOffset.y : 0;
+			character.setPosition(posX, posY);
+			add(character);
+			_animation_play(null);
+		}
 
 		characterPropertiesWindow.testAsDropDown.index = characterPropertiesWindow.testAsDropDown.options.indexOf(stagePosition.toUpperCase());
 		characterPropertiesWindow.testAsDropDown.label.text = stagePosition.toUpperCase();
@@ -823,8 +839,14 @@ class CharacterEditor extends UIState {
 
 	public inline function updateCharacterStagePosition() {
 		remove(character);
-		if (stage.characterPoses.exists(stagePosition))
+		if (stage != null && stagePosition != "none" && stage.characterPoses.exists(stagePosition))
 			stage.applyCharStuff(character, stagePosition, 0);
+		else {
+			var posX:Float = character.positionOffset != null ? character.positionOffset.x : 0;
+			var posY:Float = character.positionOffset != null ? character.positionOffset.y : 0;
+			character.setPosition(posX, posY);
+			add(character);
+		}
 		ensureCharacterStageLayering();
 	}
 

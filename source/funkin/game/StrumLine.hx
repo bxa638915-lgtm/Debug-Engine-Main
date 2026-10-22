@@ -201,10 +201,32 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		notes.update(elapsed);
 	}
 
+	override function set_cameras(Value:Array<FlxCamera>):Array<FlxCamera> {
+		super.set_cameras(Value);
+		if (members != null) {
+			for (member in members) {
+				if (member != null) member.cameras = Value;
+			}
+		}
+		if (notes != null)
+			notes.cameras = Value;
+		return Value;
+	}
+
 	public override function draw() {
+		if (members != null && members.length > 0 && members[0] != null && members[0].cameras != null && members[0].cameras.length > 0) {
+			var firstCam = members[0].cameras;
+			if (cameras != firstCam) {
+				cameras = firstCam;
+				if (notes != null) notes.cameras = firstCam;
+			}
+		}
 		super.draw();
-		notes.cameras = cameras;
-		notes.draw();
+		if (notes != null) {
+			if (cameras != null && notes.cameras != cameras)
+				notes.cameras = cameras;
+			notes.draw();
+		}
 	}
 
 	/**
@@ -396,10 +418,13 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	}
 
 	override function destroy() {
-		super.destroy();
-		if(startingPos != null)
+		flixel.tweens.FlxTween.cancelTweensOf(this);
+		if(startingPos != null) {
 			startingPos.put();
-		notes = FlxDestroyUtil.destroy(notes);
+			startingPos = null;
+		}
+		notes = flixel.util.FlxDestroyUtil.destroy(notes);
+		super.destroy();
 	}
 
 	/**
@@ -415,6 +440,8 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		var babyArrow:Strum = new Strum(startingPos.x + (Note.swagWidth * strumScale * (data.strumSpacing != null ? data.strumSpacing : 1) * i), startingPos.y + (Note.swagWidth*0.5) - (Note.swagWidth * strumScale * 0.5));
 		babyArrow.ID = i;
 		babyArrow.strumLine = this;
+		if (this.cameras != null)
+			babyArrow.cameras = this.cameras;
 
 		if(data.scrollSpeed != null)
 			babyArrow.scrollSpeed = data.scrollSpeed;

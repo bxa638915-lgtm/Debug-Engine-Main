@@ -10,6 +10,8 @@ import funkin.backend.FunkinText;
 import haxe.io.Path;
 import sys.FileSystem;
 import dbe.compatibility.mods.RuntimeModConverter;
+import dbe.compatibility.rea.READecodedEnginesManager;
+import dbe.compatibility.rea.READecodedEnginesManager.DecodedEngineEntry;
 
 class ModSwitchMenu extends MusicBeatSubstate {
 	var disableConf:Map<String, Map<String, String>>;
@@ -27,6 +29,11 @@ class ModSwitchMenu extends MusicBeatSubstate {
 	var addonObjs:FlxTypedGroup<Alphabet>;
 	var addonChecks:FlxTypedGroup<FlxSprite>; // NOTE: maybe make a CheckboxObject, it kinda makes some things a mess here
 	var queuedAddonsOff:Array<Bool> = [];
+
+	var decodedEngines:Array<DecodedEngineEntry> = [];
+	var engineTexts:FlxTypedGroup<FunkinText>;
+	var engineHeader:FunkinText;
+	var curEngineIndex:Int = 0;
 
 	var timer:Float = 0;
 	var curSelected:Int = 0;
@@ -154,6 +161,28 @@ class ModSwitchMenu extends MusicBeatSubstate {
 		reconvertHint.visible = false;
 		add(reconvertHint);
 
+		// Initialize Decoded Engines (AppData)
+		READecodedEnginesManager.ensureInitialized();
+		decodedEngines = READecodedEnginesManager.listDecodedEngines();
+
+		engineTexts = new FlxTypedGroup<FunkinText>();
+		add(engineTexts);
+
+		for (i in 0...5) {
+			var et = new FunkinText(680, 320 + (i * 120), FlxG.width - 690, "", 22);
+			et.borderSize = 1.25;
+			et.borderColor = 0xFF000000;
+			et.scrollFactor.set();
+			engineTexts.add(et);
+		}
+
+		engineHeader = new FunkinText(680, 290, FlxG.width - 690, "[< / >] Engine Decodificada (AppData):", 14);
+		engineHeader.color = 0xFF00FFCC;
+		engineHeader.borderColor = 0xFF003322;
+		engineHeader.borderSize = 1;
+		engineHeader.scrollFactor.set();
+		add(engineHeader);
+
 		changeSelection(0, true);
 		if (addons.length > 0)
 			changeAddon(0, true);
@@ -192,10 +221,20 @@ class ModSwitchMenu extends MusicBeatSubstate {
 			if (offset != null)
 				check.frameOffset.copyFrom(offset);
 		}
+
+		if (!inAddons) {
+			updateEngineDisplay();
+		}
 	}
 
 	function regularControls(scrollChange:Int) {
 		changeSelection(scrollChange);
+
+		// Cycle decoded engine for the currently selected mod with LEFT / RIGHT
+		var engineChange = (controls.RIGHT_P ? 1 : 0) + (controls.LEFT_P ? -1 : 0);
+		if (engineChange != 0 && !inAddons && decodedEngines.length > 1) {
+			cycleEngine(engineChange);
+		}
 
 		if (controls.ACCEPT) {
 			var newAddonsOff:Array<String> = [];
@@ -205,8 +244,44 @@ class ModSwitchMenu extends MusicBeatSubstate {
 			}
 			Options.disabledAddons = newAddonsOff;
 
-			ModsFolder.switchMod(mods[curSelected]);
+			var selectedMod = mods[curSelected];
+			if (selectedMod != null) {
+				// Apply selected decoded engine rules to this mod
+				if (decodedEngines.length > 0 && curEngineIndex < decodedEngines.length) {
+					var eng = decodedEngines[curEngineIndex];
+					READecodedEnginesManager.setEngineForMod(selectedMod, eng.id);
+					READecodedEnginesManager.applyEngineToMod(selectedMod, eng.id);
+				}
+
+				var modPath = ModsFolder.modsPath + selectedMod;
+				var conversion = RuntimeModConverter.prepare(modPath, RuntimeModConverter.defaultManagedRoot());
+				if (conversion != null && conversion.blocked == true) {
+					// Conversion blocked! Open REAModExePromptSubState so user can provide the original .exe!
+					openSubState(new dbe.compatibility.rea.REAModExePromptSubState(selectedMod, conversion.report, function(success:Bool) {
+						if (success) {
+							ModsFolder.switchMod(selectedMod);
+							close();
+						}
+					}));
+					return;
+				}
+			}
+
+			ModsFolder.switchMod(selectedMod);
 			close();
+		}
+
+		// [E] — Link or change original executable (.exe) via REA
+		if (FlxG.keys.justPressed.E && !inAddons) {
+			var mod = mods[curSelected];
+			if (mod != null) {
+				openSubState(new dbe.compatibility.rea.REAModExePromptSubState(mod, null, function(success:Bool) {
+					if (success) {
+						ModsFolder.switchMod(mod);
+						close();
+					}
+				}));
+			}
 		}
 
 		// [R] — force reconversion of the selected Psych mod
@@ -265,15 +340,118 @@ class ModSwitchMenu extends MusicBeatSubstate {
 
 		desc.text = getDescription(modConf[curSelected]);
 
-		// Show reconvert hint only for Psych mods
+		// Show reconvert and REA executable hints
 		var mod = mods[curSelected];
 		if (mod != null) {
-			reconvertHint.visible = _isPsychMod(mod);
-			if (reconvertHint.visible)
-				reconvertHint.text = "[R] Reconvert Psych Mod";
+			var isPsych = _isPsychMod(mod);
+			var hasAssociatedExe = dbe.compatibility.rea.REARuntimeBridge.getAssociatedExecutable(mod) != null;
+			reconvertHint.visible = true;
+			var engineInfo = (decodedEngines.length > 1) ? "[< / >] Mudar Engine | " : "";
+			if (hasAssociatedExe) {
+				reconvertHint.text = engineInfo + "[R] Reconverter | [E] Alterar .EXE Original (Vinculado)";
+			} else if (isPsych) {
+				reconvertHint.text = engineInfo + "[R] Reconverter | [E] Vincular Executavel Original (.exe)";
+			} else {
+				reconvertHint.text = engineInfo + "[E] Vincular Executavel Original (.exe) com REA";
+			}
 		} else {
 			reconvertHint.visible = false;
 		}
+
+		updateEngineDisplay();
+	}
+
+	public function updateEngineDisplay():Void {
+		var selectedMod = mods[curSelected];
+		if (inAddons || selectedMod == null || decodedEngines == null || decodedEngines.length == 0) {
+			if (engineHeader != null) engineHeader.visible = false;
+			if (engineTexts != null) {
+				for (et in engineTexts.members) et.visible = false;
+			}
+			return;
+		}
+
+		if (engineHeader != null) engineHeader.visible = true;
+
+		// Find the active engine ID for this mod
+		var activeEngineId = READecodedEnginesManager.getEngineForMod(selectedMod);
+		curEngineIndex = 0;
+		for (i in 0...decodedEngines.length) {
+			if (decodedEngines[i].id == activeEngineId) {
+				curEngineIndex = i;
+				break;
+			}
+		}
+
+		var selectedAlphabet = (curSelected < alphabets.members.length) ? alphabets.members[curSelected] : null;
+		var baseY = (selectedAlphabet != null) ? selectedAlphabet.y + 12 : (FlxG.height * 0.48);
+		var startX = 660.0;
+		if (selectedAlphabet != null) {
+			startX = Math.max(620.0, selectedAlphabet.x + selectedAlphabet.width + 30);
+		}
+		if (startX > FlxG.width - 340) startX = FlxG.width - 340;
+
+		if (engineHeader != null) {
+			engineHeader.setPosition(startX, baseY - 28);
+		}
+
+		var count = decodedEngines.length;
+		for (slot in 0...engineTexts.members.length) {
+			var txt = engineTexts.members[slot];
+			if (slot < count) {
+				var engIdx = (curEngineIndex + slot) % count;
+				var eng = decodedEngines[engIdx];
+				txt.visible = true;
+				txt.x = startX;
+
+				// Alinha cada engine com a linha correspondente do mod abaixo
+				var modBelow = (curSelected + slot < alphabets.members.length) ? alphabets.members[curSelected + slot] : null;
+				var slotY = (modBelow != null) ? (modBelow.y + 12) : (baseY + (slot * 120));
+				txt.y = slotY;
+
+				if (slot == 0) {
+					// Mod selecionado => Engine (Visibilidade 100%)
+					txt.text = '=> ${eng.name}';
+					txt.color = 0xFF00FFCC;
+					txt.alpha = 1.0;
+					txt.size = 20;
+				} else if (slot == 1) {
+					// 1ª engine abaixo: -30% de visibilidade (alpha 0.70)
+					txt.text = '   ${eng.name}';
+					txt.color = 0xFFDDDDDD;
+					txt.alpha = 0.70;
+					txt.size = 18;
+				} else if (slot == 2) {
+					// 2ª engine abaixo: -75% de visibilidade (alpha 0.25)
+					txt.text = '   ${eng.name}';
+					txt.color = 0xFFAAAAAA;
+					txt.alpha = 0.25;
+					txt.size = 16;
+				} else if (slot == 3) {
+					txt.text = '   ${eng.name}';
+					txt.color = 0xFF777777;
+					txt.alpha = 0.08;
+					txt.size = 14;
+				} else {
+					txt.visible = false;
+				}
+			} else {
+				txt.visible = false;
+			}
+		}
+	}
+
+	public function cycleEngine(change:Int):Void {
+		var selectedMod = mods[curSelected];
+		if (selectedMod == null || decodedEngines == null || decodedEngines.length <= 1) return;
+
+		curEngineIndex = FlxMath.wrap(curEngineIndex + change, 0, decodedEngines.length - 1);
+		var chosen = decodedEngines[curEngineIndex];
+		READecodedEnginesManager.setEngineForMod(selectedMod, chosen.id);
+		READecodedEnginesManager.applyEngineToMod(selectedMod, chosen.id);
+
+		CoolUtil.playMenuSFX(SCROLL, 0.7);
+		updateEngineDisplay();
 	}
 
 	/** Returns true if the given mod folder is detected as a Psych Engine mod. Uses a cache to avoid rescanning. */
@@ -315,11 +493,16 @@ class ModSwitchMenu extends MusicBeatSubstate {
 			
 			title.text = TU.translate("mods.addonsTitle");
 			desc.text = addonsChanged() ? TU.translate("mods.addonsChanged") : "";
+
+			if (engineHeader != null) engineHeader.visible = false;
+			if (engineTexts != null) for (et in engineTexts.members) et.visible = false;
 		} else {
 			title.alignment = desc.alignment = LEFT;
 
 			title.text = TU.translate("mods.modsTitle");
 			desc.text = getDescription(modConf[curSelected]);
+
+			updateEngineDisplay();
 		}
 
 		keyInfo.text = '[${CoolUtil.keyToString(Options.SOLO_CHANGE_MODE[0])}]';

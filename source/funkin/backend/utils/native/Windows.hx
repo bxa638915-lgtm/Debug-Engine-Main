@@ -111,6 +111,14 @@ final class Windows {
 
 	SetConsoleOutputCP(65001);
 	SetConsoleCP(65001);
+
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hOut != INVALID_HANDLE_VALUE) {
+		DWORD dwMode = 0;
+		if (GetConsoleMode(hOut, &dwMode)) {
+			SetConsoleMode(hOut, dwMode | 0x0004); // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+		}
+	}
 	')
 	public static function allocConsole() {
 	}
@@ -158,6 +166,15 @@ final class Windows {
 
 	@:functionCode('
 		SetProcessDPIAware();
+		SetConsoleOutputCP(65001);
+		SetConsoleCP(65001);
+		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hOut != INVALID_HANDLE_VALUE) {
+			DWORD dwMode = 0;
+			if (GetConsoleMode(hOut, &dwMode)) {
+				SetConsoleMode(hOut, dwMode | 0x0004); // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+			}
+		}
 	')
 	public static function registerAsDPICompatible() {}
 

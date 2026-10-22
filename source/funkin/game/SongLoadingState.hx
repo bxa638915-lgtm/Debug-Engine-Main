@@ -93,6 +93,13 @@ class SongLoadingState extends MusicBeatState {
 		graphicCache.cacheGraphic(graphic);
 	}
 
+	var totalLoadTime:Float = 0.0;
+	var targetDuration:Float = 0.0;
+	var visualProgress:Float = 0.0;
+	var calculatedDuration:Bool = false;
+	var hasVideosToPreload:Bool = false;
+	var videoInfoText:String = "";
+
 	public override function update(elapsed:Float):Void {
 		super.update(elapsed);
 		if (transitioning) return;
@@ -118,11 +125,51 @@ class SongLoadingState extends MusicBeatState {
 			return;
 		}
 
+		totalLoadTime += elapsed;
 		SongLoader.update(generation);
-		var progress = SongLoader.progress(generation);
-		progressFill.scale.x = progress;
-		progressText.text = '${Std.int(progress * 100)}%';
-		phaseText.text = phaseLabel(SongLoader.currentPhase(generation));
+
+		var manifest = SongLoader.getManifest(generation);
+		if (manifest != null && !calculatedDuration) {
+			calculatedDuration = true;
+			if (manifest.hasVideo) {
+				hasVideosToPreload = true;
+				var mb = manifest.totalVideoBytes / (1024.0 * 1024.0);
+				// Dinamicamente entre 10 e 30 segundos dependendo do tamanho/peso do vídeo:
+				// 0-2 MB: 10s | 14-15 MB: ~20s | 30+ MB: 30s
+				targetDuration = flixel.math.FlxMath.bound(10.0 + (mb / 30.0) * 20.0, 10.0, 30.0);
+				var roundedMB = Math.round(mb * 10) / 10;
+				videoInfoText = ' (${roundedMB} MB)';
+			} else {
+				targetDuration = 0.35;
+			}
+		}
+
+		var actualAssetsComplete:Bool = SongLoader.isComplete(generation);
+		var assetProgress = SongLoader.progress(generation);
+
+		var timeProgress:Float = targetDuration > 0 ? Math.min(1.0, totalLoadTime / targetDuration) : 1.0;
+		var targetProgress:Float = (targetDuration > 0) ? Math.min(assetProgress, timeProgress) : assetProgress;
+		if (actualAssetsComplete && timeProgress >= 1.0) targetProgress = 1.0;
+
+		visualProgress = flixel.math.FlxMath.lerp(visualProgress, targetProgress, flixel.math.FlxMath.bound(elapsed * 10.0, 0.0, 1.0));
+		if (Math.abs(1.0 - visualProgress) < 0.005 && targetProgress >= 1.0) visualProgress = 1.0;
+
+		progressFill.scale.x = visualProgress;
+		progressText.text = '${Std.int(visualProgress * 100)}%';
+
+		if (hasVideosToPreload) {
+			if (visualProgress < 0.30) {
+				phaseText.text = 'Mapeando recursos e vídeo cutscene$videoInfoText...';
+			} else if (visualProgress < 0.70) {
+				phaseText.text = 'Pré-carregando vídeo cutscene na memória (0ms delay)...';
+			} else if (visualProgress < 0.98) {
+				phaseText.text = 'Blindando decodificador e sincronizando áudio (100%)...';
+			} else {
+				phaseText.text = 'Cutscenes 100% carregadas e blindadas! Pronto!';
+			}
+		} else {
+			phaseText.text = phaseLabel(SongLoader.currentPhase(generation));
+		}
 
 		var error = SongLoader.errorMessage(generation);
 		if (error != null) {
@@ -130,7 +177,7 @@ class SongLoadingState extends MusicBeatState {
 			return;
 		}
 
-		if (SongLoader.isComplete(generation)) {
+		if (actualAssetsComplete && visualProgress >= 1.0 && timeProgress >= 1.0) {
 			transitioning = true;
 			FlxG.switchState(new PlayState());
 		}

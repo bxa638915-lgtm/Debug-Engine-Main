@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://lime.software/project/1.0.4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://lime.software/project/1.0.4 http://lime.software/xsd/project-1.0.4.xsd">
+
+	<!-- _________________________ Application Settings _________________________ -->
+	<app
+		main="dbe.launcher.ui.Main"
+		title="DBE Launcher"
+		file="DBE-Launcher"
+		packageName="com.dbe.launcher"
+		package="com.dbe.launcher"
+		version="1.0.0"
+		company="DBE Team"/>
+
+	<!-- Icons -->
+	<icon path="assets/images/icon16.png" size='16'/>
+	<icon path="assets/images/icon32.png" size='32'/>
+	<icon path="assets/images/icon64.png" size='64'/>
+	<icon path="assets/images/iconOG.png" size='128'/>
+
+	<!-- ____________________________ Window Settings ___________________________ -->
+	<window hardware="true" colorDepth="32" fps="60" orientation="landscape"/>
+	<window if="desktop" width="960" height="540" resizable="false" fullscreen="false" vsync="true"/>
+
+	<!-- _______________________________ Classpaths _____________________________ -->
+	<source path="source"/>
+
+	<!-- _______________________________ Assets _________________________________ -->
+	<assets path="assets/fonts" rename="fonts"/>
+	<assets path="assets/images" rename="images"/>
+
+	<!-- _______________________________ Libraries ______________________________ -->
+	<haxelib name="flixel"/>
+	<haxelib name="flixel-addons"/>
+	<haxelib name="lime"/>
+	<haxelib name="openfl"/>
+
+	<!-- Fast compilation flags -->
+	<haxedef name="FLX_NO_GAMEPAD"/>
+	<haxedef name="FLX_NO_SOUND_TRAY"/>
+
+</project>

@@ -1,0 +1,10 @@
+{
+	"closeOnPlay": true,
+	"keepBackups": 3,
+	"channel": "stable",
+	"enginePath": "",
+	"protectedExtra": [],
+	"autoCheck": true,
+	"owner": "bxa638915-lgtm",
+	"repo": "Debug-Engine-Main"
+}

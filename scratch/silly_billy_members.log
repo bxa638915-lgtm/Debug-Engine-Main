@@ -1,0 +1,47 @@
+--- STDOUT ---
+[0m[37m[  [0m[35m16:09:24[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[37mSwitched to mod: [0m[92mSILLY BILLY REMASTERED PORT+OPTİ BY MVOREZZ[0m
+
+[0m[37m[  [0m[35m16:09:27[0m[37m  |[0m[33m   WARNING   [0m[37m] [0m[93mBlend Mode Extensions won't work in MOD_API_VERSION below than 2[0m
+
+[0m[37m[  [0m[35m16:09:27[0m[37m  |[0m[96m INFORMATION [0m[37m] [0m[94m[Language] [0m[37mFound languages: en/English, es/Español, it/Italiano, pl/Polski, pt/Português[0m
+
+[0m[37m[  [0m[35m16:09:27[0m[37m  |[0m[35m   VERBOSE   [0m[37m] [0m[94m[Language] [0m[37mSetting Language To: [0m[92mEnglish (en)[0m
+
+[0m[37m[  [0m[35m16:09:28[0m[37m  |[0m[31m    ERROR    [0m[37m] [0m[91m[FLIXEL] Could not find a image asset with ID 'assets/images/characters/gf.png'.[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[96m INFORMATION [0m[37m] [0m[94m[Discord] [0m[37mConnected to User Dev S.Hx ([0m[90mdev_scx4dc[0m[37m)[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter evilLookalike built: anims=[idle-alt,singDOWN,singRIGHT-alt,singLEFT-alt,singUP,idle,singRIGHT,singDOWN-alt,singLEFT,singUP-alt] curAnim=idle frame=ElIdleBIG0000 pos=(0, 0) scale=(1, 1) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[31m    ERROR    [0m[37m] [0m[91m[lime.utils.Assets] There is no asset with an ID of "assets/songs/silly-billy/song/Voices.ogg"[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[31m    ERROR    [0m[37m] [0m[91m[lime.utils.Assets] There is no SOUND asset with an ID of "assets/songs/silly-billy/song/Voices.ogg"[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter bfurself built: anims=[singRIGHT-alt,singDOWN,singLEFT-alt,singUP,idle,singRIGHT,singDOWN-alt,singLEFT,singUP-alt] curAnim=idle frame=BFIdle0000 pos=(0, 0) scale=(0.95, 0.95) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[31m    ERROR    [0m[37m] [0m[91m[lime.utils.Assets] There is no asset with an ID of "assets/songs/silly-billy/song/Voices.ogg"[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[31m    ERROR    [0m[37m] [0m[91m[lime.utils.Assets] There is no SOUND asset with an ID of "assets/songs/silly-billy/song/Voices.ogg"[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter gf built: anims=[scared,combo50,danceRight,singDOWN,danceLeft,singUP,hairBlow,hairFall,cheer,singRIGHT,sad,singLEFT] curAnim=danceLeft frame=null pos=(0, 0) scale=(1, 1) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[31m    ERROR    [0m[37m] [0m[91m[lime.utils.Assets] There is no asset with an ID of "assets/songs/silly-billy/song/Voices.ogg"[0m
+
+[0m[37m[  [0m[35m16:09:29[0m[37m  |[0m[31m    ERROR    [0m[37m] [0m[91m[lime.utils.Assets] There is no SOUND asset with an ID of "assets/songs/silly-billy/song/Voices.ogg"[0m
+
+[0m[37m[  [0m[35m16:09:30[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter bf_ultrafinale2 built: anims=[singDOWN,singRIGHT-alt,singLEFT-alt,singUP,idle,singRIGHT,singDOWN-alt,singLEFT,singUP-alt] curAnim=idle frame=BFIdleALT0000 pos=(0, 0) scale=(1.4, 1.4) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:30[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter bf-pixel built: anims=[singRIGHTmiss,singDOWN,singLEFTmiss,singUP,idle,singDOWNmiss,singRIGHT,singLEFT,singUPmiss] curAnim=idle frame=BF IDLE instance 10000 pos=(0, 0) scale=(6, 6) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:30[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter lookalike built: anims=[idle,singRIGHT,singDOWN,singUP,singLEFT] curAnim=idle frame=Idle 0000 pos=(0, 0) scale=(6, 6) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:30[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter bf-lookalike - Copie built: anims=[idle,singRIGHT,singDOWN,singUP,singLEFT] curAnim=idle frame=ElIdleSMALL0000 pos=(0, 0) scale=(1, 1) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:30[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter bf-lookalike built: anims=[idle,singRIGHT,singDOWN,singUP,singLEFT] curAnim=idle frame=ElIdleSMALL0000 pos=(0, 0) scale=(1, 1) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:33[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter transLookalike built: anims=[Smallize] curAnim=null frame=ElUngrow0000 pos=(0, 0) scale=(1, 1) flipX=false[0m
+
+[0m[37m[  [0m[35m16:09:33[0m[37m  |[0m[90m    TRACE    [0m[37m] [0m[37mCharacter transLookalike2 built: anims=[Bigize] curAnim=null frame=ElUnshrink0000 pos=(0, 0) scale=(1, 1) flipX=false[0m
+
+
+--- STDERR ---
